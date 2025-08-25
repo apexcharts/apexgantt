@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+  </head>
+  <body>
+    <div id="svg-gantt" style="margin: 0 auto; width: 90%; height: 600px"></div>
+    <script>
+      const ganttOptions = {
+        series: [
+          {
+            id: 'a',
+            startTime: '10-11-2024',
+            endTime: '02-01-2025',
+            name: 'task 1',
+          },
+          {
+            id: 'b',
+            startTime: '02-01-2025',
+            endTime: '03-01-2026',
+            name: 'task 2',
+          },
+          {
+            id: 'c',
+            startTime: '03-01-2026',
+            endTime: '12-20-2026',
+            name: 'task 3',
+          },
+          {
+            id: 'd',
+            startTime: '12-20-2026',
+            endTime: '06-20-2027',
+            name: 'task 4',
+          },
+        ],
+        viewMode: 'quarter',
+      };
+      const s = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
+      s.render();
+    </script>
+  </body>
+</html>

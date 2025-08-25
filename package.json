@@ -1,0 +1,25 @@
+{
+  "name": "apexgantt",
+  "version": "1.0.1",
+  "dependencies": {
+    "dayjs": "^1.11.13",
+    "html2pdf.js": "^0.10.3",
+    "lodash": "^4.17.21"
+  },
+  "type": "module",
+  "main": "./apexgantt.min.js",
+  "module": "./apexgantt.es.min.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./index.d.ts",
+        "default": "./apexgantt.es.min.js"
+      },
+      "require": {
+        "types": "./index.d.ts",
+        "default": "./apexgantt.min.js"
+      }
+    }
+  }
+}

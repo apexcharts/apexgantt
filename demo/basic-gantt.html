@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+  </head>
+  <body>
+    <div id="svg-gantt" style="margin: 0 auto; width: 90%; height: 600px"></div>
+    <script>
+      const ganttOptions = {
+        enableTaskDrag: false,
+        enableTaskResize: false,
+        series: [
+          {
+            id: 'a',
+            startTime: '10-11-2024',
+            endTime: '11-01-2024',
+            name: 'task 1',
+            progress: 65,
+          },
+          {
+            id: '5',
+            startTime: '10-11-2024',
+            endTime: '10-26-2024',
+            name: 'subtask 1.1',
+            parentId: 'a',
+            progress: 65,
+          },
+          {
+            id: '9',
+            startTime: '10-11-2024',
+            endTime: '10-16-2024',
+            name: 'subtask 1.1.1',
+            parentId: '5',
+            progress: 65,
+          },
+          {
+            id: '10',
+            startTime: '10-17-2024',
+            endTime: '10-26-2024',
+            name: 'subtask 1.1.2',
+            parentId: '5',
+            dependency: '9',
+            progress: 65,
+          },
+          {
+            id: '13',
+            startTime: '10-17-2024',
+            endTime: '10-23-2024',
+            name: 'subtask 1.1.2.1',
+            parentId: '10',
+            progress: 65,
+          },
+          {
+            id: '14',
+            startTime: '10-24-2024',
+            endTime: '10-26-2024',
+            name: 'subtask 1.1.2.2',
+            parentId: '10',
+            progress: 65,
+          },
+          {
+            id: '14.1',
+            startTime: '10-27-2024',
+            name: 'Task 2 Milestone',
+            parentId: '10',
+            dependency: '14',
+            type: 'milestone',
+          },
+          {
+            id: '6',
+            startTime: '10-28-2024',
+            endTime: '11-01-2024',
+            name: 'subtask 1.2',
+            parentId: 'a',
+            progress: 65,
+          },
+          {
+            id: 'b',
+            startTime: '11-02-2024',
+            endTime: '11-15-2024',
+            name: 'task 2',
+            progress: 25,
+          },
+          {
+            id: '7',
+            startTime: '11-02-2024',
+            endTime: '11-11-2024',
+            name: 'subtask 2.1',
+            parentId: 'b',
+            dependency: '13',
+            progress: 65,
+          },
+          {
+            id: '11',
+            startTime: '11-02-2024',
+            endTime: '11-06-2024',
+            name: 'subtask 2.1.1',
+            parentId: '7',
+            progress: 65,
+          },
+          {
+            id: '12',
+            startTime: '11-07-2024',
+            endTime: '11-11-2024',
+            name: 'subtask 2.1.2',
+            parentId: '7',
+            dependency: '11',
+            progress: 65,
+          },
+          {
+            id: '12.1',
+            startTime: '11-12-2024',
+            name: 'Task 2 Milestone',
+            parentId: '7',
+            dependency: '12',
+            type: 'milestone',
+          },
+          {
+            id: '8',
+            startTime: '11-13-2024',
+            endTime: '11-15-2024',
+            name: 'subtask 2.2',
+            parentId: 'b',
+            dependency: '12.1',
+            progress: 65,
+          },
+          {
+            id: 'c',
+            startTime: '11-16-2024',
+            endTime: '11-25-2024',
+            name: 'task 3',
+            progress: 75,
+          },
+          {
+            id: 'd',
+            startTime: '11-26-2024',
+            endTime: '12-01-2024',
+            name: 'task 4',
+            progress: 50,
+          },
+          {
+            id: 'e',
+            startTime: '12-02-2024',
+            name: 'Project Milestone',
+            dependency: 'd',
+            type: 'milestone',
+          },
+        ],
+      };
+      const s = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
+      s.render();
+    </script>
+  </body>
+</html>
