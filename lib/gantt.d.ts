@@ -12,6 +12,7 @@ export declare class ApexGantt {
      */
     private handleWatermark;
     private renderDependencyArrows;
+    private setCSSVariables;
     render(): void;
     renderToolbar(container: Element): void;
     update(options: GanttOptions): void;

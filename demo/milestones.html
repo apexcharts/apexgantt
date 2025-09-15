@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Milestones Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+  </head>
+  <body style="margin: 0; padding: 20px; background: #0f172a; min-height: 100vh; font-family: 'Roboto', sans-serif">
+    <div style="max-width: 1400px; margin: 0 auto">
+      <h1 style="color: #f1f5f9; text-align: center; margin-bottom: 10px; font-weight: 700; font-size: 28px">
+        Product Launch Campaign
+      </h1>
+      <p style="color: #94a3b8; text-align: center; margin-bottom: 30px; font-size: 16px">
+        Key milestones and deliverables tracking
+      </p>
+      <div
+        id="svg-gantt"
+        style="background: #1e293b; border-radius: 2px; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3); overflow: hidden"
+      ></div>
+    </div>
+    <script>
+      const ganttOptions = {
+        width: '100%',
+        height: 750,
+        viewMode: 'week',
+        fontFamily: 'Roboto, sans-serif',
+        fontSize: '14px',
+        fontWeight: '500',
+        fontColor: '#E2E8F0',
+        headerBackground: '#0F172A',
+        canvasStyle: 'border: none;',
+        barBorderRadius: '6px',
+        barMargin: 3,
+        arrowColor: '#06B6D4',
+        tooltipBGColor: '#0F172A',
+        tooltipBorderColor: '#475569',
+        rowBackgroundColors: ['#1E293B', '#334155'],
+        enableTaskDrag: false,
+        enableTaskResize: false,
+        series: [
+          {
+            id: 'research',
+            startTime: '01-06-2025',
+            endTime: '01-24-2025',
+            name: '🔍 Market Research & Analysis',
+            progress: 100,
+            barBackgroundColor: '#0EA5E9',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'competitor-analysis',
+            startTime: '01-06-2025',
+            endTime: '01-15-2025',
+            name: 'Competitor Analysis',
+            parentId: 'research',
+            progress: 100,
+            barBackgroundColor: '#38BDF8',
+            barTextColor: '#0F172A',
+          },
+          {
+            id: 'market-research-milestone',
+            startTime: '01-16-2025',
+            name: '📊 Market Research Complete',
+            type: 'milestone',
+            dependency: 'competitor-analysis',
+          },
+          {
+            id: 'user-surveys',
+            startTime: '01-17-2025',
+            endTime: '01-24-2025',
+            name: 'User Surveys & Feedback',
+            parentId: 'research',
+            dependency: 'market-research-milestone',
+            progress: 85,
+            barBackgroundColor: '#38BDF8',
+            barTextColor: '#0F172A',
+          },
+          {
+            id: 'research-complete-milestone',
+            startTime: '01-25-2025',
+            name: '✅ Research Phase Complete',
+            type: 'milestone',
+            dependency: 'user-surveys',
+          },
+          {
+            id: 'strategy',
+            startTime: '01-27-2025',
+            endTime: '02-14-2025',
+            name: '📈 Strategy Development',
+            progress: 60,
+            barBackgroundColor: '#8B5CF6',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'positioning',
+            startTime: '01-27-2025',
+            endTime: '02-05-2025',
+            name: 'Product Positioning',
+            parentId: 'strategy',
+            dependency: 'research-complete-milestone',
+            progress: 80,
+            barBackgroundColor: '#A78BFA',
+            barTextColor: '#1E1B4B',
+          },
+          {
+            id: 'pricing-strategy',
+            startTime: '02-06-2025',
+            endTime: '02-10-2025',
+            name: 'Pricing Strategy',
+            parentId: 'strategy',
+            dependency: 'positioning',
+            progress: 70,
+            barBackgroundColor: '#A78BFA',
+            barTextColor: '#1E1B4B',
+          },
+          {
+            id: 'go-to-market',
+            startTime: '02-11-2025',
+            endTime: '02-14-2025',
+            name: 'Go-to-Market Plan',
+            parentId: 'strategy',
+            dependency: 'pricing-strategy',
+            progress: 30,
+            barBackgroundColor: '#A78BFA',
+            barTextColor: '#1E1B4B',
+          },
+          {
+            id: 'strategy-milestone',
+            startTime: '02-15-2025',
+            name: '🎯 Strategy Finalized',
+            type: 'milestone',
+            dependency: 'go-to-market',
+          },
+          {
+            id: 'content-creation',
+            startTime: '02-17-2025',
+            endTime: '03-14-2025',
+            name: '✨ Content Creation',
+            progress: 45,
+            barBackgroundColor: '#10B981',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'brand-assets',
+            startTime: '02-17-2025',
+            endTime: '02-28-2025',
+            name: 'Brand Assets & Guidelines',
+            parentId: 'content-creation',
+            dependency: 'strategy-milestone',
+            progress: 75,
+            barBackgroundColor: '#34D399',
+            barTextColor: '#064E3B',
+          },
+          {
+            id: 'website-content',
+            startTime: '03-01-2025',
+            endTime: '03-07-2025',
+            name: 'Website Content',
+            parentId: 'content-creation',
+            dependency: 'brand-assets',
+            progress: 50,
+            barBackgroundColor: '#34D399',
+            barTextColor: '#064E3B',
+          },
+          {
+            id: 'marketing-materials',
+            startTime: '03-08-2025',
+            endTime: '03-14-2025',
+            name: 'Marketing Materials',
+            parentId: 'content-creation',
+            dependency: 'website-content',
+            progress: 20,
+            barBackgroundColor: '#34D399',
+            barTextColor: '#064E3B',
+          },
+          {
+            id: 'content-milestone',
+            startTime: '03-15-2025',
+            name: '🎨 Content Ready',
+            type: 'milestone',
+            dependency: 'marketing-materials',
+          },
+          {
+            id: 'digital-campaign',
+            startTime: '03-17-2025',
+            endTime: '04-11-2025',
+            name: '📱 Digital Campaign Launch',
+            progress: 25,
+            barBackgroundColor: '#F59E0B',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'social-media',
+            startTime: '03-17-2025',
+            endTime: '03-28-2025',
+            name: 'Social Media Campaign',
+            parentId: 'digital-campaign',
+            dependency: 'content-milestone',
+            progress: 40,
+            barBackgroundColor: '#FBBF24',
+            barTextColor: '#92400E',
+          },
+          {
+            id: 'email-campaign',
+            startTime: '03-24-2025',
+            endTime: '04-04-2025',
+            name: 'Email Marketing Campaign',
+            parentId: 'digital-campaign',
+            progress: 30,
+            barBackgroundColor: '#FBBF24',
+            barTextColor: '#92400E',
+          },
+          {
+            id: 'paid-advertising',
+            startTime: '04-01-2025',
+            endTime: '04-11-2025',
+            name: 'Paid Advertising',
+            parentId: 'digital-campaign',
+            dependency: 'social-media',
+            progress: 10,
+            barBackgroundColor: '#FBBF24',
+            barTextColor: '#92400E',
+          },
+          {
+            id: 'soft-launch-milestone',
+            startTime: '04-12-2025',
+            name: '🚀 Soft Launch',
+            type: 'milestone',
+            dependency: 'paid-advertising',
+          },
+          {
+            id: 'pr-outreach',
+            startTime: '04-14-2025',
+            endTime: '04-25-2025',
+            name: '📰 PR & Media Outreach',
+            progress: 15,
+            dependency: 'soft-launch-milestone',
+            barBackgroundColor: '#EF4444',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'influencer-partnerships',
+            startTime: '04-21-2025',
+            endTime: '05-02-2025',
+            name: '👥 Influencer Partnerships',
+            progress: 5,
+            dependency: 'pr-outreach',
+            barBackgroundColor: '#F87171',
+            barTextColor: '#7F1D1D',
+          },
+          {
+            id: 'full-launch-milestone',
+            startTime: '05-03-2025',
+            name: '🎉 Full Product Launch',
+            type: 'milestone',
+            dependency: 'influencer-partnerships',
+          },
+          {
+            id: 'post-launch',
+            startTime: '05-05-2025',
+            endTime: '05-16-2025',
+            name: '📊 Post-Launch Analysis',
+            progress: 0,
+            dependency: 'full-launch-milestone',
+            barBackgroundColor: '#6366F1',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'campaign-complete-milestone',
+            startTime: '05-17-2025',
+            name: '🏁 Campaign Complete',
+            type: 'milestone',
+            dependency: 'post-launch',
+          },
+        ],
+        annotations: [
+          {
+            x1: '04-12-2025',
+            label: {
+              text: 'Soft Launch Day',
+              fontColor: '#111', // optional
+            },
+          },
+        ],
+        tooltipTemplate(task, dateFormat) {
+          if (task.type === 'milestone') {
+            return `
+              <div style='background: #0F172A; color: #F1F5F9; padding: 12px 16px; border-radius: 8px; font-family: Roboto, sans-serif; border: 2px solid #06B6D4; box-shadow: 0 10px 25px rgba(0,0,0,0.3);'>
+                <div style='font-weight: 700; font-size: 14px; margin-bottom: 8px; color: #06B6D4;'>🎯 MILESTONE</div>
+                <div style='font-weight: 600; font-size: 13px; margin-bottom: 6px;'>${task.name}</div>
+                <div style='font-size: 12px; color: #94A3B8;'>Due: ${task.startTime}</div>
+              </div>
+            `;
+          }
+
+          const progressBar = `
+            <div style="width: 100%; background: #475569; border-radius: 4px; height: 6px; margin: 8px 0;">
+              <div style="width: ${task.progress}%; background: ${task.barBackgroundColor || '#06B6D4'}; height: 100%; border-radius: 4px;"></div>
+            </div>
+          `;
+
+          return `
+            <div style='background: #0F172A; color: #F1F5F9; padding: 12px 16px; border-radius: 8px; font-family: Roboto, sans-serif; max-width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid #334155;'>
+              <div style='font-weight: 700; font-size: 14px; margin-bottom: 8px;'>${task.name}</div>
+              <div style='font-size: 12px; color: #94A3B8; margin-bottom: 4px;'>Progress: ${task.progress}%</div>
+              ${progressBar}
+              <div style='font-size: 11px; color: #64748B;'>
+                ${task.startTime} - ${task.endTime || 'Ongoing'}
+              </div>
+            </div>
+          `;
+        },
+        cellBorderColor: '#111',
+      };
+
+      const gantt = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
+      gantt.render();
+    </script>
+  </body>
+</html>

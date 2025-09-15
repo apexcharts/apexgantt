@@ -45,7 +45,6 @@ export interface AnnotationOptions {
     readonly annotationBorderDashArray?: number[];
     readonly annotationBorderWidth?: number;
     readonly annotationOrientation?: Orientation;
-    readonly annotationTextColor?: string;
 }
 export interface InteractiveOptions {
     readonly enableTaskDrag: boolean;
@@ -55,7 +54,11 @@ export interface GanttData {
     readonly annotations: Annotation[];
     readonly series: Task[];
 }
-export type GanttOptions = AnnotationOptions & CommonOptions & FontOptions & GanttBarOptions & GanttData & GanttRowOptions & InteractiveOptions & TooltipOptions;
+export interface BorderOptions {
+    readonly cellBorderColor: string;
+    readonly cellBorderWidth: string;
+}
+export type GanttOptions = AnnotationOptions & BorderOptions & CommonOptions & FontOptions & GanttBarOptions & GanttData & GanttRowOptions & InteractiveOptions & TooltipOptions;
 export declare const ColumnWidthByMode: Record<ViewMode, number>;
 export declare function getDaysInUnit(date: any, mode: any): number;
 export declare const getPixelsPerDayForUnit: (unitStartDate: any, viewMode: any) => number;

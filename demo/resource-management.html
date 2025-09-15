@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Resource Management Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
+      min-height: 100vh;
+      font-family: 'Poppins', sans-serif;
+    "
+  >
+    <div style="max-width: 1300px; margin: 0 auto">
+      <h1
+        style="
+          color: #2d3748;
+          text-align: center;
+          margin-bottom: 10px;
+          font-weight: 700;
+          font-size: 32px;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        "
+      >
+        Team Resource Allocation
+      </h1>
+      <p style="color: #4a5568; text-align: center; margin-bottom: 30px; font-size: 18px; font-weight: 500">
+        Q1 2025 Project Assignment & Capacity Planning
+      </p>
+
+      <!-- Team Legend -->
+      <div
+        style="
+          background: white;
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 20px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        "
+      >
+        <h3 style="margin: 0 0 15px 0; color: #2d3748; font-weight: 600">Team Color Legend:</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 20px">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <div style="width: 20px; height: 12px; background: #ff6b6b; border-radius: 4px"></div>
+            <span style="color: #4a5568; font-weight: 500">Frontend Team</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <div style="width: 20px; height: 12px; background: #4ecdc4; border-radius: 4px"></div>
+            <span style="color: #4a5568; font-weight: 500">Backend Team</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <div style="width: 20px; height: 12px; background: #45b7d1; border-radius: 4px"></div>
+            <span style="color: #4a5568; font-weight: 500">DevOps Team</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <div style="width: 20px; height: 12px; background: #96ceb4; border-radius: 4px"></div>
+            <span style="color: #4a5568; font-weight: 500">QA Team</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <div style="width: 20px; height: 12px; background: #ffeaa7; border-radius: 4px"></div>
+            <span style="color: #4a5568; font-weight: 500">Design Team</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <div style="width: 20px; height: 12px; background: #dda0dd; border-radius: 4px"></div>
+            <span style="color: #4a5568; font-weight: 500">Product Team</span>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="svg-gantt"
+        style="background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12); overflow: hidden"
+      ></div>
+    </div>
+    <script>
+      const ganttOptions = {
+        width: '100%',
+        height: 800,
+        viewMode: 'week',
+        fontFamily: 'Poppins, sans-serif',
+        fontSize: '13px',
+        fontWeight: '500',
+        fontColor: '#2D3748',
+        headerBackground: '#F8F9FA',
+        canvasStyle: 'border: none;',
+        rowBackgroundColors: ['#FFFFFF', '#F8F9FA'],
+        barBorderRadius: '10px',
+        barMargin: 5,
+        arrowColor: '#667EEA',
+        tooltipBGColor: '#2D3748',
+        tooltipBorderColor: '#4A5568',
+        enableTaskDrag: true,
+        enableTaskResize: true,
+        series: [
+          // E-commerce Platform Project
+          {
+            id: 'ecommerce-project',
+            startTime: '01-06-2025',
+            endTime: '03-28-2025',
+            name: '🛒 E-commerce Platform (Team: 12 members)',
+            progress: 35,
+            barBackgroundColor: '#667EEA',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'ecom-frontend',
+            startTime: '01-06-2025',
+            endTime: '02-21-2025',
+            name: '💻 Frontend Development (Sarah, Mike, John)',
+            parentId: 'ecommerce-project',
+            progress: 60,
+            barBackgroundColor: '#FF6B6B',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'ecom-backend',
+            startTime: '01-13-2025',
+            endTime: '03-07-2025',
+            name: '⚙️ Backend API (David, Lisa, Alex)',
+            parentId: 'ecommerce-project',
+            progress: 45,
+            barBackgroundColor: '#4ECDC4',
+            barTextColor: '#2D3748',
+          },
+          {
+            id: 'ecom-design',
+            startTime: '01-06-2025',
+            endTime: '01-31-2025',
+            name: '🎨 UI/UX Design (Emma, Tom)',
+            parentId: 'ecommerce-project',
+            progress: 85,
+            barBackgroundColor: '#FFEAA7',
+            barTextColor: '#2D3748',
+          },
+          {
+            id: 'ecom-testing',
+            startTime: '02-15-2025',
+            endTime: '03-21-2025',
+            name: '🧪 QA Testing (Maria, James)',
+            parentId: 'ecommerce-project',
+            dependency: 'ecom-frontend',
+            progress: 20,
+            barBackgroundColor: '#96CEB4',
+            barTextColor: '#2D3748',
+          },
+          {
+            id: 'ecom-devops',
+            startTime: '03-08-2025',
+            endTime: '03-28-2025',
+            name: '🚀 DevOps & Deployment (Kevin)',
+            parentId: 'ecommerce-project',
+            dependency: 'ecom-backend',
+            progress: 10,
+            barBackgroundColor: '#45B7D1',
+            barTextColor: '#FFFFFF',
+          },
+
+          // Mobile App Project
+          {
+            id: 'mobile-app-project',
+            startTime: '02-03-2025',
+            endTime: '04-11-2025',
+            name: '📱 Mobile App Development (Team: 8 members)',
+            progress: 25,
+            barBackgroundColor: '#A78BFA',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'mobile-frontend',
+            startTime: '02-03-2025',
+            endTime: '03-21-2025',
+            name: '📲 Mobile Frontend (React Native - Anna, Chris)',
+            parentId: 'mobile-app-project',
+            progress: 40,
+            barBackgroundColor: '#FF6B6B',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'mobile-backend',
+            startTime: '02-10-2025',
+            endTime: '03-14-2025',
+            name: '🔗 Mobile API Integration (Paul, Nina)',
+            parentId: 'mobile-app-project',
+            progress: 35,
+            barBackgroundColor: '#4ECDC4',
+            barTextColor: '#2D3748',
+          },
+          {
+            id: 'mobile-design',
+            startTime: '02-03-2025',
+            endTime: '02-28-2025',
+            name: '📐 Mobile UI Design (Sophie, Mark)',
+            parentId: 'mobile-app-project',
+            progress: 70,
+            barBackgroundColor: '#FFEAA7',
+            barTextColor: '#2D3748',
+          },
+          {
+            id: 'mobile-testing',
+            startTime: '03-15-2025',
+            endTime: '04-04-2025',
+            name: '📋 Mobile Testing (Rachel, Steve)',
+            parentId: 'mobile-app-project',
+            dependency: 'mobile-backend',
+            progress: 15,
+            barBackgroundColor: '#96CEB4',
+            barTextColor: '#2D3748',
+          },
+
+          // Analytics Dashboard Project
+          {
+            id: 'analytics-project',
+            startTime: '01-20-2025',
+            endTime: '03-07-2025',
+            name: '📊 Analytics Dashboard (Team: 6 members)',
+            progress: 55,
+            barBackgroundColor: '#F093FB',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'analytics-frontend',
+            startTime: '01-20-2025',
+            endTime: '02-28-2025',
+            name: '📈 Dashboard Frontend (React - Ben, Kate)',
+            parentId: 'analytics-project',
+            progress: 75,
+            barBackgroundColor: '#FF6B6B',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'analytics-backend',
+            startTime: '01-27-2025',
+            endTime: '02-21-2025',
+            name: '🗄️ Data Processing Backend (Oliver, Grace)',
+            parentId: 'analytics-project',
+            progress: 80,
+            barBackgroundColor: '#4ECDC4',
+            barTextColor: '#2D3748',
+          },
+          {
+            id: 'analytics-product',
+            startTime: '01-20-2025',
+            endTime: '02-14-2025',
+            name: '📋 Product Requirements (Jennifer, Ryan)',
+            parentId: 'analytics-project',
+            progress: 90,
+            barBackgroundColor: '#DDA0DD',
+            barTextColor: '#2D3748',
+          },
+
+          // Infrastructure Upgrade
+          {
+            id: 'infrastructure-project',
+            startTime: '02-17-2025',
+            endTime: '04-25-2025',
+            name: '🏗️ Infrastructure Modernization (Team: 4 members)',
+            progress: 30,
+            barBackgroundColor: '#74B9FF',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'infra-planning',
+            startTime: '02-17-2025',
+            endTime: '03-07-2025',
+            name: '📝 Infrastructure Planning (Lucas, Amy)',
+            parentId: 'infrastructure-project',
+            progress: 60,
+            barBackgroundColor: '#DDA0DD',
+            barTextColor: '#2D3748',
+          },
+          {
+            id: 'infra-migration',
+            startTime: '03-08-2025',
+            endTime: '04-11-2025',
+            name: '🔄 Cloud Migration (DevOps - Kevin, Michael)',
+            parentId: 'infrastructure-project',
+            dependency: 'infra-planning',
+            progress: 25,
+            barBackgroundColor: '#45B7D1',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'infra-testing',
+            startTime: '04-12-2025',
+            endTime: '04-25-2025',
+            name: '✅ Infrastructure Testing (Combined QA)',
+            parentId: 'infrastructure-project',
+            dependency: 'infra-migration',
+            progress: 0,
+            barBackgroundColor: '#96CEB4',
+            barTextColor: '#2D3748',
+          },
+
+          // Maintenance & Bug Fixes (Ongoing)
+          {
+            id: 'maintenance',
+            startTime: '01-06-2025',
+            endTime: '04-25-2025',
+            name: '🔧 Maintenance & Bug Fixes (Rotating Team)',
+            progress: 40,
+            barBackgroundColor: '#FD79A8',
+            barTextColor: '#FFFFFF',
+          },
+        ],
+        annotations: [
+          {
+            x1: '02-14-2025',
+            x2: '02-21-2025',
+            bgColor: 'rgba(255, 107, 107, 0.1)',
+            label: {
+              text: 'Sprint Review Week',
+            },
+          },
+          {
+            x1: '03-28-2025',
+            x2: '04-04-2025',
+            bgColor: 'rgba(102, 126, 234, 0.1)',
+            label: {
+              text: 'Major Release Window',
+            },
+          },
+        ],
+        tooltipTemplate(task, dateFormat) {
+          const getTeamInfo = (taskName) => {
+            if (taskName.includes('Frontend') || taskName.includes('UI')) return '👥 Frontend Team';
+            if (taskName.includes('Backend') || taskName.includes('API')) return '👥 Backend Team';
+            if (taskName.includes('DevOps') || taskName.includes('Deployment')) return '👥 DevOps Team';
+            if (taskName.includes('QA') || taskName.includes('Testing')) return '👥 QA Team';
+            if (taskName.includes('Design') || taskName.includes('UI/UX')) return '👥 Design Team';
+            if (taskName.includes('Product') || taskName.includes('Requirements')) return '👥 Product Team';
+            return '👥 Mixed Team';
+          };
+
+          const teamInfo = getTeamInfo(task.name);
+          const progressBar = `
+            <div style="width: 100%; background: #4A5568; border-radius: 4px; height: 8px; margin: 10px 0;">
+              <div style="width: ${task.progress}%; background: ${task.barBackgroundColor || '#667EEA'}; height: 100%; border-radius: 4px;"></div>
+            </div>
+          `;
+
+          return `
+            <div style='background: #2D3748; color: #F7FAFC; padding: 16px 20px; border-radius: 4px; font-family: Poppins, sans-serif; max-width: 320px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); border: 2px solid ${task.barBackgroundColor || '#667EEA'};'>
+              <div style='font-weight: 700; font-size: 15px; margin-bottom: 8px; color: #F7FAFC;'>${task.name}</div>
+              <div style='font-size: 13px; color: #A0AEC0; margin-bottom: 6px;'>${teamInfo}</div>
+              <div style='font-size: 12px; color: #CBD5E0; margin-bottom: 4px;'>Progress: ${task.progress}%</div>
+              ${progressBar}
+              <div style='font-size: 11px; color: #A0AEC0; margin-top: 8px;'>
+                📅 ${task.startTime} - ${task.endTime || 'Ongoing'}
+              </div>
+            </div>
+          `;
+        },
+      };
+
+      const gantt = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
+      gantt.render();
+    </script>
+  </body>
+</html>

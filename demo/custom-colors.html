@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Custom Colors Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+    "
+  >
+    <div style="max-width: 1200px; margin: 0 auto">
+      <div
+        id="svg-gantt"
+        style="background: white; border-radius: 12px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1); overflow: hidden"
+      ></div>
+    </div>
+    <script>
+      const ganttOptions = {
+        width: '100%',
+        height: 700,
+        viewMode: 'week',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '13px',
+        fontWeight: '500',
+        canvasStyle: 'border: none; border-radius: 12px;',
+        rowBackgroundColors: ['#F7FAFC', '#EDF2F7'],
+        barBorderRadius: '8px',
+        barMargin: 4,
+        arrowColor: '#4299E1',
+        tooltipBGColor: '#2D3748',
+        tooltipBorderColor: '#4A5568',
+        enableTaskDrag: false,
+        enableTaskResize: false,
+        series: [
+          {
+            id: 'planning',
+            startTime: '01-08-2025',
+            endTime: '01-17-2025',
+            name: '📋 Project Planning Phase',
+            progress: 100,
+            barBackgroundColor: '#48BB78',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'requirements',
+            startTime: '01-08-2025',
+            endTime: '01-12-2025',
+            name: '📝 Requirements Gathering',
+            parentId: 'planning',
+            progress: 100,
+            barBackgroundColor: '#68D391',
+            barTextColor: '#1A202C',
+          },
+          {
+            id: 'architecture',
+            startTime: '01-13-2025',
+            endTime: '01-17-2025',
+            name: '🏗️ System Architecture',
+            parentId: 'planning',
+            dependency: 'requirements',
+            progress: 100,
+            barBackgroundColor: '#68D391',
+            barTextColor: '#1A202C',
+          },
+          {
+            id: 'frontend',
+            startTime: '01-20-2025',
+            endTime: '02-14-2025',
+            name: '💻 Frontend Development',
+            progress: 75,
+            barBackgroundColor: '#4299E1',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'ui-components',
+            startTime: '01-20-2025',
+            endTime: '01-31-2025',
+            name: '🎨 UI Components',
+            parentId: 'frontend',
+            progress: 90,
+            barBackgroundColor: '#63B3ED',
+            barTextColor: '#1A202C',
+          },
+          {
+            id: 'responsive-design',
+            startTime: '02-01-2025',
+            endTime: '02-07-2025',
+            name: '📱 Responsive Design',
+            parentId: 'frontend',
+            dependency: 'ui-components',
+            progress: 60,
+            barBackgroundColor: '#63B3ED',
+            barTextColor: '#1A202C',
+          },
+          {
+            id: 'integration',
+            startTime: '02-08-2025',
+            endTime: '02-14-2025',
+            name: '🔌 API Integration',
+            parentId: 'frontend',
+            dependency: 'responsive-design',
+            progress: 40,
+            barBackgroundColor: '#63B3ED',
+            barTextColor: '#1A202C',
+          },
+          {
+            id: 'backend',
+            startTime: '01-20-2025',
+            endTime: '02-21-2025',
+            name: '⚙️ Backend Development',
+            progress: 65,
+            barBackgroundColor: '#9F7AEA',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'database',
+            startTime: '01-20-2025',
+            endTime: '01-27-2025',
+            name: '🗄️ Database Setup',
+            parentId: 'backend',
+            progress: 100,
+            barBackgroundColor: '#B794F6',
+            barTextColor: '#1A202C',
+          },
+          {
+            id: 'api-dev',
+            startTime: '01-28-2025',
+            endTime: '02-14-2025',
+            name: '🚀 API Development',
+            parentId: 'backend',
+            dependency: 'database',
+            progress: 70,
+            barBackgroundColor: '#B794F6',
+            barTextColor: '#1A202C',
+          },
+          {
+            id: 'auth-security',
+            startTime: '02-15-2025',
+            endTime: '02-21-2025',
+            name: '🔐 Authentication & Security',
+            parentId: 'backend',
+            dependency: 'api-dev',
+            progress: 30,
+            barBackgroundColor: '#B794F6',
+            barTextColor: '#1A202C',
+          },
+          {
+            id: 'testing',
+            startTime: '02-22-2025',
+            endTime: '03-07-2025',
+            name: '🧪 Testing Phase',
+            progress: 25,
+            barBackgroundColor: '#F56565',
+            barTextColor: '#FFFFFF',
+          },
+          {
+            id: 'unit-tests',
+            startTime: '02-22-2025',
+            endTime: '02-28-2025',
+            name: '🔬 Unit Testing',
+            parentId: 'testing',
+            progress: 45,
+            barBackgroundColor: '#FC8181',
+            barTextColor: '#1A202C',
+          },
+          {
+            id: 'integration-tests',
+            startTime: '03-01-2025',
+            endTime: '03-07-2025',
+            name: '🔗 Integration Testing',
+            parentId: 'testing',
+            dependency: 'unit-tests',
+            progress: 10,
+            barBackgroundColor: '#FC8181',
+            barTextColor: '#1A202C',
+          },
+          {
+            id: 'deployment',
+            startTime: '03-08-2025',
+            endTime: '03-14-2025',
+            name: '🚀 Deployment & Launch',
+            progress: 0,
+            barBackgroundColor: '#ED8936',
+            barTextColor: '#FFFFFF',
+          },
+        ],
+        tooltipTemplate(task, dateFormat) {
+          const progressBar = `
+            <div style="width: 100%; background: #E2E8F0; border-radius: 4px; height: 6px; margin: 8px 0;">
+              <div style="width: ${task.progress}%; background: ${task.barBackgroundColor || '#4299E1'}; height: 100%; border-radius: 4px;"></div>
+            </div>
+          `;
+
+          return `
+            <div style='background: #2D3748; color: white; padding: 12px 16px; border-radius: 8px; font-family: Inter, sans-serif; max-width: 250px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);'>
+              <div style='font-weight: 600; font-size: 14px; margin-bottom: 8px;'>${task.name}</div>
+              <div style='font-size: 12px; color: #A0AEC0; margin-bottom: 4px;'>Progress: ${task.progress}%</div>
+              ${progressBar}
+              <div style='font-size: 11px; color: #CBD5E0;'>
+                ${task.startTime} - ${task.endTime || 'Ongoing'}
+              </div>
+            </div>
+          `;
+        },
+      };
+
+      const gantt = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
+      gantt.render();
+    </script>
+  </body>
+</html>

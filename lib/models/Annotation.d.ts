@@ -10,9 +10,12 @@ export declare enum Orientation {
  * Interface representing the label of an annotation.
  */
 interface AnnotationLabel {
+    readonly fontColor?: string;
+    readonly fontFamily?: string;
+    readonly fontSize?: string;
+    readonly fontWeight?: string;
     readonly orientation: Orientation;
     readonly text: string;
-    readonly textColor: string;
 }
 /**
  * Interface representing an annotation in the graph.
