@@ -1,11 +1,11 @@
 import { Task } from './models/Tasks';
-import { GanttOptions } from './models/Options';
+import { GanttUserOptions } from './models/Options';
 
 export declare class ApexGantt {
     element: HTMLElement;
     private options;
     private viewMode;
-    constructor(element: HTMLElement, options?: GanttOptions);
+    constructor(element: HTMLElement, options?: GanttUserOptions);
     static setLicense(key: string): void;
     /**
      * Handle watermark display based on license validation
@@ -15,7 +15,7 @@ export declare class ApexGantt {
     private setCSSVariables;
     render(): void;
     renderToolbar(container: Element): void;
-    update(options: GanttOptions): void;
+    update(options: GanttUserOptions): void;
     updateTask(taskId: string, updatedTask: Partial<Task>): void;
     zoomIn(): void;
     zoomOut(): void;
