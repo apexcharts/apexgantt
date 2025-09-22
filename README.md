@@ -106,7 +106,7 @@ tooltipTemplate(task, dateFormat) {
       items.push(`
         <div>
           <strong>Start:</strong>
-          <span>${getTaskTextByColumn(task, ColumnKey.StartTime, '')}</span>
+          <span>${getTaskTextByColumn(task, ColumnKey.StartTime, dateFormat)}</span>
         </div>
         <div>
           <strong>End:</strong>
