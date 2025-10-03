@@ -1,0 +1,36 @@
+export type ThemeMode = 'dark' | 'light';
+export interface GanttTheme {
+    readonly tooltipBGColor: string;
+    readonly tooltipBorderColor: string;
+    readonly tooltipTextColor: string;
+    readonly cellBorderColor: string;
+    readonly rowBackgroundColors: readonly string[];
+    readonly headerBackground: string;
+    readonly headerTextColor: string;
+    readonly barBackgroundColor: string;
+    readonly barTextColor: string;
+    readonly arrowColor: string;
+    readonly backgroundColor: string;
+    readonly textColor: string;
+    readonly borderColor: string;
+    readonly annotationBgColor: string;
+    readonly annotationBorderColor: string;
+    readonly dialogBgColor: string;
+    readonly dialogBorderColor: string;
+    readonly buttonBgColor: string;
+    readonly buttonTextColor: string;
+    readonly buttonHoverBgColor: string;
+    readonly toolbarBgColor: string;
+    readonly toolbarBorderColor: string;
+    readonly toolbarHoverBgColor: string;
+    readonly scrollbarTrackColor: string;
+    readonly scrollbarThumbColor: string;
+    readonly scrollbarThumbHoverColor: string;
+    readonly splitBarColor: string;
+    readonly splitBarHoverColor: string;
+    readonly splitBarBorderColor: string;
+    readonly splitBarHandleColor: string;
+}
+export declare const LightTheme: GanttTheme;
+export declare const DarkTheme: GanttTheme;
+export declare function getTheme(mode: ThemeMode): GanttTheme;

@@ -1,3 +1,5 @@
+import { ChartContext } from '../../../../graph-utils/src/index.ts';
+
 export interface DialogOptions {
     closeOnClickOutside?: boolean;
     closeOnEscape?: boolean;
@@ -7,16 +9,22 @@ export interface DialogOptions {
     modal?: boolean;
     title?: string;
     width?: string;
+    positionRelativeToChart?: boolean;
 }
 export declare class Dialog {
+    private chartContext;
     private options;
     private container;
     private overlay;
     private keydownHandler;
     private clickOutsideHandler;
-    constructor(options: DialogOptions);
+    constructor(chartContext: ChartContext, options: DialogOptions);
     private createDialog;
     private createDialogStructure;
+    /**
+     * Position dialog relative to the chart container
+     */
+    private positionRelativeToChart;
     private setupEventListeners;
     private trapFocus;
     private updateDialogContent;

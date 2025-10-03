@@ -1,4 +1,6 @@
 import { GanttOptions } from './Options';
+import { DataManager } from './DataManager';
+import { ChartContext } from '../../../../graph-utils/src/index.ts';
 
 export declare enum TaskType {
     Milestone = "milestone",
@@ -22,10 +24,12 @@ export interface Task {
 }
 export declare class Tasks {
     options: GanttOptions;
-    constructor(options: GanttOptions);
+    chartContext: ChartContext;
+    dataManager: DataManager;
+    constructor(options: GanttOptions, chartContext: ChartContext, dataManager: DataManager);
     generateBody(tasks: Task[], reRender: () => void): HTMLElement;
     generateHeader(headerList: string[]): HTMLElement;
     generateRow(task: Task, reRender: () => void): HTMLTableRowElement;
     generateRows(tasks: Task[], tableBody: HTMLElement, reRender: () => void): HTMLElement;
-    render(reRender: () => void): HTMLElement;
+    render(reRender: () => void): HTMLElement[];
 }

@@ -1,6 +1,7 @@
 import { GanttOptions } from './Options';
 import { ViewMode } from '../util/gantt.util';
 import { Dayjs } from 'dayjs';
+import { ChartContext } from '../../../../graph-utils/src/index.ts';
 
 export declare enum Orientation {
     Horizontal = "horizontal",
@@ -36,7 +37,9 @@ export declare class AnnotationRenderer {
     private options;
     private ganttStartDate;
     private viewMode;
-    constructor(options: GanttOptions, ganttStartDate: Dayjs, viewMode: ViewMode);
+    private chartContext;
+    private totalHeight;
+    constructor(options: GanttOptions, ganttStartDate: Dayjs, viewMode: ViewMode, chartContext: ChartContext, totalHeight: number);
     private calculateWidth;
     private calculateX;
     private drawAnnotation;

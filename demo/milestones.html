@@ -10,7 +10,7 @@
   <body style="margin: 0; padding: 20px; background: #0f172a; min-height: 100vh; font-family: 'Roboto', sans-serif">
     <div style="max-width: 1400px; margin: 0 auto">
       <h1 style="color: #f1f5f9; text-align: center; margin-bottom: 10px; font-weight: 700; font-size: 28px">
-        Product Launch Campaign
+        Dark Theme Demo
       </h1>
       <p style="color: #94a3b8; text-align: center; margin-bottom: 30px; font-size: 16px">
         Key milestones and deliverables tracking
@@ -24,19 +24,14 @@
       const ganttOptions = {
         width: '100%',
         height: 750,
-        viewMode: 'week',
+        viewMode: 'month',
         fontFamily: 'Roboto, sans-serif',
         fontSize: '14px',
         fontWeight: '500',
-        fontColor: '#E2E8F0',
-        headerBackground: '#0F172A',
+        theme: 'dark',
         canvasStyle: 'border: none;',
         barBorderRadius: '6px',
         barMargin: 3,
-        arrowColor: '#06B6D4',
-        tooltipBGColor: '#0F172A',
-        tooltipBorderColor: '#475569',
-        rowBackgroundColors: ['#1E293B', '#334155'],
         enableTaskDrag: false,
         enableTaskResize: false,
         series: [
@@ -60,19 +55,12 @@
             barTextColor: '#0F172A',
           },
           {
-            id: 'market-research-milestone',
-            startTime: '01-16-2025',
-            name: '📊 Market Research Complete',
-            type: 'milestone',
-            dependency: 'competitor-analysis',
-          },
-          {
             id: 'user-surveys',
             startTime: '01-17-2025',
             endTime: '01-24-2025',
             name: 'User Surveys & Feedback',
             parentId: 'research',
-            dependency: 'market-research-milestone',
+            dependency: 'competitor-analysis',
             progress: 85,
             barBackgroundColor: '#38BDF8',
             barTextColor: '#0F172A',

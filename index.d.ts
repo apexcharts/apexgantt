@@ -6,3 +6,7 @@ export type { Annotation } from './lib/models/Annotation';
 export type { GanttUserOptions } from './lib/models/Options';
 export type { Task } from './lib/models/Tasks';
 export { ViewMode } from './lib/util/gantt.util';
+export type { ThemeMode, GanttTheme } from './lib/models/Theme';
+export { LightTheme, DarkTheme, getTheme } from './lib/models/Theme';
+export { GanttEvents } from './lib/types/events';
+export type { TaskUpdateEventDetail, TaskValidationErrorEventDetail, TaskUpdateSuccessEventDetail, TaskUpdateErrorEventDetail, } from './lib/types/events';

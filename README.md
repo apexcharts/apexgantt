@@ -52,9 +52,10 @@ The layout can be configured by either setting the properties in the table below
 
 | Options                   | Default                       | Description                                         |
 | ------------------------- | ----------------------------- | --------------------------------------------------- |
-| width                     | `800`                         | The width of graph container                        |
-| height                    | `800`                         | The height of graph container                       |
+| width                     | `100%`                        | The width of graph container                        |
+| height                    | `500px`                       | The height of graph container                       |
 | series,                   | `[]`                          | Data for gantt. See format below                    |
+| theme,                    | `light`                       | Built in light and dark theme for easy styling      |
 | canvasStyle               | `None`                        | The css styles for canvas root container            |
 | viewMode                  | `ViewMode.Month`              | View mode                                           |
 | arrowColor                | `#0D6EFD`                     | Color for the dependency arrows                     |
@@ -254,4 +255,68 @@ Zooms out the gantt based on current view mode. View mode direction for zoom in 
 
 ```js
 ganttInstance.zoomOut();
+```
+
+## Events
+
+ApexGantt emits CustomEvents on the container element when tasks are updated through the dialog form.
+
+| Event                 | When                          | Detail                                        |
+| --------------------- | ----------------------------- | --------------------------------------------- |
+| `taskUpdate`          | Task is being updated         | `{ taskId, updates, updatedTask, timestamp }` |
+| `taskUpdateSuccess`   | Update completed successfully | `{ taskId, updatedTask, timestamp }`          |
+| `taskValidationError` | Form validation failed        | `{ taskId, errors, timestamp }`               |
+| `taskUpdateError`     | Update failed                 | `{ taskId, error, timestamp }`                |
+
+### Events Usage
+
+#### Vanilla JS
+
+```javascript
+import ApexGantt, {GanttEvents} from 'apexgantt';
+
+const container = document.getElementById('gantt');
+const chart = new ApexGantt(container, {series: tasks});
+chart.render();
+
+// Hook into updates to save to your backend
+container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, async (e) => {
+  const {updatedTask} = e.detail;
+  /* use this updatedTask for any server operations */
+});
+
+// handle any errors
+container.addEventListener(GanttEvents.TASK_UPDATE_ERROR, (e) => {
+  console.error('Update failed:', e.detail.error);
+});
+```
+
+#### React
+
+```jsx
+import {useRef, useEffect} from 'react';
+import ApexGantt, {GanttEvents} from 'apexgantt';
+
+function GanttChart({tasks}) {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const chart = new ApexGantt(containerRef.current, {series: tasks});
+    chart.render();
+
+    const handleSuccess = async (e) => {
+      const {updatedTask} = e.detail;
+      /* use this updatedTask for any server operations */
+    };
+
+    containerRef.current.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, handleSuccess);
+
+    return () => {
+      containerRef.current?.removeEventListener(GanttEvents.TASK_UPDATE_SUCCESS, handleSuccess);
+      chart.destroy();
+    };
+  }, [tasks]);
+
+  return <div ref={containerRef} />;
+}
 ```

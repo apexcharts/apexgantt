@@ -157,6 +157,11 @@
       };
       const s = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
       s.render();
+
+      s.addEventListener('taskUpdateSuccess', (e) => {
+        const {updatedTask} = e.detail;
+        window.alert(JSON.stringify(updatedTask));
+      });
     </script>
   </body>
 </html>

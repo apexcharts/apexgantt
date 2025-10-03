@@ -1,7 +1,7 @@
+import { ThemeMode } from './Theme';
 import { Task } from './Tasks';
 import { Annotation, Orientation } from './Annotation';
 import { ViewMode } from '../util/gantt.util';
-import { ArrowLink } from '../../../../graph-utils/src/index.ts';
 
 export interface AnnotationOptions {
     readonly annotationBgColor?: string;
@@ -15,6 +15,8 @@ export interface BorderOptions {
     readonly cellBorderWidth: string;
 }
 export interface CommonOptions {
+    readonly backgroundColor: string;
+    readonly borderColor: string;
     readonly canvasStyle: string;
     readonly enableExport: boolean;
     readonly enableResize: boolean;
@@ -60,6 +62,7 @@ export interface TooltipOptions {
 }
 export type GanttOptionsInternal = AnnotationOptions & BorderOptions & CommonOptions & FontOptions & GanttBarOptions & GanttData & GanttRowOptions & InteractiveOptions & TooltipOptions;
 export interface GanttUserOptions {
+    readonly theme?: ThemeMode;
     readonly annotationBgColor?: string;
     readonly annotationBorderColor?: string;
     readonly annotationBorderDashArray?: number[];
@@ -67,10 +70,12 @@ export interface GanttUserOptions {
     readonly annotationOrientation?: Orientation;
     readonly annotations?: Annotation[];
     readonly arrowColor?: string;
+    readonly backgroundColor?: string;
     readonly barBackgroundColor?: string;
     readonly barBorderRadius?: string;
     readonly barMargin?: number;
     readonly barTextColor?: string;
+    readonly borderColor?: string;
     readonly canvasStyle?: string;
     readonly cellBorderColor?: string;
     readonly cellBorderWidth?: string;
@@ -102,5 +107,5 @@ export type GanttOptions = GanttOptionsInternal;
 export declare const ColumnWidthByMode: Record<ViewMode, number>;
 export declare function getDaysInUnit(date: any, mode: any): number;
 export declare const getPixelsPerDayForUnit: (unitStartDate: any, viewMode: any) => number;
-export declare const arrowLink: ArrowLink;
+export declare function getDefaultOptions(theme?: ThemeMode): GanttOptionsInternal;
 export declare const DefaultOptions: GanttOptionsInternal;

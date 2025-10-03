@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multiple Gantts in Same Shadow Root Demo</title>
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f5f5f5;
+      }
+      .demo-section {
+        margin: 20px 0;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .controls {
+        margin: 10px 0;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      button {
+        padding: 8px 16px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: #fff;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #f0f0f0;
+      }
+      .shadow-host {
+        width: 100%;
+        min-height: 800px;
+        margin: 10px 0;
+        border: 2px solid #6f42c1;
+        border-radius: 4px;
+        padding: 10px;
+      }
+      .status {
+        margin: 10px 0;
+        padding: 10px;
+        background: #e3f2fd;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Multiple Gantts in Same Shadow Root Demo</h1>
+    <p>This demo tests scenarios where multiple Gantt instances exist within the same Shadow DOM context.</p>
+
+    <div class="demo-section">
+      <h2>Shadow DOM Container (Purple Border)</h2>
+      <p>This container hosts multiple Gantt instances in the same Shadow Root.</p>
+
+      <div class="controls">
+        <button onclick="createFirstGantt()">Create First Gantt</button>
+        <button onclick="createSecondGantt()">Create Second Gantt</button>
+        <button onclick="createBothGantts()">Create Both Gantts</button>
+        <button onclick="destroyFirstGantt()">Destroy First Gantt</button>
+        <button onclick="destroySecondGantt()">Destroy Second Gantt</button>
+        <button onclick="destroyBothGantts()">Destroy Both Gantts</button>
+        <button onclick="recreateFirstAfterDestroy()">Recreate First After Destroy</button>
+      </div>
+
+      <div id="shadow-host" class="shadow-host"></div>
+      <div id="status" class="status">Status: Ready</div>
+    </div>
+
+    <div class="demo-section">
+      <h2>Test Scenarios</h2>
+      <div class="controls">
+        <button onclick="testScenario1()">Scenario 1: Sequential Creation</button>
+        <button onclick="testScenario2()">Scenario 2: Simultaneous Creation</button>
+        <button onclick="testScenario3()">Scenario 3: Destroy First, Check Second</button>
+        <button onclick="testScenario4()">Scenario 4: Recreate After Destroy</button>
+        <button onclick="testScenario5()">Scenario 5: Multiple Create/Destroy Cycles</button>
+      </div>
+      <div id="test-status" class="status">Click a scenario to test</div>
+    </div>
+
+    <script>
+      let ganttInstance1 = null;
+      let ganttInstance2 = null;
+      let shadowRoot = null;
+      let container1 = null;
+      let container2 = null;
+
+      const sampleData1 = [
+        {id: 'proj1-task1', startTime: '10-11-2024', endTime: '11-01-2024', name: 'Project 1 - Task 1', progress: 65},
+        {
+          id: 'proj1-task2',
+          startTime: '11-02-2024',
+          endTime: '11-15-2024',
+          name: 'Project 1 - Task 2',
+          progress: 25,
+          dependency: 'proj1-task1',
+        },
+        {id: 'proj1-task3', startTime: '11-16-2024', endTime: '11-25-2024', name: 'Project 1 - Task 3', progress: 0},
+      ];
+
+      const sampleData2 = [
+        {id: 'proj2-task1', startTime: '10-15-2024', endTime: '11-05-2024', name: 'Project 2 - Task 1', progress: 80},
+        {
+          id: 'proj2-task2',
+          startTime: '11-06-2024',
+          endTime: '11-20-2024',
+          name: 'Project 2 - Task 2',
+          progress: 40,
+          dependency: 'proj2-task1',
+        },
+        {id: 'proj2-task3', startTime: '11-21-2024', endTime: '12-01-2024', name: 'Project 2 - Task 3', progress: 10},
+      ];
+
+      function updateStatus(message) {
+        document.getElementById('status').textContent = `Status: ${message}`;
+      }
+
+      function updateTestStatus(message) {
+        document.getElementById('test-status').textContent = message;
+      }
+
+      function initializeShadowDOM() {
+        const shadowHost = document.getElementById('shadow-host');
+
+        if (!shadowRoot) {
+          shadowRoot = shadowHost.attachShadow({mode: 'open'});
+        }
+
+        // Clear existing content
+        shadowRoot.innerHTML = '';
+
+        // Create containers for two gantts
+        const wrapper = document.createElement('div');
+        wrapper.style.width = '100%';
+        wrapper.style.height = '100%';
+
+        const title1 = document.createElement('h3');
+        title1.textContent = 'Gantt Instance 1 - Project Alpha';
+        title1.style.margin = '0 0 10px 0';
+        title1.style.color = '#007bff';
+
+        container1 = document.createElement('div');
+        container1.id = 'gantt-container-1';
+        container1.style.width = '100%';
+        container1.style.height = '350px';
+        container1.style.marginBottom = '20px';
+        container1.style.border = '1px solid #007bff';
+        container1.style.borderRadius = '4px';
+
+        const title2 = document.createElement('h3');
+        title2.textContent = 'Gantt Instance 2 - Project Beta';
+        title2.style.margin = '0 0 10px 0';
+        title2.style.color = '#28a745';
+
+        container2 = document.createElement('div');
+        container2.id = 'gantt-container-2';
+        container2.style.width = '100%';
+        container2.style.height = '350px';
+        container2.style.border = '1px solid #28a745';
+        container2.style.borderRadius = '4px';
+
+        wrapper.appendChild(title1);
+        wrapper.appendChild(container1);
+        wrapper.appendChild(title2);
+        wrapper.appendChild(container2);
+        shadowRoot.appendChild(wrapper);
+      }
+
+      function createFirstGantt() {
+        try {
+          if (!shadowRoot) {
+            initializeShadowDOM();
+          }
+
+          if (ganttInstance1) {
+            ganttInstance1.destroy();
+          }
+
+          ganttInstance1 = new ApexGantt(container1, {
+            series: sampleData1,
+            viewMode: 'week',
+            tasksContainerWidth: 200,
+          });
+          ganttInstance1.render();
+          updateStatus('First Gantt created successfully');
+        } catch (error) {
+          updateStatus(`Error creating first gantt: ${error.message}`);
+          console.error('First gantt error:', error);
+        }
+      }
+
+      function createSecondGantt() {
+        try {
+          if (!shadowRoot) {
+            initializeShadowDOM();
+          }
+
+          if (ganttInstance2) {
+            ganttInstance2.destroy();
+          }
+
+          ganttInstance2 = new ApexGantt(container2, {
+            series: sampleData2,
+            viewMode: 'week',
+            tasksContainerWidth: 200,
+          });
+          ganttInstance2.render();
+          updateStatus('Second Gantt created successfully');
+        } catch (error) {
+          updateStatus(`Error creating second gantt: ${error.message}`);
+          console.error('Second gantt error:', error);
+        }
+      }
+
+      function createBothGantts() {
+        try {
+          initializeShadowDOM();
+          createFirstGantt();
+          createSecondGantt();
+          updateStatus('Both Gantts created successfully in same Shadow DOM');
+        } catch (error) {
+          updateStatus(`Error creating both gantts: ${error.message}`);
+          console.error('Both gantts error:', error);
+        }
+      }
+
+      function destroyFirstGantt() {
+        try {
+          if (ganttInstance1) {
+            ganttInstance1.destroy();
+            ganttInstance1 = null;
+            container1.innerHTML =
+              '<div style="padding: 20px; text-align: center; color: #666;">First Gantt Destroyed</div>';
+            updateStatus('First Gantt destroyed');
+          } else {
+            updateStatus('First Gantt was not created');
+          }
+        } catch (error) {
+          updateStatus(`Error destroying first gantt: ${error.message}`);
+          console.error('First gantt destroy error:', error);
+        }
+      }
+
+      function destroySecondGantt() {
+        try {
+          if (ganttInstance2) {
+            ganttInstance2.destroy();
+            ganttInstance2 = null;
+            container2.innerHTML =
+              '<div style="padding: 20px; text-align: center; color: #666;">Second Gantt Destroyed</div>';
+            updateStatus('Second Gantt destroyed');
+          } else {
+            updateStatus('Second Gantt was not created');
+          }
+        } catch (error) {
+          updateStatus(`Error destroying second gantt: ${error.message}`);
+          console.error('Second gantt destroy error:', error);
+        }
+      }
+
+      function destroyBothGantts() {
+        try {
+          destroyFirstGantt();
+          destroySecondGantt();
+          updateStatus('Both Gantts destroyed');
+        } catch (error) {
+          updateStatus(`Error destroying both gantts: ${error.message}`);
+        }
+      }
+
+      function recreateFirstAfterDestroy() {
+        try {
+          destroyFirstGantt();
+          setTimeout(() => {
+            createFirstGantt();
+            updateStatus('First Gantt recreated - check if second still works');
+          }, 500);
+        } catch (error) {
+          updateStatus(`Error in recreate scenario: ${error.message}`);
+        }
+      }
+
+      // Test Scenarios
+      function testScenario1() {
+        updateTestStatus('Scenario 1: Testing sequential creation...');
+        initializeShadowDOM();
+
+        setTimeout(() => {
+          updateTestStatus('Creating first gantt...');
+          createFirstGantt();
+
+          setTimeout(() => {
+            updateTestStatus('Creating second gantt...');
+            createSecondGantt();
+            updateTestStatus('Scenario 1 Complete: Both gantts created sequentially. Check if both render correctly.');
+          }, 1000);
+        }, 500);
+      }
+
+      function testScenario2() {
+        updateTestStatus('Scenario 2: Testing simultaneous creation...');
+        createBothGantts();
+        updateTestStatus('Scenario 2 Complete: Both gantts created simultaneously. Check if both render correctly.');
+      }
+
+      function testScenario3() {
+        updateTestStatus('Scenario 3: Testing destroy first, check second...');
+        createBothGantts();
+
+        setTimeout(() => {
+          updateTestStatus('Destroying first gantt...');
+          destroyFirstGantt();
+          updateTestStatus('Scenario 3 Complete: First gantt destroyed. Check if second gantt still works correctly.');
+        }, 2000);
+      }
+
+      function testScenario4() {
+        updateTestStatus('Scenario 4: Testing recreate after destroy...');
+        createBothGantts();
+
+        setTimeout(() => {
+          updateTestStatus('Destroying first gantt...');
+          destroyFirstGantt();
+
+          setTimeout(() => {
+            updateTestStatus('Recreating first gantt...');
+            createFirstGantt();
+            updateTestStatus('Scenario 4 Complete: First gantt recreated. Check if both gantts work correctly.');
+          }, 1000);
+        }, 2000);
+      }
+
+      function testScenario5() {
+        updateTestStatus('Scenario 5: Testing multiple create/destroy cycles...');
+
+        let cycle = 0;
+        const maxCycles = 3;
+
+        function runCycle() {
+          cycle++;
+          updateTestStatus(`Cycle ${cycle}/${maxCycles}: Creating both gantts...`);
+          createBothGantts();
+
+          setTimeout(() => {
+            updateTestStatus(`Cycle ${cycle}/${maxCycles}: Destroying both gantts...`);
+            destroyBothGantts();
+
+            if (cycle < maxCycles) {
+              setTimeout(runCycle, 500);
+            } else {
+              setTimeout(() => {
+                updateTestStatus('Scenario 5 Complete: Multiple cycles finished. Creating final gantts...');
+                createBothGantts();
+                updateTestStatus('Scenario 5 Complete: Check if both gantts work correctly after multiple cycles.');
+              }, 500);
+            }
+          }, 1500);
+        }
+
+        runCycle();
+      }
+
+      // Initialize on page load
+      window.addEventListener('load', () => {
+        initializeShadowDOM();
+        updateStatus('Shadow DOM initialized, ready to create Gantts');
+      });
+    </script>
+  </body>
+</html>
