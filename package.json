@@ -3,7 +3,6 @@
   "version": "3.0.0",
   "dependencies": {
     "dayjs": "^1.11.13",
-    "html2pdf.js": "^0.10.3",
     "lodash": "^4.17.21"
   },
   "type": "module",

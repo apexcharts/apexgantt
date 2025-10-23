@@ -1,4 +1,4 @@
-import { Task } from './Tasks';
+import { Task, TaskInput } from './Tasks';
 import { ChartContext } from '../../../../graph-utils/src/index.ts';
 import { Dayjs } from 'dayjs';
 
@@ -12,13 +12,13 @@ export declare class DataManager {
     private taskMap;
     private taskTree;
     private arrowLinkInstanceId;
-    constructor(tasks?: Task[]);
+    constructor(tasks?: TaskInput[]);
     private buildTaskTree;
     private processLevel;
     private sortTasksByDate;
     private validateTask;
     addDependency(fromId: string, toId: string, type?: Dependency['type']): void;
-    addTask(task: Partial<Task>): void;
+    addTask(taskInput: Partial<TaskInput>): void;
     calculateProgress(): number;
     getDateRange(add: number, viewMode: any): [Dayjs, Dayjs];
     getFlatSortedTasks(tasks: Task[], getAll?: boolean): Task[];
@@ -35,10 +35,10 @@ export declare class DataManager {
     hasChildren(id: string): boolean;
     removeDependency(fromId: string, toId: string): void;
     removeTask(id: string): void;
-    setTasks(tasks: Task[]): void;
+    setTasks(taskInputs: TaskInput[]): void;
     toggleTask(id: string): void;
     setArrowLinkInstanceId(instanceId: string): void;
     updateDependencyArrows(taskId: string, chartContext?: ChartContext): void;
-    updateTask(id: string, updates: Partial<Task>): Task;
+    updateTask(id: string, updates: Partial<TaskInput>): Task;
 }
 export {};

@@ -1,5 +1,5 @@
 import { ViewMode } from './gantt.util';
-import { Task } from '../models/Tasks';
+import { Task, TaskInput } from '../models/Tasks';
 import { GanttOptions } from '../models/Options';
 import { DataManager } from '../models/DataManager';
 import { Dayjs } from 'dayjs';
@@ -26,7 +26,6 @@ export interface ColumnListItem {
 export declare const ColumnList: ColumnListItem[];
 export declare function getTaskTextByColumn(task: Task, columnKey: ColumnKey, inputDateFormat: string): string;
 export declare function getTaskRowElement(context: ChartContext, taskId: string): HTMLElement | null;
-export declare function updateColumnContent(context: ChartContext, taskId: string, columnKey: string, value: string): void;
 export declare function getRowBackgroundColor(index: number, rowBackgroundColors: readonly string[]): string;
 export declare function setTaskRowBackgroundColor(context: ChartContext, taskId: string, bgColor: string): void;
 interface TaskElements {
@@ -35,5 +34,5 @@ interface TaskElements {
     taskRow: HTMLElement | null;
 }
 export declare const getTaskElements: (context: ChartContext, taskId: string) => TaskElements;
-export declare const updateTaskInUI: (context: ChartContext, dataManager: DataManager, taskId: string, updates: Partial<Task>, options: GanttOptions, viewMode: ViewMode, ganttStartDate: Dayjs) => void;
+export declare const updateTaskInUI: (context: ChartContext, dataManager: DataManager, taskId: string, updates: Partial<TaskInput>, options: GanttOptions, viewMode: ViewMode, ganttStartDate: Dayjs) => void;
 export {};

@@ -6,20 +6,25 @@ export declare enum TaskType {
     Milestone = "milestone",
     Task = "task"
 }
-export interface Task {
-    readonly barBackgroundColor?: string;
-    collapsed?: boolean;
-    readonly dependency?: string;
-    readonly endTime: string;
+export interface TaskInput {
     readonly id: string;
-    readonly left?: number;
-    readonly level: number;
     readonly name: string;
-    readonly parentId?: string;
-    readonly progress: number;
-    readonly rowBackgroundColor?: string;
     readonly startTime: string;
+    readonly endTime?: string;
+    readonly progress?: number;
     readonly type?: TaskType;
+    readonly parentId?: string;
+    readonly dependency?: string;
+    readonly barBackgroundColor?: string;
+    readonly rowBackgroundColor?: string;
+    collapsed?: boolean;
+}
+export interface Task extends TaskInput {
+    readonly endTime: string;
+    readonly level?: number;
+    readonly progress: number;
+    readonly type: TaskType;
+    readonly left?: number;
     readonly width?: number;
 }
 export declare class Tasks {
@@ -29,7 +34,9 @@ export declare class Tasks {
     constructor(options: GanttOptions, chartContext: ChartContext, dataManager: DataManager);
     generateBody(tasks: Task[], reRender: () => void): HTMLElement;
     generateHeader(headerList: string[]): HTMLElement;
-    generateRow(task: Task, reRender: () => void): HTMLTableRowElement;
-    generateRows(tasks: Task[], tableBody: HTMLElement, reRender: () => void): HTMLElement;
+    generateRow(task: Task, reRender: () => void): HTMLElement;
+    generateRows(tasks: Task[], bodyContainer: HTMLElement, reRender: () => void): HTMLElement;
+    private fillEmptyRows;
+    private generateEmptyRow;
     render(reRender: () => void): HTMLElement[];
 }

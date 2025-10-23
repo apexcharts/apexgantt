@@ -15,6 +15,7 @@ export declare class TimeLine {
     generateHeader(headerData: HeaderObject[], subHeader: null | string[]): HTMLElement;
     generateRow(taskId: string, cellCount: number): HTMLElement;
     generateRows(tasks: Task[], cellCount: number): HTMLElement;
+    private fillEmptyRows;
     getHeaderData(startDate: Dayjs, endDate: Dayjs, viewMode: ViewMode): [HeaderObject[], null | string[]] | null;
     render(): HTMLElement[] | null;
 }

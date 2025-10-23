@@ -75,7 +75,7 @@ The layout can be configured by either setting the properties in the table below
 | enableTaskResize          | `true`                        | Enable/disable gantt export options                 |
 | headerBackground          | `#f3f3f3`                     | Background color for header                         |
 | inputDateFormat           | `MM-DD-YYYY`                  | Input date format                                   |
-| tasksContainerWidth       | `440`                         | Task sidebar container width                        |
+| tasksContainerWidth       | `425`                         | Task sidebar container width                        |
 | tooltipId                 | `apexgantt-tooltip-container` | The tooltip HTML element id                         |
 | tooltipTemplate           | `tooltipTemplate`             | The HTML template for tooltip                       |
 | tooltipBorderColor        | `#BCBCBC`                     | The border color of tooltip                         |
@@ -184,6 +184,65 @@ Each tasks should be in below format
   },
 ];
 ```
+
+## Data Parsing
+
+Map your existing data structure to ApexGantt format without manual transformation.
+
+```javascript
+const apiData = [
+  {
+    task_id: 'T1',
+    task_name: 'Design Phase',
+    start_date: '01-01-2024',
+    end_date: '01-15-2024',
+    completion: 75,
+  },
+];
+
+const gantt = new ApexGantt(document.getElementById('gantt'), {
+  series: apiData,
+  parsing: {
+    id: 'task_id',
+    name: 'task_name',
+    startTime: 'start_date',
+    endTime: 'end_date',
+    progress: 'completion',
+  },
+});
+```
+
+### Nested Objects & Transforms
+
+Use dot notation for nested properties and inline transforms for data conversion:
+
+```javascript
+const nestedData = [
+  {
+    project: {
+      task: {id: 'T1', title: 'Design'},
+      dates: {start: '01-01-2024', end: '01-15-2024'},
+      status: {completion: 0.75},
+    },
+  },
+];
+
+const gantt = new ApexGantt(document.getElementById('gantt'), {
+  series: nestedData,
+  parsing: {
+    id: 'project.task.id',
+    name: 'project.task.title',
+    startTime: 'project.dates.start',
+    endTime: 'project.dates.end',
+    progress: {
+      key: 'project.status.completion',
+      transform: (value) => value * 100, // convert to percentage
+    },
+  },
+});
+```
+
+**Supported fields:** `id`, `name`, `startTime`, `endTime`, `progress`, `type`, `parentId`, `dependency`, `barBackgroundColor`, `rowBackgroundColor`, `collapsed`
 
 ## 📘 Public API
 

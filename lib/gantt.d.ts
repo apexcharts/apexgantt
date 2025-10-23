@@ -10,6 +10,10 @@ export declare class ApexGantt extends BaseChart {
     private dataManager;
     private zoomHandler;
     private timelineScrollHandlers;
+    private isSyncingScroll;
+    private scrollbarResizeObserver;
+    private splitBarResizeHandler;
+    private stateManager;
     constructor(element: HTMLElement, options?: GanttUserOptions);
     static setLicense(key: string): void;
     private setupShadowDOMEnvironment;
@@ -30,16 +34,20 @@ export declare class ApexGantt extends BaseChart {
      * Setup proper positioning for chart container to support dialogs
      */
     private setupChartContainerPositioning;
+    private disableHeaderMousewheelScroll;
     private createLayout;
     private syncTasksColumnWidths;
+    private setupScrollbarResizeObserver;
+    private setupSplitBarResizeListener;
+    private positionHorizontalScrollbar;
     private compensateForScrollbar;
+    private setupTimelineHorizontalScroll;
+    private applyScrollbarStylesToElement;
     private setupZoomEventListener;
     private setupRowBackgroundColors;
     private renderDependencyArrows;
     private setupDependencyArrowEvents;
-    private createExportDropdown;
     private rerenderTimeline;
-    private setupTimelineHeaderScroll;
     private updateToolbarAfterZoom;
     private cleanupEventListeners;
     private cleanupTooltips;
@@ -49,9 +57,18 @@ export declare class ApexGantt extends BaseChart {
     private createViewModeDisplay;
     renderToolbar(container: HTMLElement): void;
     update(options: GanttUserOptions): void;
+    private detectCurrentTheme;
+    private fillEmptyRowsAfterRender;
+    private createEmptyTimelineRow;
+    private createEmptyTaskRow;
+    private cleanupScrollbarStyles;
     updateTask(taskId: string, updatedTask: Partial<Task>): void;
     zoomIn(): void;
     zoomOut(): void;
+    /**
+     * update the horizontal scrollbar's content width to match timeline width
+     */
+    private updateHorizontalScrollbarContent;
     /**
      * Check if element already has explicit dimensions from CSS
      */

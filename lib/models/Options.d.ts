@@ -1,5 +1,6 @@
+import { ParsingConfig } from '../models/DataParser';
 import { ThemeMode } from './Theme';
-import { Task } from './Tasks';
+import { Task, TaskInput } from './Tasks';
 import { Annotation, Orientation } from './Annotation';
 import { ViewMode } from '../util/gantt.util';
 
@@ -43,7 +44,7 @@ export interface GanttBarOptions {
 }
 export interface GanttData {
     readonly annotations: Annotation[];
-    readonly series: Task[];
+    readonly series: TaskInput[];
 }
 export interface GanttRowOptions {
     readonly rowBackgroundColors: readonly string[];
@@ -94,7 +95,7 @@ export interface GanttUserOptions {
     readonly inputDateFormat?: string;
     readonly rowBackgroundColors?: readonly string[];
     readonly rowHeight?: number;
-    readonly series: Task[];
+    readonly series: TaskInput[] | Record<string, unknown>[];
     readonly tasksContainerWidth?: number;
     readonly tooltipBGColor?: string;
     readonly tooltipBorderColor?: string;
@@ -102,6 +103,7 @@ export interface GanttUserOptions {
     readonly tooltipTemplate?: (task: Task, dateFormat: string) => string;
     readonly viewMode?: ViewMode;
     readonly width?: number | string;
+    readonly parsing?: ParsingConfig;
 }
 export type GanttOptions = GanttOptionsInternal;
 export declare const ColumnWidthByMode: Record<ViewMode, number>;
