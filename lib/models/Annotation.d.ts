@@ -15,17 +15,17 @@ interface AnnotationLabel {
     readonly fontFamily?: string;
     readonly fontSize?: string;
     readonly fontWeight?: string;
-    readonly orientation: Orientation;
-    readonly text: string;
+    readonly orientation?: Orientation;
+    readonly text?: string;
 }
 /**
  * Interface representing an annotation in the graph.
  */
 export interface Annotation {
     readonly bgColor?: string;
-    readonly borderColor: string;
-    readonly borderDashArray: number;
-    readonly borderWidth: number;
+    readonly borderColor?: string;
+    readonly borderDashArray?: number;
+    readonly borderWidth?: number;
     readonly label?: AnnotationLabel;
     readonly x1: string;
     readonly x2?: null | string;
