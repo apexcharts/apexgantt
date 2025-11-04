@@ -21,9 +21,15 @@ export declare const ColumnKeyTitleMap: {
 export interface ColumnListItem {
     readonly key: ColumnKey;
     readonly title: string;
-    readonly width?: string;
+    readonly minWidth?: string;
+    readonly flexGrow?: number;
 }
 export declare const ColumnList: ColumnListItem[];
+/**
+ * generates grid-template-columns string based on column configuration
+ * @returns CSS grid-template-columns value
+ */
+export declare function generateGridTemplateColumns(columns: ColumnListItem[]): string;
 export declare function getTaskTextByColumn(task: Task, columnKey: ColumnKey, inputDateFormat: string): string;
 export declare function getTaskRowElement(context: ChartContext, taskId: string): HTMLElement | null;
 export declare function getRowBackgroundColor(index: number, rowBackgroundColors: readonly string[]): string;

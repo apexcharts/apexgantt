@@ -67,6 +67,7 @@ The layout can be configured by either setting the properties in the table below
 | barTextColor              | `#FFFFFF`                     | Text color for timeline bar                         |
 | cellBorderColor           | `#eff0f0`                     | Border color for all table cells and timeline cells |
 | cellBorderWidth           | `1px`                         | Border width for all table cells and timeline cells |
+| columnConfig              | `undefined`                   | Custom column widths                                |
 | enableToolbar             | `false`                       | Enable/disable graph toolbar                        |
 | enableResize              | `true`                        | Enable/disable gantt sidebar resize                 |
 | enableExport              | `true`                        | Enable/disable gantt export options                 |
@@ -183,6 +184,44 @@ Each tasks should be in below format
     },
   },
 ];
+```
+
+## Column Configuration
+
+Customize task table column widths:
+
+```js
+import {ColumnKey} from 'apexgantt';
+
+const gantt = new ApexGantt(element, {
+  series: tasks,
+  columnConfig: [
+    {
+      key: ColumnKey.Name,
+      title: 'Task Name',
+      minWidth: '100px',
+      flexGrow: 3,
+    },
+    {
+      key: ColumnKey.StartTime,
+      title: 'Start',
+      minWidth: '100px',
+      flexGrow: 1.5,
+    },
+    {
+      key: ColumnKey.Duration,
+      title: 'Duration',
+      minWidth: '80px',
+      flexGrow: 1,
+    },
+    {
+      key: ColumnKey.Progress,
+      title: 'Progress',
+      minWidth: '80px',
+      flexGrow: 1,
+    },
+  ],
+});
 ```
 
 ## Data Parsing

@@ -31,7 +31,16 @@ export declare class Tasks {
     options: GanttOptions;
     chartContext: ChartContext;
     dataManager: DataManager;
+    private effectiveColumnList;
     constructor(options: GanttOptions, chartContext: ChartContext, dataManager: DataManager);
+    /**
+     * Merges user column config with defaults
+     */
+    private mergeColumnConfig;
+    /**
+     * Dynamic CSS for column widths based on configuration
+     */
+    private injectDynamicColumnStyles;
     generateBody(tasks: Task[], reRender: () => void): HTMLElement;
     generateHeader(headerList: string[]): HTMLElement;
     generateRow(task: Task, reRender: () => void): HTMLElement;

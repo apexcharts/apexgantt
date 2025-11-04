@@ -14,6 +14,9 @@ export declare class ApexGantt extends BaseChart {
     private scrollbarResizeObserver;
     private splitBarResizeHandler;
     private stateManager;
+    private containerResizeObserver;
+    private lastKnownWidth;
+    private resizeDebounceTimer;
     constructor(element: HTMLElement, options?: GanttUserOptions);
     static setLicense(key: string): void;
     private setupShadowDOMEnvironment;
@@ -30,6 +33,7 @@ export declare class ApexGantt extends BaseChart {
     private isColorDark;
     private initializeTooltip;
     render(data?: any): any;
+    private performAfterActions;
     /**
      * Setup proper positioning for chart container to support dialogs
      */
@@ -77,6 +81,12 @@ export declare class ApexGantt extends BaseChart {
      * Normalize dimension value to CSS string
      */
     private normalizeDimension;
+    /**
+     * resize observer for container to handle responsive width changes
+     */
+    private setupContainerResizeObserver;
+    private handleContainerResize;
+    private performResize;
     destroy(): void;
     isDestroyed(): boolean;
 }

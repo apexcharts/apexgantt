@@ -2,6 +2,7 @@ import { ParsingConfig } from '../models/DataParser';
 import { ThemeMode } from './Theme';
 import { Task, TaskInput } from './Tasks';
 import { Annotation, Orientation } from './Annotation';
+import { ColumnListItem } from '../util/task.util';
 import { ViewMode } from '../util/gantt.util';
 
 export interface AnnotationOptions {
@@ -27,6 +28,9 @@ export interface CommonOptions {
     readonly tasksContainerWidth: number;
     readonly viewMode: ViewMode;
     readonly width: number | string;
+}
+export interface ColumnOptions {
+    readonly columnConfig?: ColumnListItem[];
 }
 export interface FontOptions {
     readonly fontColor: string;
@@ -61,7 +65,7 @@ export interface TooltipOptions {
     readonly tooltipId: string;
     readonly tooltipTemplate?: (task: Task, dateFormat: string) => string;
 }
-export type GanttOptionsInternal = AnnotationOptions & BorderOptions & CommonOptions & FontOptions & GanttBarOptions & GanttData & GanttRowOptions & InteractiveOptions & TooltipOptions;
+export type GanttOptionsInternal = AnnotationOptions & BorderOptions & CommonOptions & ColumnOptions & FontOptions & GanttBarOptions & GanttData & GanttRowOptions & InteractiveOptions & TooltipOptions;
 export interface GanttUserOptions {
     readonly theme?: ThemeMode;
     readonly annotationBgColor?: string;
@@ -80,6 +84,7 @@ export interface GanttUserOptions {
     readonly canvasStyle?: string;
     readonly cellBorderColor?: string;
     readonly cellBorderWidth?: string;
+    readonly columnConfig?: ColumnListItem[];
     readonly enableExport?: boolean;
     readonly enableResize?: boolean;
     readonly enableTaskDrag?: boolean;
