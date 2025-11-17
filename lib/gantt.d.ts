@@ -16,6 +16,7 @@ export declare class ApexGantt extends BaseChart {
     private stateManager;
     private containerResizeObserver;
     private lastKnownWidth;
+    private lastKnownHeight;
     private resizeDebounceTimer;
     constructor(element: HTMLElement, options?: GanttUserOptions);
     static setLicense(key: string): void;
@@ -82,7 +83,7 @@ export declare class ApexGantt extends BaseChart {
      */
     private normalizeDimension;
     /**
-     * resize observer for container to handle responsive width changes
+     * resize observer for container to handle responsive width and height changes
      */
     private setupContainerResizeObserver;
     private handleContainerResize;
