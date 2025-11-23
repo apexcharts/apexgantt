@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Drag & Resize Events Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .demo-header {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-header h1 {
+        margin: 0 0 10px 0;
+        color: #333;
+      }
+
+      .demo-header p {
+        margin: 0;
+        color: #666;
+      }
+
+      #svg-gantt {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        height: 400px;
+      }
+
+      .event-log {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-top: 20px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .event-log h2 {
+        margin-top: 0;
+        color: #333;
+        font-size: 18px;
+      }
+
+      .event-log-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .clear-log {
+        background: #f44336;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: 'Quicksand', sans-serif;
+        font-weight: 600;
+      }
+
+      .clear-log:hover {
+        background: #d32f2f;
+      }
+
+      .event-item {
+        border-left: 3px solid #2196f3;
+        padding: 10px;
+        margin-bottom: 10px;
+        background: #f8f9fa;
+        border-radius: 0 4px 4px 0;
+        font-size: 13px;
+      }
+
+      .event-item.drag {
+        border-left-color: #4caf50;
+      }
+
+      .event-item.resize {
+        border-left-color: #ff9800;
+      }
+
+      .event-item.update {
+        border-left-color: #9c27b0;
+      }
+
+      .event-time {
+        color: #999;
+        font-size: 11px;
+        margin-bottom: 5px;
+      }
+
+      .event-type {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+      }
+
+      .event-details {
+        color: #666;
+        line-height: 1.4;
+      }
+
+      .event-details strong {
+        color: #333;
+      }
+
+      .no-events {
+        color: #999;
+        text-align: center;
+        padding: 40px;
+        font-style: italic;
+      }
+
+      .instructions {
+        background: #e3f2fd;
+        border: 1px solid #90caf9;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 20px;
+        color: #1565c0;
+      }
+
+      .instructions ul {
+        margin: 10px 0 0 0;
+        padding-left: 20px;
+      }
+
+      .instructions li {
+        margin: 5px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div class="demo-header">
+        <h1>ApexGantt - Drag & Resize Events Demo</h1>
+        <p>Interactive demo showing task drag and resize events</p>
+      </div>
+
+      <div class="instructions">
+        <strong>Instructions:</strong>
+        <ul>
+          <li>Drag any task bar horizontally to move it to a new date</li>
+          <li>Hover over task edges and drag the handles to resize (change duration)</li>
+          <li>Double-click a task to edit it via the dialog</li>
+          <li>Watch the event log below to see all emitted events</li>
+        </ul>
+      </div>
+
+      <div id="svg-gantt"></div>
+
+      <div class="event-log">
+        <div class="event-log-header">
+          <h2>Event Log</h2>
+          <button class="clear-log" onclick="clearEventLog()">Clear Log</button>
+        </div>
+        <div id="event-log-content">
+          <div class="no-events">No events yet. Try dragging or resizing a task!</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // event log management
+      let eventCount = 0;
+      const maxEvents = 50;
+
+      function clearEventLog() {
+        document.getElementById('event-log-content').innerHTML =
+          '<div class="no-events">No events yet. Try dragging or resizing a task!</div>';
+        eventCount = 0;
+      }
+
+      function logEvent(type, detail) {
+        const logContent = document.getElementById('event-log-content');
+
+        // remove "no events" message
+        const noEventsMsg = logContent.querySelector('.no-events');
+        if (noEventsMsg) {
+          noEventsMsg.remove();
+        }
+
+        // format timestamp
+        const timestamp = new Date(detail.timestamp).toLocaleTimeString();
+
+        // create event item
+        const eventItem = document.createElement('div');
+        eventItem.className = `event-item ${type}`;
+
+        let eventHTML = `
+          <div class="event-time">${timestamp}</div>
+          <div class="event-type">${type.toUpperCase()} EVENT</div>
+          <div class="event-details">
+        `;
+
+        // format details based on event type
+        if (type === 'drag') {
+          eventHTML += `
+            <strong>Task ID:</strong> ${detail.taskId}<br>
+            <strong>Days Moved:</strong> ${detail.daysMoved}<br>
+            <strong>Old Dates:</strong> ${detail.oldStartTime} → ${detail.oldEndTime}<br>
+            <strong>New Dates:</strong> ${detail.newStartTime} → ${detail.newEndTime}
+          `;
+
+          if (detail.affectedChildTasks && detail.affectedChildTasks.length > 0) {
+            eventHTML += `<br><strong>Affected Children:</strong> ${detail.affectedChildTasks.length} task(s)`;
+          }
+        } else if (type === 'resize') {
+          eventHTML += `
+            <strong>Task ID:</strong> ${detail.taskId}<br>
+            <strong>Handle:</strong> ${detail.resizeHandle}<br>
+            <strong>Duration Change:</strong> ${detail.durationChange > 0 ? '+' : ''}${detail.durationChange} days<br>
+            <strong>Old Dates:</strong> ${detail.oldStartTime} → ${detail.oldEndTime}<br>
+            <strong>New Dates:</strong> ${detail.newStartTime} → ${detail.newEndTime}
+          `;
+        } else if (type === 'update') {
+          eventHTML += `
+            <strong>Task ID:</strong> ${detail.taskId}<br>
+            <strong>Updated Fields:</strong> ${Object.keys(detail.updates).join(', ')}
+          `;
+        }
+
+        eventHTML += '</div>';
+        eventItem.innerHTML = eventHTML;
+
+        // add to log (prepend for newest first)
+        logContent.insertBefore(eventItem, logContent.firstChild);
+
+        // limit number of events shown
+        eventCount++;
+        if (eventCount > maxEvents) {
+          logContent.removeChild(logContent.lastChild);
+        }
+      }
+
+      // gantt initialization
+      const ganttOptions = {
+        enableTaskDrag: true,
+        enableTaskResize: true,
+        enableTaskEdit: true,
+        viewMode: 'week',
+        series: [
+          {
+            id: 'task-1',
+            startTime: '11-01-2024',
+            endTime: '11-08-2024',
+            name: 'Project Planning',
+            progress: 75,
+          },
+          {
+            id: 'task-2',
+            startTime: '11-04-2024',
+            endTime: '11-12-2024',
+            name: 'Development Phase',
+            progress: 50,
+          },
+          {
+            id: 'task-2.1',
+            startTime: '11-04-2024',
+            endTime: '11-07-2024',
+            name: 'Backend Development',
+            parentId: 'task-2',
+            progress: 60,
+          },
+          {
+            id: 'task-2.2',
+            startTime: '11-08-2024',
+            endTime: '11-12-2024',
+            name: 'Frontend Development',
+            parentId: 'task-2',
+            dependency: 'task-2.1',
+            progress: 40,
+          },
+          {
+            id: 'task-3',
+            startTime: '11-13-2024',
+            endTime: '11-15-2024',
+            name: 'Testing & QA',
+            dependency: 'task-2',
+            progress: 25,
+          },
+          {
+            id: 'task-4',
+            startTime: '11-16-2024',
+            endTime: '11-20-2024',
+            name: 'Deployment',
+            progress: 0,
+          },
+          {
+            id: 'milestone-1',
+            startTime: '11-21-2024',
+            name: 'Project Launch',
+            type: 'milestone',
+            dependency: 'task-4',
+          },
+        ],
+      };
+
+      const container = document.getElementById('svg-gantt');
+      const gantt = new ApexGantt(container, ganttOptions);
+      gantt.render();
+
+      container.addEventListener('taskDragged', (e) => {
+        console.log('Task Dragged:', e.detail);
+        logEvent('drag', e.detail);
+      });
+
+      container.addEventListener('taskResized', (e) => {
+        console.log('Task Resized:', e.detail);
+        logEvent('resize', e.detail);
+      });
+
+      container.addEventListener('taskUpdateSuccess', (e) => {
+        console.log('Task Updated:', e.detail);
+        logEvent('update', e.detail);
+      });
+    </script>
+  </body>
+</html>

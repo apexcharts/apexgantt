@@ -35,6 +35,30 @@ export interface TaskUpdateErrorEventDetail {
     error: Error;
     timestamp: number;
 }
+export interface TaskDraggedEventDetail {
+    taskId: string;
+    oldStartTime: string;
+    oldEndTime: string;
+    newStartTime: string;
+    newEndTime: string;
+    daysMoved: number;
+    affectedChildTasks: Array<{
+        taskId: string;
+        newStartTime: string;
+        newEndTime: string;
+    }>;
+    timestamp: number;
+}
+export interface TaskResizedEventDetail {
+    taskId: string;
+    resizeHandle: 'left' | 'right';
+    oldStartTime: string;
+    oldEndTime: string;
+    newStartTime: string;
+    newEndTime: string;
+    durationChange: number;
+    timestamp: number;
+}
 /**
  * chart event names
  * use these constants to attach event listeners like below
@@ -60,4 +84,12 @@ export declare const GanttEvents: {
      * emits when a task update fails
      */
     readonly TASK_UPDATE_ERROR: "taskUpdateError";
+    /**
+     * emits when a task bar is dragged to a new position
+     */
+    readonly TASK_DRAGGED: "taskDragged";
+    /**
+     * emits when a task bar is resized via handles
+     */
+    readonly TASK_RESIZED: "taskResized";
 };

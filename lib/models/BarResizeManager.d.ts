@@ -15,6 +15,7 @@ export declare class BarResizeManager {
     constructor(taskId: string, options: GanttOptions, viewMode: ViewMode, chartContext: ChartContext, dataManager: DataManager);
     private createMouseMoveHandler;
     private createMouseUpHandler;
+    private emitTaskResizedEvent;
     private createResizeMouseDownHandler;
     makeResizable(barElement: HTMLDivElement, onUpdate?: onUpdateBarCallback): () => void;
 }

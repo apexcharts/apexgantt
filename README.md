@@ -357,14 +357,18 @@ ganttInstance.zoomOut();
 
 ## Events
 
-ApexGantt emits CustomEvents on the container element when tasks are updated through the dialog form.
+ApexGantt emits CustomEvents on the container element for various user interactions, allowing you to track and respond to changes in real-time.
 
-| Event                 | When                          | Detail                                        |
-| --------------------- | ----------------------------- | --------------------------------------------- |
-| `taskUpdate`          | Task is being updated         | `{ taskId, updates, updatedTask, timestamp }` |
-| `taskUpdateSuccess`   | Update completed successfully | `{ taskId, updatedTask, timestamp }`          |
-| `taskValidationError` | Form validation failed        | `{ taskId, errors, timestamp }`               |
-| `taskUpdateError`     | Update failed                 | `{ taskId, error, timestamp }`                |
+### Available Events
+
+| Event | When | Detail |
+| --- | --- | --- |
+| `taskUpdate` | Task is being updated | `{ taskId, updates, updatedTask, timestamp }` |
+| `taskUpdateSuccess` | Update completed successfully | `{ taskId, updatedTask, timestamp }` |
+| `taskValidationError` | Form validation failed | `{ taskId, errors, timestamp }` |
+| `taskUpdateError` | Update failed | `{ taskId, error, timestamp }` |
+| `taskDragged` | Task bar is dragged | `{ taskId, oldStartTime, oldEndTime, newStartTime, newEndTime, daysMoved, affectedChildTasks, timestamp }` |
+| `taskResized` | Task bar is resized | `{ taskId, resizeHandle, oldStartTime, oldEndTime, newStartTime, newEndTime, durationChange, timestamp }` |
 
 ### Events Usage
 

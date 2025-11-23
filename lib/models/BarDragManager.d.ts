@@ -17,6 +17,7 @@ export declare class BarDragManager {
     private createMouseDownHandler;
     private createMouseMoveHandler;
     private createMouseUpHandler;
+    private emitTaskDraggedEvent;
     private isOutOfBounds;
     private moveBar;
     private moveChildBars;
