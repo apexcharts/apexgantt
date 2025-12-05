@@ -6,6 +6,7 @@ export type { Annotation } from './lib/models/Annotation';
 export type { GanttUserOptions } from './lib/models/Options';
 export type { TaskInput, TaskType } from './lib/models/Tasks';
 export { ViewMode } from './lib/util/gantt.util';
+export { ColumnKey } from './lib/util/task.util';
 export type { ThemeMode, GanttTheme } from './lib/models/Theme';
 export { LightTheme, DarkTheme, getTheme } from './lib/models/Theme';
 export { GanttEvents } from './lib/types/events';
