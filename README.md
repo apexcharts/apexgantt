@@ -46,6 +46,20 @@ const gantt = new ApexGantt(document.getElementById('gantt-container'), ganttOpt
 gantt.render();
 ```
 
+## Setting the License
+
+To use ApexGantt with a commercial license, set your license key before creating any chart instances:
+
+```js
+import ApexGantt from 'apexgantt';
+
+// set license key before creating any charts
+ApexGantt.setLicense('your-license-key');
+
+const gantt = new ApexGantt(document.getElementById('gantt-container'), ganttOptions);
+gantt.render();
+```
+
 ## ApexGantt Options
 
 The layout can be configured by either setting the properties in the table below by passing a second arg to ApexGantt with these properties set. The latter takes precedence.

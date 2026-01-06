@@ -1,1 +1,1 @@
-export declare const exportGantt: (element: HTMLElement) => Promise<void>;
+export declare const exportGantt: (element: HTMLElement, type?: string) => Promise<void>;
