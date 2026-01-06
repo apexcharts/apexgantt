@@ -9,6 +9,11 @@
   "main": "./apexgantt.min.js",
   "module": "./apexgantt.es.min.js",
   "types": "./index.d.ts",
+  "license": "See LICENSE in LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/apexcharts/apexgantt"
+  },
   "exports": {
     ".": {
       "import": {
