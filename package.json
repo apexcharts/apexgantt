@@ -1,6 +1,6 @@
 {
   "name": "apexgantt",
-  "version": "3.6.1",
+  "version": "2.2.0",
   "dependencies": {
     "dayjs": "^1.11.13",
     "lodash": "^4.17.21"
@@ -9,11 +9,6 @@
   "main": "./apexgantt.min.js",
   "module": "./apexgantt.es.min.js",
   "types": "./index.d.ts",
-  "license": "See LICENSE in LICENSE",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/apexcharts/apexgantt"
-  },
   "exports": {
     ".": {
       "import": {
