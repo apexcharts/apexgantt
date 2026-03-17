@@ -1,13 +1,12 @@
 {
   "name": "apexgantt",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/apexcharts/apexgantt"
   },
   "dependencies": {
-    "dayjs": "^1.11.13",
-    "lodash": "^4.17.21"
+    "dayjs": "^1.11.13"
   },
   "type": "module",
   "main": "./apexgantt.min.js",

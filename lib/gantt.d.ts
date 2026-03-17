@@ -1,59 +1,59 @@
-import { Task } from './models/Tasks';
+import { Task, TaskInput } from './models/Tasks';
 import { GanttUserOptions } from './models/Options';
 import { BaseChart } from '../../../graph-utils/src/index.ts';
 
 export declare class ApexGantt extends BaseChart {
     private options;
     private viewMode;
-    private stylesInjected;
     private arrowLink;
     private dataManager;
-    private zoomHandler;
-    private timelineScrollHandlers;
-    private isSyncingScroll;
-    private scrollbarResizeObserver;
-    private splitBarResizeHandler;
     private stateManager;
     private containerResizeObserver;
     private lastKnownWidth;
     private lastKnownHeight;
     private resizeDebounceTimer;
+    private dependencyArrowHandler;
+    private rowHoverHandler;
+    private rowHoverLeaveHandler;
+    private criticalPathResult;
+    /** Cached references to frequently queried DOM elements. Populated by cacheDomElements() after each render. */
+    private domCache;
+    private scrollManager;
+    private zoomManager;
+    private layoutManager;
+    private styleManager;
+    private keyboardNavigationManager;
+    private virtualScrollCoordinator;
+    /** MediaQueryList for prefers-reduced-motion. Updated dynamically. */
+    private reducedMotionMQL;
+    private reducedMotionHandler;
     constructor(element: HTMLElement, options?: GanttUserOptions);
     static setLicense(key: string): void;
-    private setupShadowDOMEnvironment;
     /**
-     * Inject all required styles with context awareness
+     * Detect prefers-reduced-motion at init time and listen for runtime changes.
+     * When active, a CSS class is toggled on the root element so that the
+     * `@media (prefers-reduced-motion: reduce)` rules in Gantt.style.ts disable
+     * all transitions/animations automatically.
      */
-    private injectGanttStyles;
-    private injectStylesDirectly;
-    /**
-     * Handle watermark display based on license validation
-     */
-    private handleWatermark;
-    private setCSSVariables;
-    private isColorDark;
+    private setupReducedMotion;
     private initializeTooltip;
-    render(data?: any): any;
+    render(_data?: TaskInput[]): HTMLElement;
+    private cacheDomElements;
+    private clearDomCache;
     private performAfterActions;
     /**
-     * Setup proper positioning for chart container to support dialogs
+     * Create (or re-create) the VirtualScrollCoordinator.
+     * Called once per full render, before the coordinator is used.
      */
-    private setupChartContainerPositioning;
-    private disableHeaderMousewheelScroll;
-    private createLayout;
-    private syncTasksColumnWidths;
-    private setupScrollbarResizeObserver;
-    private setupSplitBarResizeListener;
-    private positionHorizontalScrollbar;
-    private compensateForScrollbar;
-    private setupTimelineHorizontalScroll;
-    private applyScrollbarStylesToElement;
-    private setupZoomEventListener;
+    private initVirtualScrollCoordinator;
+    private setupRowHoverSync;
     private setupRowBackgroundColors;
+    private fadeArrowsAfterAnimation;
     private renderDependencyArrows;
     private setupDependencyArrowEvents;
+    private computeCriticalPath;
+    private applyCriticalPathHighlighting;
     private rerenderTimeline;
-    private updateToolbarAfterZoom;
     private cleanupEventListeners;
     private cleanupTooltips;
     private cleanupDependencyArrows;
@@ -63,21 +63,12 @@ export declare class ApexGantt extends BaseChart {
     renderToolbar(container: HTMLElement): void;
     update(options: GanttUserOptions): void;
     private detectCurrentTheme;
-    private fillEmptyRowsAfterRender;
-    private createEmptyTimelineRow;
-    private createEmptyTaskRow;
-    private cleanupScrollbarStyles;
     updateTask(taskId: string, updatedTask: Partial<Task>): void;
     zoomIn(): void;
     zoomOut(): void;
     /**
      * update the horizontal scrollbar's content width to match timeline width
      */
-    private updateHorizontalScrollbarContent;
-    /**
-     * Check if element already has explicit dimensions from CSS
-     */
-    private hasExplicitDimensions;
     /**
      * Normalize dimension value to CSS string
      */

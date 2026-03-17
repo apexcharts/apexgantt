@@ -58,6 +58,9 @@ export interface InteractiveOptions {
     readonly enableTaskDrag: boolean;
     readonly enableTaskResize: boolean;
 }
+export interface AccessibilityOptions {
+    readonly taskListAriaLabel?: string;
+}
 export interface TooltipOptions {
     readonly enableTooltip: boolean;
     readonly tooltipBGColor: string;
@@ -65,7 +68,31 @@ export interface TooltipOptions {
     readonly tooltipId: string;
     readonly tooltipTemplate?: (task: Task, dateFormat: string) => string;
 }
-export type GanttOptionsInternal = AnnotationOptions & BorderOptions & CommonOptions & ColumnOptions & FontOptions & GanttBarOptions & GanttData & GanttRowOptions & InteractiveOptions & TooltipOptions;
+export interface ParsingOptions {
+    readonly parsing?: ParsingConfig;
+}
+export interface BaselineOptions {
+    /** Whether to render baseline bars below actual bars. Defaults to false. */
+    readonly enabled: boolean;
+    /** Color of the baseline bar. Defaults to '#b0b8c1' (light grey). */
+    readonly color: string;
+}
+export interface GanttBaselineConfig {
+    readonly baseline: BaselineOptions;
+}
+export interface CriticalPathOptions {
+    /** When true, tasks and arrows on the critical path are highlighted. Defaults to false. */
+    readonly enableCriticalPath: boolean;
+    /** Fill color for critical-path task bars. Defaults to '#e53935'. */
+    readonly criticalBarColor: string;
+    /** Stroke color for critical-path dependency arrows. Defaults to '#e53935'. */
+    readonly criticalArrowColor: string;
+}
+export type GanttOptionsInternal = AccessibilityOptions & AnnotationOptions & BorderOptions & CommonOptions & ColumnOptions & CriticalPathOptions & FontOptions & GanttBarOptions & GanttBaselineConfig & GanttData & GanttRowOptions & InteractiveOptions & ParsingOptions & TooltipOptions;
+/** Mutable intermediate type used only during options merging in update() */
+export type GanttOptionsMutable = {
+    -readonly [K in keyof GanttOptionsInternal]: GanttOptionsInternal[K];
+};
 export interface GanttUserOptions {
     readonly theme?: ThemeMode;
     readonly annotationBgColor?: string;
@@ -80,8 +107,13 @@ export interface GanttUserOptions {
     readonly barBorderRadius?: string;
     readonly barMargin?: number;
     readonly barTextColor?: string;
+    /** Baseline options. When `enabled` is true, tasks with a `baseline` field render a thin bar below the actual bar. */
+    readonly baseline?: Partial<BaselineOptions>;
     readonly borderColor?: string;
     readonly canvasStyle?: string;
+    readonly criticalBarColor?: string;
+    readonly criticalArrowColor?: string;
+    readonly enableCriticalPath?: boolean;
     readonly cellBorderColor?: string;
     readonly cellBorderWidth?: string;
     readonly columnConfig?: ColumnListItem[];
@@ -109,10 +141,11 @@ export interface GanttUserOptions {
     readonly viewMode?: ViewMode;
     readonly width?: number | string;
     readonly parsing?: ParsingConfig;
+    readonly taskListAriaLabel?: string;
 }
 export type GanttOptions = GanttOptionsInternal;
 export declare const ColumnWidthByMode: Record<ViewMode, number>;
-export declare function getDaysInUnit(date: any, mode: any): number;
-export declare const getPixelsPerDayForUnit: (unitStartDate: any, viewMode: any) => number;
+export declare function getDaysInUnit(date: string | Date, mode: ViewMode): number;
+export declare const getPixelsPerDayForUnit: (unitStartDate: string | Date, viewMode: ViewMode) => number;
 export declare function getDefaultOptions(theme?: ThemeMode): GanttOptionsInternal;
 export declare const DefaultOptions: GanttOptionsInternal;

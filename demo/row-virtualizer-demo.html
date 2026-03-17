@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Row Virtualizer Demo</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 20px;
+      }
+      #gantt-container {
+        width: 100%;
+        height: 600px;
+      }
+      .controls {
+        margin-bottom: 10px;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ApexGantt Row Virtualizer Demo</h1>
+    <div class="controls">
+      <label>
+        Row count:
+        <select id="row-count">
+          <option value="20">20</option>
+          <option value="100">100</option>
+          <option value="500">500</option>
+          <option value="1000" selected>1000</option>
+          <option value="5000">5000</option>
+        </select>
+      </label>
+      <label>
+        <input type="checkbox" id="use-hierarchy" checked />
+        Parent/child hierarchy
+      </label>
+      <label>
+        <input type="checkbox" id="use-deps" checked />
+        Dependency arrows
+      </label>
+      <button onclick="renderGantt()">Render</button>
+    </div>
+    <div id="gantt-container"></div>
+
+    <script src="../apexgantt.min.js"></script>
+    <script>
+      let gantt;
+
+      /**
+       * Generate flat tasks with optional parent/child grouping and dependency arrows.
+       *
+       * Hierarchy: every 5th task becomes a parent; the following 4 are its children.
+       * Dependencies: each child depends on the previous sibling (FS).
+       */
+      function generateTasks(count, useHierarchy, useDeps) {
+        const tasks = [];
+        const startDate = new Date('2026-01-01');
+
+        let parentId = null;
+        let prevSiblingId = null;
+        let positionInGroup = 0; // 0 = parent, 1-4 = children
+
+        // Pre-compute a random day-offset for each group so bars are scattered
+        // across a ~4-month window rather than stepping in uniform 14-day blocks.
+        // Using a seeded sequence (simple LCG) keeps the layout stable across
+        // re-renders without needing a library.
+        const totalGroups = Math.ceil(count / 5);
+        const WINDOW_DAYS = 120; // scatter within Jan–Apr 2026
+        let seed = 42;
+        const rand = () => {
+          seed = (seed * 1664525 + 1013904223) & 0x7fffffff;
+          return seed / 0x7fffffff;
+        };
+        const groupOffsets = Array.from({length: totalGroups}, () => Math.floor(rand() * WINDOW_DAYS));
+
+        for (let i = 0; i < count; i++) {
+          const groupIndex = Math.floor(i / 5);
+          const groupStart = new Date(startDate);
+          groupStart.setDate(groupStart.getDate() + groupOffsets[groupIndex]);
+
+          const start = new Date(groupStart);
+          start.setDate(start.getDate() + positionInGroup * 3);
+
+          const end = new Date(start);
+          end.setDate(end.getDate() + 5 + (positionInGroup === 0 ? 10 : 3));
+
+          const id = `task-${i}`;
+
+          const task = {
+            id,
+            name: positionInGroup === 0 ? `Group ${Math.floor(i / 5) + 1}` : `Task ${i}`,
+            startTime: start.toISOString().split('T')[0],
+            endTime: end.toISOString().split('T')[0],
+            progress: Math.floor(Math.random() * 100),
+          };
+
+          if (useHierarchy) {
+            if (positionInGroup === 0) {
+              // this task is a parent
+              parentId = id;
+              prevSiblingId = null;
+            } else {
+              task.parentId = parentId;
+              if (useDeps && prevSiblingId) {
+                task.dependency = prevSiblingId;
+              }
+              prevSiblingId = id;
+            }
+          } else if (useDeps && i > 0 && i % 5 === 0) {
+            // flat mode: link every 5th task to the one before it
+            task.dependency = `task-${i - 1}`;
+          }
+
+          tasks.push(task);
+          positionInGroup = (positionInGroup + 1) % 5;
+        }
+
+        return tasks;
+      }
+
+      function renderGantt() {
+        const count = parseInt(document.getElementById('row-count').value);
+        const useHierarchy = document.getElementById('use-hierarchy').checked;
+        const useDeps = document.getElementById('use-deps').checked;
+        const tasks = generateTasks(count, useHierarchy, useDeps);
+
+        if (gantt) {
+          gantt.destroy();
+        }
+
+        gantt = new ApexGantt(document.getElementById('gantt-container'), {
+          series: tasks,
+          height: 600,
+          enableResize: true,
+        });
+
+        gantt.render();
+      }
+
+      renderGantt();
+    </script>
+  </body>
+</html>

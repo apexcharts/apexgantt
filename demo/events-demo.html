@@ -159,16 +159,6 @@
         <p>Interactive demo showing task drag and resize events</p>
       </div>
 
-      <div class="instructions">
-        <strong>Instructions:</strong>
-        <ul>
-          <li>Drag any task bar horizontally to move it to a new date</li>
-          <li>Hover over task edges and drag the handles to resize (change duration)</li>
-          <li>Double-click a task to edit it via the dialog</li>
-          <li>Watch the event log below to see all emitted events</li>
-        </ul>
-      </div>
-
       <div id="svg-gantt"></div>
 
       <div class="event-log">
@@ -236,9 +226,13 @@
             <strong>New Dates:</strong> ${detail.newStartTime} → ${detail.newEndTime}
           `;
         } else if (type === 'update') {
+          const task = detail.updatedTask || {};
           eventHTML += `
             <strong>Task ID:</strong> ${detail.taskId}<br>
-            <strong>Updated Fields:</strong> ${Object.keys(detail.updates).join(', ')}
+            <strong>Name:</strong> ${task.name || ''}<br>
+            <strong>Start:</strong> ${task.startTime || ''}<br>
+            <strong>End:</strong> ${task.endTime || ''}<br>
+            <strong>Progress:</strong> ${task.progress ?? ''}%
           `;
         }
 

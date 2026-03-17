@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt — Accessibility Demo (WCAG 2.1 AA)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f7fa;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 4px;
+      }
+
+      .subtitle {
+        color: #555;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+      }
+
+      .instructions {
+        background: #e8f4fd;
+        border: 1px solid #b3d8f5;
+        border-radius: 6px;
+        padding: 14px 18px;
+        margin-bottom: 20px;
+        font-size: 0.875rem;
+        line-height: 1.6;
+      }
+
+      .instructions h2 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+      }
+
+      .instructions ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      kbd {
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        padding: 1px 5px;
+        font-family: monospace;
+        font-size: 0.85em;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+      }
+
+      #gantt-a11y {
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ApexGantt — Accessibility Demo</h1>
+    <p class="subtitle">WCAG 2.1 AA · ARIA roles · Keyboard navigation · Focus management · prefers-reduced-motion</p>
+
+    <div id="gantt-a11y"></div>
+
+    <div class="instructions">
+      <h2>⌨️ Keyboard Navigation</h2>
+      <ul>
+        <li>Click any task row or press <kbd>Tab</kbd> to focus the task list.</li>
+        <li><kbd>↑</kbd> / <kbd>↓</kbd> — move between rows</li>
+        <li><kbd>→</kbd> — expand a collapsed parent / move to first child</li>
+        <li><kbd>←</kbd> — collapse an expanded parent / move to parent row</li>
+        <li><kbd>Home</kbd> — jump to first row &nbsp;|&nbsp; <kbd>End</kbd> — jump to last row</li>
+        <li><kbd>Space</kbd> — select / deselect the focused row</li>
+        <li><kbd>Enter</kbd> — open the edit form for the focused row (when task editing is enabled)</li>
+        <li><kbd>Escape</kbd> — release focus from the task list</li>
+        <li>
+          Task bars in the timeline are focusable via <kbd>Tab</kbd>; press <kbd>Enter</kbd> or <kbd>Space</kbd> to open
+          the edit form.
+        </li>
+      </ul>
+    </div>
+
+    <script>
+      const ganttOptions = {
+        taskListAriaLabel: 'Project task list — WCAG 2.1 AA demo',
+        enableTaskEdit: true,
+        enableTaskDrag: true,
+        enableTaskResize: true,
+        enableTooltip: true,
+        height: 500,
+        series: [
+          {
+            id: 'phase1',
+            startTime: '03-01-2025',
+            endTime: '03-31-2025',
+            name: 'Phase 1 — Planning',
+            progress: 100,
+          },
+          {
+            id: 'p1t1',
+            startTime: '03-01-2025',
+            endTime: '03-10-2025',
+            name: 'Requirements gathering',
+            parentId: 'phase1',
+            progress: 100,
+          },
+          {
+            id: 'p1t2',
+            startTime: '03-11-2025',
+            endTime: '03-20-2025',
+            name: 'Stakeholder sign-off',
+            parentId: 'phase1',
+            dependency: 'p1t1',
+            progress: 100,
+          },
+          {
+            id: 'p1t3',
+            startTime: '03-21-2025',
+            endTime: '03-31-2025',
+            name: 'Architecture design',
+            parentId: 'phase1',
+            dependency: 'p1t2',
+            progress: 100,
+          },
+          {
+            id: 'ms1',
+            startTime: '03-31-2025',
+            name: 'Planning complete ✓',
+            dependency: 'p1t3',
+            type: 'milestone',
+          },
+          {
+            id: 'phase2',
+            startTime: '04-01-2025',
+            endTime: '05-15-2025',
+            name: 'Phase 2 — Development',
+            progress: 60,
+          },
+          {
+            id: 'p2t1',
+            startTime: '04-01-2025',
+            endTime: '04-18-2025',
+            name: 'Backend API',
+            parentId: 'phase2',
+            progress: 85,
+          },
+          {
+            id: 'p2t2',
+            startTime: '04-01-2025',
+            endTime: '04-25-2025',
+            name: 'Frontend UI',
+            parentId: 'phase2',
+            progress: 70,
+          },
+          {
+            id: 'p2t3',
+            startTime: '04-26-2025',
+            endTime: '05-15-2025',
+            name: 'Integration & QA',
+            parentId: 'phase2',
+            dependency: 'p2t1',
+            progress: 20,
+          },
+          {
+            id: 'phase3',
+            startTime: '05-16-2025',
+            endTime: '05-30-2025',
+            name: 'Phase 3 — Launch',
+            progress: 0,
+          },
+          {
+            id: 'p3t1',
+            startTime: '05-16-2025',
+            endTime: '05-23-2025',
+            name: 'User acceptance testing',
+            parentId: 'phase3',
+            dependency: 'p2t3',
+            progress: 0,
+          },
+          {
+            id: 'p3t2',
+            startTime: '05-24-2025',
+            endTime: '05-29-2025',
+            name: 'Production deployment',
+            parentId: 'phase3',
+            dependency: 'p3t1',
+            progress: 0,
+          },
+          {
+            id: 'ms2',
+            startTime: '05-30-2025',
+            name: 'Project launch 🚀',
+            dependency: 'p3t2',
+            type: 'milestone',
+          },
+        ],
+        tooltipTemplate: (task, dateFormat) => {
+          return `
+            <div style="padding:10px 14px;">
+              <strong>${task.name}</strong><br/>
+              <small>Start: ${task.startTime}</small><br/>
+              <small>End: ${task.endTime || '—'}</small><br/>
+              <small>Progress: ${task.progress ?? 0}%</small>
+            </div>
+          `;
+        },
+      };
+
+      const gantt = new ApexGantt(document.getElementById('gantt-a11y'), ganttOptions);
+      gantt.render();
+    </script>
+  </body>
+</html>

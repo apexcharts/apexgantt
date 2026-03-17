@@ -5,7 +5,7 @@ import { TaskInput } from './Tasks';
  */
 export type ParsingValue = string | {
     key: string;
-    transform?: (value: any) => any;
+    transform?: (value: unknown) => unknown;
 };
 /**
  * Configuration for parsing raw data into TaskInput format
@@ -42,12 +42,17 @@ export declare class DataParser {
      */
     private static processParsingValue;
     /**
+     * Build a TaskInput from a raw item using the provided config.
+     * Returns null if required fields are missing or cannot be extracted.
+     */
+    private static buildTaskInput;
+    /**
      * Parse an array of raw data objects into TaskInput array
      * @param data - Array of raw data objects
      * @param config - Parsing configuration mapping
      * @returns Array of TaskInput objects
      */
-    static parse(data: any[], config: ParsingConfig): TaskInput[];
+    static parse(data: unknown[], config: ParsingConfig): TaskInput[];
     /**
      * validate parsing configuration
      * @param config - parsing configuration to validate

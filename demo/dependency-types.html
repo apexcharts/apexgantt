@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt — Dependency Types (FS / SS / FF / SF) with Lag &amp; Lead</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: Quicksand, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f8f9fa;
+      }
+      h1 {
+        font-size: 1.4rem;
+        color: #333;
+        margin-bottom: 4px;
+      }
+      p.subtitle {
+        color: #666;
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+      }
+      .section {
+        margin-bottom: 40px;
+        background: #fff;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      }
+      .section h2 {
+        font-size: 1.1rem;
+        color: #0d6efd;
+        margin: 0 0 4px 0;
+      }
+      .section p {
+        font-size: 0.85rem;
+        color: #555;
+        margin: 0 0 12px 0;
+      }
+      table.legend {
+        border-collapse: collapse;
+        font-size: 0.8rem;
+        margin-bottom: 16px;
+      }
+      table.legend th,
+      table.legend td {
+        border: 1px solid #ddd;
+        padding: 4px 10px;
+        text-align: left;
+      }
+      table.legend th {
+        background: #f3f3f3;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ApexGantt — All Dependency Types</h1>
+    <p class="subtitle">
+      Demonstrates FS (Finish-to-Start), SS (Start-to-Start), FF (Finish-to-Finish) and SF (Start-to-Finish)
+      dependencies, plus lag (positive offset) and lead (negative offset).
+    </p>
+
+    <!-- FS dependency (default / backwards-compat string syntax) -->
+    <div class="section">
+      <h2>Finish-to-Start (FS) — backwards-compatible string syntax</h2>
+      <p>
+        Task B cannot start until Task A finishes. The dependency is expressed as a plain string (existing API — still
+        works).
+      </p>
+      <div id="gantt-fs"></div>
+    </div>
+
+    <!-- SS dependency -->
+    <div class="section">
+      <h2>Start-to-Start (SS)</h2>
+      <p>Task B cannot start until Task A starts. The arrow exits A's left edge and enters B's left edge.</p>
+      <div id="gantt-ss"></div>
+    </div>
+
+    <!-- FF dependency -->
+    <div class="section">
+      <h2>Finish-to-Finish (FF)</h2>
+      <p>Task B cannot finish until Task A finishes. The arrow exits A's right edge and enters B's right edge.</p>
+      <div id="gantt-ff"></div>
+    </div>
+
+    <!-- SF dependency -->
+    <div class="section">
+      <h2>Start-to-Finish (SF)</h2>
+      <p>Task B cannot finish until Task A starts. The arrow exits A's left edge and enters B's right edge.</p>
+      <div id="gantt-sf"></div>
+    </div>
+
+    <!-- Lag / Lead -->
+    <div class="section">
+      <h2>Lag &amp; Lead on FS</h2>
+      <p>
+        Lag (positive) delays B's start; lead (negative) means B can overlap A. The
+        <code>lag</code> value is stored on the dependency and available in the data model.
+      </p>
+      <div id="gantt-lag"></div>
+    </div>
+
+    <!-- Mixed — all 4 types in one chart -->
+    <div class="section">
+      <h2>Mixed — All 4 dependency types in one chart</h2>
+      <div id="gantt-mixed"></div>
+    </div>
+
+    <table class="legend">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Meaning</th>
+          <th>Arrow from → to</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>FS</strong></td>
+          <td>B cannot start until A finishes</td>
+          <td>A finish → B start</td>
+        </tr>
+        <tr>
+          <td><strong>SS</strong></td>
+          <td>B cannot start until A starts</td>
+          <td>A start → B start</td>
+        </tr>
+        <tr>
+          <td><strong>FF</strong></td>
+          <td>B cannot finish until A finishes</td>
+          <td>A finish → B finish</td>
+        </tr>
+        <tr>
+          <td><strong>SF</strong></td>
+          <td>B cannot finish until A starts (rare)</td>
+          <td>A start → B finish</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <script>
+      const base = {
+        enableTaskDrag: true,
+        enableTaskResize: true,
+        viewMode: 'week',
+      };
+
+      // ── FS (string syntax – backwards compat) ──────────────────────────────
+      new ApexGantt(document.getElementById('gantt-fs'), {
+        ...base,
+        series: [
+          {id: 'a', name: 'Task A', startTime: '01-01-2025', endTime: '01-10-2025', progress: 100},
+          {
+            id: 'b',
+            name: 'Task B (FS)',
+            startTime: '01-11-2025',
+            endTime: '01-20-2025',
+            dependency: 'a', // plain string → FS
+          },
+        ],
+      }).render();
+
+      // ── SS ─────────────────────────────────────────────────────────────────
+      new ApexGantt(document.getElementById('gantt-ss'), {
+        ...base,
+        series: [
+          {id: 'a', name: 'Task A', startTime: '01-01-2025', endTime: '01-15-2025', progress: 60},
+          {
+            id: 'b',
+            name: 'Task B (SS)',
+            startTime: '01-03-2025',
+            endTime: '01-20-2025',
+            dependency: {taskId: 'a', type: 'SS'},
+          },
+        ],
+      }).render();
+
+      // ── FF ─────────────────────────────────────────────────────────────────
+      new ApexGantt(document.getElementById('gantt-ff'), {
+        ...base,
+        series: [
+          {id: 'a', name: 'Task A', startTime: '01-01-2025', endTime: '01-15-2025', progress: 80},
+          {
+            id: 'b',
+            name: 'Task B (FF)',
+            startTime: '01-05-2025',
+            endTime: '01-15-2025',
+            dependency: {taskId: 'a', type: 'FF'},
+          },
+        ],
+      }).render();
+
+      // ── SF ─────────────────────────────────────────────────────────────────
+      new ApexGantt(document.getElementById('gantt-sf'), {
+        ...base,
+        series: [
+          {id: 'a', name: 'Task A', startTime: '01-01-2025', endTime: '01-10-2025', progress: 50},
+          {
+            id: 'b',
+            name: 'Task B (SF)',
+            startTime: '01-05-2025',
+            endTime: '01-15-2025',
+            dependency: {taskId: 'a', type: 'SF'},
+          },
+        ],
+      }).render();
+
+      // ── Lag / Lead ─────────────────────────────────────────────────────────
+      new ApexGantt(document.getElementById('gantt-lag'), {
+        ...base,
+        series: [
+          {id: 'a', name: 'Task A', startTime: '01-01-2025', endTime: '01-10-2025', progress: 100},
+          {
+            id: 'b',
+            name: 'Task B (FS + 3d lag)',
+            startTime: '01-14-2025', // starts 3 days after A finishes (lag=3)
+            endTime: '01-22-2025',
+            dependency: {taskId: 'a', type: 'FS', lag: 3},
+          },
+          {
+            id: 'c',
+            name: 'Task C (FS − 2d lead)',
+            startTime: '01-09-2025', // starts 2 days before A finishes (lead=-2)
+            endTime: '01-18-2025',
+            dependency: {taskId: 'a', type: 'FS', lag: -2},
+          },
+        ],
+      }).render();
+
+      // ── Mixed ──────────────────────────────────────────────────────────────
+      new ApexGantt(document.getElementById('gantt-mixed'), {
+        ...base,
+        series: [
+          {id: 'project', name: 'Project', startTime: '01-01-2025', endTime: '01-31-2025', progress: 40},
+          {
+            id: 'a',
+            name: 'Task A',
+            startTime: '01-01-2025',
+            endTime: '01-10-2025',
+            parentId: 'project',
+            progress: 100,
+          },
+          {
+            id: 'b',
+            name: 'Task B (FS from A)',
+            startTime: '01-11-2025',
+            endTime: '01-18-2025',
+            parentId: 'project',
+            dependency: 'a', // plain string = FS
+          },
+          {
+            id: 'c',
+            name: 'Task C (SS with A)',
+            startTime: '01-03-2025',
+            endTime: '01-15-2025',
+            parentId: 'project',
+            dependency: {taskId: 'a', type: 'SS'},
+          },
+          {
+            id: 'd',
+            name: 'Task D (FF with B)',
+            startTime: '01-08-2025',
+            endTime: '01-18-2025',
+            parentId: 'project',
+            dependency: {taskId: 'b', type: 'FF'},
+          },
+          {
+            id: 'e',
+            name: 'Task E (SF from A)',
+            startTime: '01-05-2025',
+            endTime: '01-20-2025',
+            parentId: 'project',
+            dependency: {taskId: 'a', type: 'SF'},
+          },
+        ],
+      }).render();
+    </script>
+  </body>
+</html>

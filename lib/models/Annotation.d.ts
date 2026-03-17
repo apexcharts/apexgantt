@@ -51,6 +51,6 @@ export declare class AnnotationRenderer {
     /**
      * Render all annotations.
      */
-    render(): any[];
+    render(): HTMLElement[];
 }
 export {};

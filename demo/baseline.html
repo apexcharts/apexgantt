@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt — Baseline Overlay (Planned vs. Actual)</title>
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 20px;
+        background: #f8f9fa;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin-bottom: 4px;
+      }
+
+      p {
+        color: #555;
+        margin-bottom: 16px;
+        font-size: 14px;
+      }
+
+      .legend {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 16px;
+        font-size: 13px;
+        align-items: center;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      /* Solid bar representing the actual schedule */
+      .legend-actual {
+        width: 40px;
+        height: 14px;
+        border-radius: 3px;
+        background: #87b7fe;
+      }
+
+      /* Hatched bar representing the baseline plan */
+      .legend-baseline {
+        width: 40px;
+        height: 14px;
+        border-radius: 3px;
+        background-color: #87b7fe;
+        background-image: repeating-linear-gradient(
+          -45deg,
+          transparent 0px,
+          transparent 4px,
+          rgba(0, 0, 0, 0.18) 4px,
+          rgba(0, 0, 0, 0.18) 7px
+        );
+        opacity: 0.5;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Baseline Overlay — Planned vs. Actual Bars</h1>
+    <p>
+      The hatched overlay shows the original planned (baseline) schedule. It uses the same colour as the actual bar but
+      with a diagonal stripe pattern and reduced opacity so both periods are easy to compare at a glance.
+    </p>
+
+    <div id="svg-gantt" style="margin: 0 auto"></div>
+
+    <script>
+      const ganttOptions = {
+        enableTaskDrag: false,
+        enableTaskResize: false,
+        baseline: {
+          enabled: true,
+          opacity: 0.5,
+        },
+        series: [
+          {
+            id: 'design',
+            name: 'Design',
+            startTime: '01-10-2026',
+            endTime: '01-20-2026',
+            progress: 100,
+            baseline: {
+              start: '01-08-2026',
+              end: '01-18-2026',
+            },
+          },
+          {
+            id: 'development',
+            name: 'Development',
+            startTime: '01-21-2026',
+            endTime: '02-10-2026',
+            progress: 60,
+            baseline: {
+              start: '01-19-2026',
+              end: '02-05-2026',
+            },
+          },
+          {
+            id: 'dev-frontend',
+            name: 'Frontend',
+            parentId: 'development',
+            startTime: '01-21-2026',
+            endTime: '02-03-2026',
+            progress: 75,
+            baseline: {
+              start: '01-19-2026',
+              end: '02-01-2026',
+            },
+          },
+          {
+            id: 'dev-backend',
+            name: 'Backend',
+            parentId: 'development',
+            startTime: '01-28-2026',
+            endTime: '02-10-2026',
+            progress: 45,
+            baseline: {
+              start: '01-26-2026',
+              end: '02-05-2026',
+            },
+          },
+          {
+            id: 'testing',
+            name: 'Testing',
+            startTime: '02-11-2026',
+            endTime: '02-20-2026',
+            progress: 10,
+            baseline: {
+              start: '02-06-2026',
+              end: '02-14-2026',
+            },
+          },
+          {
+            id: 'no-baseline',
+            name: 'Deployment (no baseline)',
+            startTime: '02-21-2026',
+            endTime: '02-25-2026',
+            progress: 0,
+          },
+        ],
+      };
+
+      const gantt = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
+      gantt.render();
+    </script>
+  </body>
+</html>

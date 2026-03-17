@@ -1,11 +1,13 @@
-import { Task, TaskInput } from './Tasks';
+import { ViewMode } from '../util/gantt.util';
+import { DependencyType, Task, TaskInput } from './Tasks';
 import { ChartContext } from '../../../../graph-utils/src/index.ts';
 import { Dayjs } from 'dayjs';
 
-type Dependency = {
+export type Dependency = {
     fromId: string;
     toId: string;
-    type: 'FF' | 'FS' | 'SF' | 'SS';
+    type: DependencyType;
+    lag: number;
 };
 export declare class DataManager {
     private dependencies;
@@ -17,10 +19,10 @@ export declare class DataManager {
     private processLevel;
     private sortTasksByDate;
     private validateTask;
-    addDependency(fromId: string, toId: string, type?: Dependency['type']): void;
+    addDependency(fromId: string, toId: string, type?: Dependency['type'], lag?: number): void;
     addTask(taskInput: Partial<TaskInput>): void;
     calculateProgress(): number;
-    getDateRange(add: number, viewMode: any): [Dayjs, Dayjs];
+    getDateRange(add: number | undefined, viewMode: ViewMode): [Dayjs, Dayjs];
     getFlatSortedTasks(tasks: Task[], getAll?: boolean): Task[];
     getFlatTasks(): Task[];
     getFlatVisibleTasks(): Task[];
@@ -39,6 +41,6 @@ export declare class DataManager {
     toggleTask(id: string): void;
     setArrowLinkInstanceId(instanceId: string): void;
     updateDependencyArrows(taskId: string, chartContext?: ChartContext): void;
+    getAllDependencies(): Dependency[];
     updateTask(id: string, updates: Partial<TaskInput>): Task;
 }
-export {};

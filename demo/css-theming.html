@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt – CSS Custom Property Theming</title>
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: system-ui, sans-serif;
+        background: #f0f4f8;
+        color: #1a202c;
+        min-height: 100vh;
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+
+      body[data-theme='dark'] {
+        background: #0d1117;
+        color: #e0e0e0;
+      }
+
+      .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 32px;
+        background: #ffffff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: background 0.3s;
+      }
+
+      body[data-theme='dark'] .page-header {
+        background: #161b22;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      }
+
+      .page-header h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+
+      .page-header h1 span {
+        color: #4a9eff;
+      }
+
+      .theme-toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        padding: 8px 16px;
+        border: 1.5px solid #cbd5e0;
+        border-radius: 8px;
+        background: transparent;
+        font: inherit;
+        font-size: 0.9rem;
+        color: inherit;
+        transition:
+          border-color 0.2s,
+          background 0.2s;
+      }
+
+      .theme-toggle:hover {
+        background: rgba(74, 158, 255, 0.1);
+        border-color: #4a9eff;
+      }
+
+      .content {
+        max-width: 1300px;
+        margin: 32px auto;
+        padding: 0 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+
+      .demo-section {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        transition:
+          background 0.3s,
+          box-shadow 0.3s;
+      }
+
+      body[data-theme='dark'] .demo-section {
+        background: #161b22;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      }
+
+      .demo-section h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      .demo-section p {
+        font-size: 0.875rem;
+        color: #718096;
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+
+      body[data-theme='dark'] .demo-section p {
+        color: #8b9cbf;
+      }
+
+      .chart-wrapper {
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        transition: border-color 0.3s;
+      }
+
+      body[data-theme='dark'] .chart-wrapper {
+        border-color: #30363d;
+      }
+
+      code {
+        font-family: 'Fira Code', monospace;
+        font-size: 0.8rem;
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 14px 18px;
+        display: block;
+        overflow-x: auto;
+        line-height: 1.7;
+        white-space: pre;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+      }
+
+      body[data-theme='dark'] code {
+        background: #0d1117;
+        border-color: #30363d;
+        color: #c9d1d9;
+      }
+
+      .token-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .token-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+      }
+
+      body[data-theme='dark'] .token-item {
+        background: #1c2128;
+        border-color: #30363d;
+        color: #c9d1d9;
+      }
+
+      .token-swatch {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+      }
+
+      .token-name {
+        font-family: monospace;
+        color: #4a9eff;
+        font-size: 0.75rem;
+      }
+
+      /* ── CSS Custom Property Theming tokens ─────────────────────── */
+      /* Light-mode tokens — set on the live chart container */
+      #gantt-live {
+        --apex-gantt-bar-fill: #318ce7;
+        --apex-gantt-row-bg-even: #ffffff;
+        --apex-gantt-row-bg-odd: #f5f9ff;
+        --apex-gantt-header-bg: #ebf3fb;
+        --apex-gantt-grid-line: #e3edf8;
+        --apex-gantt-dependency-line: #1a6fc4;
+        --apex-gantt-font-family: system-ui, sans-serif;
+        --apex-gantt-font-size: 13px;
+        --apex-gantt-font-color: #2d3748;
+      }
+
+      /* Dark-mode tokens applied when body has data-theme="dark" */
+      body[data-theme='dark'] #gantt-live {
+        --apex-gantt-bar-fill: #818cf8;
+        --apex-gantt-background-color: #1e1e1e;
+        --apex-gantt-row-bg-even: #1e1e1e;
+        --apex-gantt-row-bg-odd: #252525;
+        --apex-gantt-header-bg: #2a2a2a;
+        --apex-gantt-grid-line: #3a3a3a;
+        --apex-gantt-dependency-line: #a5b4fc;
+        --apex-gantt-font-family: system-ui, sans-serif;
+        --apex-gantt-font-size: 13px;
+        --apex-gantt-font-color: #e0e0e0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── Header ─────────────────────────────────────────────────── -->
+    <header class="page-header">
+      <h1>ApexGantt — <span>CSS Custom Property Theming</span></h1>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <span id="themeIcon">🌙</span>
+        <span id="themeLabel">Switch to Dark Mode</span>
+      </button>
+    </header>
+
+    <main class="content">
+      <!-- ── 1. Live Toggle Demo ────────────────────────────────────── -->
+      <section class="demo-section">
+        <h2>🎨 Live Theme Toggle</h2>
+        <p>
+          Use the toggle in the header to switch between light and dark mode. The Gantt chart responds to CSS custom
+          properties defined on its container element — no JavaScript options are changed.
+        </p>
+        <div class="chart-wrapper">
+          <div id="gantt-live"></div>
+        </div>
+      </section>
+
+      <!-- ── 2. Code snippet ─────────────────────────────────────── -->
+      <section class="demo-section">
+        <h2>📋 How it works</h2>
+        <p>
+          Set CSS custom properties on the container element (or any ancestor) to override the default JS option values.
+          The chart reads these at render time.
+        </p>
+        <code
+          >/* Light mode tokens on the container */ #my-gantt { --apex-gantt-bar-fill: #318ce7;
+          --apex-gantt-row-bg-even: #ffffff; --apex-gantt-row-bg-odd: #f5f9ff; --apex-gantt-header-bg: #ebf3fb;
+          --apex-gantt-grid-line: #e3edf8; --apex-gantt-dependency-line: #1a6fc4; --apex-gantt-font-family: system-ui,
+          sans-serif; --apex-gantt-font-size: 13px; --apex-gantt-font-color: #2d3748; } /* Dark mode — via OS preference
+          (no JS required) */ @media (prefers-color-scheme: dark) { #my-gantt { --apex-gantt-bar-fill: #818cf8;
+          --apex-gantt-background-color: #1e1e1e; --apex-gantt-row-bg-even: #1e1e1e; --apex-gantt-row-bg-odd: #252525;
+          --apex-gantt-header-bg: #2a2a2a; --apex-gantt-grid-line: #3a3a3a; --apex-gantt-dependency-line: #a5b4fc;
+          --apex-gantt-font-color: #e0e0e0; } } /* Dark mode — via a manual [data-theme] toggle */ [data-theme="dark"]
+          #my-gantt { --apex-gantt-bar-fill: #818cf8; --apex-gantt-background-color: #1e1e1e; --apex-gantt-row-bg-even:
+          #1e1e1e; --apex-gantt-row-bg-odd: #252525; --apex-gantt-dependency-line: #a5b4fc; --apex-gantt-font-color:
+          #e0e0e0; }</code
+        >
+      </section>
+
+      <!-- ── 3. Token Reference ───────────────────────────────────── -->
+      <section class="demo-section">
+        <h2>📖 Token Reference</h2>
+        <p>All supported CSS custom properties for ApexGantt.</p>
+        <div class="token-grid">
+          <div class="token-item">
+            <div class="token-swatch" style="background: #318ce7"></div>
+            <div>
+              <div class="token-name">--apex-gantt-bar-fill</div>
+              <div>Task bar fill color</div>
+            </div>
+          </div>
+          <div class="token-item">
+            <div class="token-swatch" style="background: #ffffff; border-color: #ccc"></div>
+            <div>
+              <div class="token-name">--apex-gantt-background-color</div>
+              <div>Toolbar / container background</div>
+            </div>
+          </div>
+          <div class="token-item">
+            <div class="token-swatch" style="background: #ffffff; border-color: #ccc"></div>
+            <div>
+              <div class="token-name">--apex-gantt-row-bg-even</div>
+              <div>Even row background</div>
+            </div>
+          </div>
+          <div class="token-item">
+            <div class="token-swatch" style="background: #f5f9ff"></div>
+            <div>
+              <div class="token-name">--apex-gantt-row-bg-odd</div>
+              <div>Odd row background</div>
+            </div>
+          </div>
+          <div class="token-item">
+            <div class="token-swatch" style="background: #ebf3fb"></div>
+            <div>
+              <div class="token-name">--apex-gantt-header-bg</div>
+              <div>Timeline / header background</div>
+            </div>
+          </div>
+          <div class="token-item">
+            <div class="token-swatch" style="background: #e3edf8"></div>
+            <div>
+              <div class="token-name">--apex-gantt-grid-line</div>
+              <div>Cell border / grid line color</div>
+            </div>
+          </div>
+          <div class="token-item">
+            <div class="token-swatch" style="background: #1a6fc4"></div>
+            <div>
+              <div class="token-name">--apex-gantt-dependency-line</div>
+              <div>Dependency arrow color</div>
+            </div>
+          </div>
+          <div class="token-item">
+            <div class="token-swatch" style="background: transparent; border-style: dashed"></div>
+            <div>
+              <div class="token-name">--apex-gantt-font-family</div>
+              <div>Font family for all labels</div>
+            </div>
+          </div>
+          <div class="token-item">
+            <div class="token-swatch" style="background: transparent; border-style: dashed"></div>
+            <div>
+              <div class="token-name">--apex-gantt-font-size</div>
+              <div>Font size for labels (e.g. 13px)</div>
+            </div>
+          </div>
+          <div class="token-item">
+            <div class="token-swatch" style="background: #2d3748"></div>
+            <div>
+              <div class="token-name">--apex-gantt-font-color</div>
+              <div>Text color for all labels</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      // ── Shared Gantt data ─────────────────────────────────────────
+      const ganttSeries = [
+        {
+          id: 'design',
+          name: '🎨 Design',
+          startTime: '01-06-2025',
+          endTime: '01-17-2025',
+          progress: 100,
+        },
+        {
+          id: 'wireframes',
+          name: 'Wireframes',
+          parentId: 'design',
+          startTime: '01-06-2025',
+          endTime: '01-10-2025',
+          progress: 100,
+        },
+        {
+          id: 'prototypes',
+          name: 'Prototypes',
+          parentId: 'design',
+          dependency: 'wireframes',
+          startTime: '01-13-2025',
+          endTime: '01-17-2025',
+          progress: 100,
+        },
+        {
+          id: 'dev',
+          name: '💻 Development',
+          startTime: '01-20-2025',
+          endTime: '02-28-2025',
+          progress: 60,
+        },
+        {
+          id: 'frontend-task',
+          name: 'Frontend',
+          parentId: 'dev',
+          dependency: 'prototypes',
+          startTime: '01-20-2025',
+          endTime: '02-14-2025',
+          progress: 75,
+        },
+        {
+          id: 'backend-task',
+          name: 'Backend',
+          parentId: 'dev',
+          startTime: '01-20-2025',
+          endTime: '02-21-2025',
+          progress: 55,
+        },
+        {
+          id: 'testing',
+          name: '🧪 Testing',
+          dependency: 'dev',
+          startTime: '02-24-2025',
+          endTime: '03-07-2025',
+          progress: 20,
+        },
+        {
+          id: 'launch',
+          name: '🚀 Launch',
+          dependency: 'testing',
+          startTime: '03-10-2025',
+          endTime: '03-14-2025',
+          progress: 0,
+        },
+      ];
+
+      const ganttOptions = {
+        width: '100%',
+        height: 420,
+        viewMode: 'week',
+        enableTaskDrag: false,
+        enableTaskResize: false,
+        series: ganttSeries,
+      };
+
+      // ── Instantiate chart ─────────────────────────────────────────
+      const gantt = new ApexGantt(document.getElementById('gantt-live'), ganttOptions);
+      gantt.render();
+
+      // ── Theme toggle logic ────────────────────────────────────────
+      function toggleTheme() {
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+          document.body.removeAttribute('data-theme');
+          document.getElementById('themeIcon').textContent = '🌙';
+          document.getElementById('themeLabel').textContent = 'Switch to Dark Mode';
+          gantt.update({theme: 'light'});
+        } else {
+          document.body.setAttribute('data-theme', 'dark');
+          document.getElementById('themeIcon').textContent = '☀️';
+          document.getElementById('themeLabel').textContent = 'Switch to Light Mode';
+          gantt.update({theme: 'dark'});
+        }
+      }
+    </script>
+  </body>
+</html>

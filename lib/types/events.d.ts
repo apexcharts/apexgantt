@@ -4,6 +4,7 @@ export interface DependencyArrowUpdateDetail {
     fromId: string;
     toId: string;
     type: 'FF' | 'FS' | 'SF' | 'SS';
+    lag?: number;
     chartInstanceId: string;
     arrowLinkInstanceId?: string;
 }

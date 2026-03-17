@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt — Critical Path</title>
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 20px;
+        background: #f8f9fa;
+      }
+      h1 {
+        font-size: 20px;
+        margin-bottom: 4px;
+      }
+      p {
+        color: #555;
+        margin-bottom: 16px;
+        font-size: 14px;
+      }
+      .legend {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 16px;
+        font-size: 13px;
+        align-items: center;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .swatch {
+        width: 18px;
+        height: 14px;
+        border-radius: 3px;
+      }
+      .swatch-critical {
+        background: #e53935;
+      }
+      .swatch-normal {
+        background: #318ce7;
+      }
+      .section {
+        margin-bottom: 40px;
+        background: #fff;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      }
+      .section h2 {
+        font-size: 15px;
+        margin: 0 0 4px;
+        color: #0d6efd;
+      }
+      .controls {
+        margin-bottom: 12px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      button {
+        padding: 6px 14px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      button.active {
+        background: #e53935;
+        color: #fff;
+        border-color: #e53935;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ApexGantt — Critical Path Highlighting</h1>
+    <p>
+      The critical path is the longest chain of dependent tasks. Any delay on a critical task delays the entire project.
+      Critical bars and arrows are highlighted in red.
+    </p>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="swatch swatch-critical"></div>
+        Critical task / arrow
+      </div>
+      <div class="legend-item">
+        <div class="swatch swatch-normal"></div>
+        Non-critical task
+      </div>
+    </div>
+
+    <!-- Section 1: simple linear chain, all tasks critical -->
+    <div class="section">
+      <h2>Linear chain — all tasks are critical</h2>
+      <p>A → B → C → D. Every task is on the only path, so all are critical.</p>
+      <div id="gantt-linear"></div>
+    </div>
+
+    <!-- Section 2: parallel paths, only the longer one is critical -->
+    <div class="section">
+      <h2>Parallel paths — only the longer path is critical</h2>
+      <p>
+        Start → A (10 d) → End and Start → B (3 d) → C (3 d) → End.<br />
+        Path A is 10 days; path B+C is 6 days. <strong>Path A is critical.</strong>
+      </p>
+      <div id="gantt-parallel"></div>
+    </div>
+
+    <!-- Section 3: toggle + drag to see recalculation -->
+    <div class="section">
+      <h2>Interactive — toggle critical path / drag tasks</h2>
+      <p>Use the button to toggle highlighting. Drag or resize a task bar — critical path recalculates on release.</p>
+      <div class="controls">
+        <button id="toggle-btn" class="active">Critical path: ON</button>
+      </div>
+      <div id="gantt-interactive"></div>
+    </div>
+
+    <script>
+      // ── Linear chain ──────────────────────────────────────────────────────
+      new ApexGantt(document.getElementById('gantt-linear'), {
+        enableCriticalPath: true,
+        enableTaskDrag: false,
+        enableTaskResize: false,
+        viewMode: 'week',
+        series: [
+          {id: 'a', name: 'Design', startTime: '01-01-2025', endTime: '01-07-2025', progress: 100},
+          {id: 'b', name: 'Development', startTime: '01-08-2025', endTime: '01-21-2025', progress: 60, dependency: 'a'},
+          {id: 'c', name: 'Testing', startTime: '01-22-2025', endTime: '01-28-2025', progress: 0, dependency: 'b'},
+          {id: 'd', name: 'Deployment', startTime: '01-29-2025', endTime: '01-31-2025', progress: 0, dependency: 'c'},
+        ],
+      }).render();
+
+      // ── Parallel paths ────────────────────────────────────────────────────
+      // Start 01-01, path-A: 10 days (critical), path-B+C: 6 days (slack=4)
+      new ApexGantt(document.getElementById('gantt-parallel'), {
+        enableCriticalPath: true,
+        enableTaskDrag: false,
+        enableTaskResize: false,
+        viewMode: 'week',
+        series: [
+          {id: 'start', name: 'Project Start', startTime: '01-01-2025', endTime: '01-01-2025', progress: 100},
+          // Long path (critical)
+          {
+            id: 'path-a',
+            name: 'Path A (10d)',
+            startTime: '01-02-2025',
+            endTime: '01-11-2025',
+            progress: 100,
+            dependency: {taskId: 'start', type: 'FS'},
+          },
+          // Short path (not critical)
+          {
+            id: 'path-b',
+            name: 'Path B (3d)',
+            startTime: '01-02-2025',
+            endTime: '01-04-2025',
+            progress: 100,
+            dependency: {taskId: 'start', type: 'FS'},
+          },
+          {
+            id: 'path-c',
+            name: 'Path C (3d)',
+            startTime: '01-05-2025',
+            endTime: '01-07-2025',
+            progress: 80,
+            dependency: {taskId: 'path-b', type: 'FS'},
+          },
+          // Merge point — depends on both path-a and path-c
+          // CPM picks the longer predecessor (path-a)
+          {
+            id: 'end',
+            name: 'Project End',
+            startTime: '01-12-2025',
+            endTime: '01-13-2025',
+            progress: 0,
+            dependency: {taskId: 'path-a', type: 'FS'},
+          },
+        ],
+      }).render();
+
+      // ── Interactive ───────────────────────────────────────────────────────
+      const interactiveGantt = new ApexGantt(document.getElementById('gantt-interactive'), {
+        enableCriticalPath: true,
+        enableTaskDrag: true,
+        enableTaskResize: true,
+        viewMode: 'week',
+        series: [
+          {id: 'i-a', name: 'Requirements', startTime: '01-01-2025', endTime: '01-05-2025', progress: 100},
+          {id: 'i-b', name: 'Design', startTime: '01-06-2025', endTime: '01-12-2025', progress: 80, dependency: 'i-a'},
+          {
+            id: 'i-c',
+            name: 'Dev — Core',
+            startTime: '01-13-2025',
+            endTime: '01-26-2025',
+            progress: 40,
+            dependency: 'i-b',
+          },
+          {
+            id: 'i-d',
+            name: 'Dev — UI',
+            startTime: '01-13-2025',
+            endTime: '01-19-2025',
+            progress: 20,
+            dependency: 'i-b',
+          },
+          {id: 'i-e', name: 'QA', startTime: '01-27-2025', endTime: '02-02-2025', progress: 0, dependency: 'i-c'},
+          {id: 'i-f', name: 'Release', startTime: '02-03-2025', endTime: '02-05-2025', progress: 0, dependency: 'i-e'},
+        ],
+      });
+      interactiveGantt.render();
+
+      document.getElementById('toggle-btn').addEventListener('click', function () {
+        const isOn = this.classList.toggle('active');
+        this.textContent = `Critical path: ${isOn ? 'ON' : 'OFF'}`;
+        interactiveGantt.update({enableCriticalPath: isOn});
+      });
+    </script>
+  </body>
+</html>
