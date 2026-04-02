@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Selection Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .demo-header {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+
+      .demo-header h1 {
+        margin: 0 0 6px;
+        color: #222;
+        font-size: 22px;
+      }
+
+      .demo-header p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+      }
+
+      .instructions {
+        background: #e8f0fe;
+        border: 1px solid #a8c7fa;
+        border-radius: 6px;
+        padding: 14px 18px;
+        color: #1a56a0;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      .instructions strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+
+      .instructions ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      #svg-gantt {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        height: 420px;
+      }
+
+      /* Two-column layout for API panel + event log */
+      .bottom-panels {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .panel {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 20px;
+      }
+
+      .panel h2 {
+        margin: 0 0 14px;
+        color: #333;
+        font-size: 16px;
+      }
+
+      /* API controls */
+      .api-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .api-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .api-row label {
+        font-size: 13px;
+        color: #555;
+        min-width: 110px;
+      }
+
+      .btn {
+        padding: 6px 14px;
+        border-radius: 4px;
+        border: 1px solid #c0c0c0;
+        background: #fff;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      .btn:hover {
+        background: #f0f0f0;
+      }
+
+      .btn-primary {
+        background: #005fcc;
+        color: white;
+        border-color: #004fa8;
+      }
+
+      .btn-primary:hover {
+        background: #004fa8;
+      }
+
+      .btn-danger {
+        background: #dc3545;
+        color: white;
+        border-color: #b02a37;
+      }
+
+      .btn-danger:hover {
+        background: #b02a37;
+      }
+
+      input[type='text'] {
+        padding: 5px 10px;
+        border: 1px solid #c0c0c0;
+        border-radius: 4px;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 13px;
+        width: 200px;
+      }
+
+      .selected-list {
+        margin-top: 14px;
+        padding: 10px 14px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        font-size: 13px;
+        color: #444;
+        min-height: 38px;
+      }
+
+      .selected-list .empty {
+        color: #999;
+        font-style: italic;
+      }
+
+      .selected-tag {
+        display: inline-block;
+        background: rgba(0, 95, 204, 0.12);
+        color: #005fcc;
+        border-radius: 12px;
+        padding: 2px 10px;
+        margin: 2px 3px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      /* Event log */
+      .event-log-scroll {
+        max-height: 260px;
+        overflow-y: auto;
+      }
+
+      .log-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .event-item {
+        border-left: 3px solid #005fcc;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        background: #f8f9fa;
+        border-radius: 0 4px 4px 0;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .event-time {
+        color: #999;
+        font-size: 11px;
+      }
+
+      .event-count {
+        font-weight: 600;
+        color: #005fcc;
+      }
+
+      .event-ids {
+        color: #555;
+      }
+
+      .no-events {
+        color: #999;
+        font-style: italic;
+        font-size: 13px;
+        text-align: center;
+        padding: 30px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div class="demo-header">
+        <h1>ApexGantt — Multi-Selection Demo</h1>
+        <p>Demonstrates <code>enableSelection</code>: checkboxes, keyboard shortcuts, and the public selection API.</p>
+      </div>
+
+      <div class="instructions">
+        <strong>How to interact</strong>
+        <ul>
+          <li><strong>Click</strong> a row — select it (replaces current selection)</li>
+          <li><strong>Ctrl / Cmd + Click</strong> — toggle a task in the selection</li>
+          <li><strong>Shift + Click</strong> — range-select from the last clicked task</li>
+          <li><strong>Checkbox</strong> — toggle individual task selection</li>
+          <li><strong>Select-all checkbox</strong> (header) — select / deselect all visible tasks</li>
+          <li><strong>Space</strong> on a focused row — toggle selection</li>
+          <li><strong>Ctrl / Cmd + A</strong> — select all tasks</li>
+          <li><strong>Escape</strong> — clear selection</li>
+        </ul>
+      </div>
+
+      <div id="svg-gantt"></div>
+
+      <div class="bottom-panels">
+        <!-- API controls -->
+        <div class="panel">
+          <h2>Public API</h2>
+          <div class="api-grid">
+            <div class="api-row">
+              <label>Select by IDs</label>
+              <input type="text" id="ids-input" placeholder="e.g. task-1, task-3" />
+              <button class="btn btn-primary" onclick="selectByIds()">Set</button>
+            </div>
+            <div class="api-row">
+              <label>Group select</label>
+              <button class="btn" onclick="gantt.getSelectedTasks && ganttSelectGroup('group-1')">
+                Select group-1
+              </button>
+            </div>
+            <div class="api-row">
+              <label>Bulk</label>
+              <button class="btn btn-primary" onclick="ganttSelectAll()">Select All</button>
+              <button class="btn btn-danger" onclick="gantt.clearSelection()">Clear</button>
+            </div>
+            <div class="api-row">
+              <label>getSelectedTasks()</label>
+              <button class="btn" onclick="refreshSelectedList()">Refresh list</button>
+            </div>
+          </div>
+
+          <div class="selected-list" id="selected-list">
+            <span class="empty">No tasks selected</span>
+          </div>
+        </div>
+
+        <!-- Event log -->
+        <div class="panel">
+          <div class="log-header">
+            <h2>selectionChange Events</h2>
+            <button class="btn" onclick="clearLog()">Clear</button>
+          </div>
+          <div class="event-log-scroll">
+            <div id="event-log">
+              <div class="no-events">No events yet. Try selecting a task!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ── Gantt init ───────────────────────────────────────────────────────
+
+      const container = document.getElementById('svg-gantt');
+
+      const gantt = new ApexGantt(container, {
+        enableSelection: true,
+        enableTaskDrag: true,
+        enableTaskResize: true,
+        viewMode: 'month',
+        series: [
+          {
+            id: 'phase-1',
+            name: 'Phase 1 — Discovery',
+            startTime: '2024-01-01',
+            endTime: '2024-01-31',
+            progress: 100,
+          },
+          {
+            id: 'task-1',
+            name: 'Stakeholder interviews',
+            startTime: '2024-01-01',
+            endTime: '2024-01-10',
+            parentId: 'phase-1',
+            progress: 100,
+          },
+          {
+            id: 'task-2',
+            name: 'Requirements doc',
+            startTime: '2024-01-11',
+            endTime: '2024-01-25',
+            parentId: 'phase-1',
+            dependency: 'task-1',
+            progress: 100,
+          },
+          {
+            id: 'task-3',
+            name: 'Sign-off',
+            startTime: '2024-01-28',
+            endTime: '2024-01-31',
+            parentId: 'phase-1',
+            dependency: 'task-2',
+            progress: 100,
+          },
+          {
+            id: 'phase-2',
+            name: 'Phase 2 — Design',
+            startTime: '2024-02-01',
+            endTime: '2024-02-29',
+            progress: 60,
+          },
+          {
+            id: 'task-4',
+            name: 'UX wireframes',
+            startTime: '2024-02-01',
+            endTime: '2024-02-14',
+            parentId: 'phase-2',
+            progress: 100,
+          },
+          {
+            id: 'task-5',
+            name: 'Visual design',
+            startTime: '2024-02-15',
+            endTime: '2024-02-29',
+            parentId: 'phase-2',
+            dependency: 'task-4',
+            progress: 40,
+          },
+          {
+            id: 'group-1',
+            name: 'Phase 3 — Development',
+            startTime: '2024-03-01',
+            endTime: '2024-04-30',
+            progress: 20,
+          },
+          {
+            id: 'task-6',
+            name: 'Backend API',
+            startTime: '2024-03-01',
+            endTime: '2024-03-31',
+            parentId: 'group-1',
+            progress: 35,
+          },
+          {
+            id: 'task-7',
+            name: 'Frontend implementation',
+            startTime: '2024-04-01',
+            endTime: '2024-04-25',
+            parentId: 'group-1',
+            dependency: 'task-6',
+            progress: 5,
+          },
+          {
+            id: 'milestone-1',
+            name: 'Beta release',
+            startTime: '2024-04-30',
+            type: 'milestone',
+            dependency: 'task-7',
+          },
+        ],
+      });
+
+      gantt.render();
+
+      // ── Event log ────────────────────────────────────────────────────────
+
+      let logCount = 0;
+
+      container.addEventListener('selectionChange', (e) => {
+        const detail = e.detail;
+        addLogEntry(detail);
+        refreshSelectedList();
+      });
+
+      function addLogEntry(detail) {
+        const log = document.getElementById('event-log');
+
+        const noEvents = log.querySelector('.no-events');
+        if (noEvents) noEvents.remove();
+
+        const item = document.createElement('div');
+        item.className = 'event-item';
+        const time = new Date(detail.timestamp).toLocaleTimeString();
+        const count = detail.selectedIds.length;
+        const ids = count > 0 ? detail.selectedIds.join(', ') : '(none)';
+
+        item.innerHTML = `
+          <div class="event-time">${time}</div>
+          <div class="event-count">${count} task${count !== 1 ? 's' : ''} selected</div>
+          <div class="event-ids">IDs: ${ids}</div>
+        `;
+
+        log.insertBefore(item, log.firstChild);
+        logCount++;
+        if (logCount > 30) {
+          log.removeChild(log.lastChild);
+        }
+      }
+
+      function clearLog() {
+        document.getElementById('event-log').innerHTML =
+          '<div class="no-events">No events yet. Try selecting a task!</div>';
+        logCount = 0;
+      }
+
+      // ── API helpers ──────────────────────────────────────────────────────
+
+      function selectByIds() {
+        const raw = document.getElementById('ids-input').value;
+        const ids = raw
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        gantt.setSelectedTasks(ids);
+      }
+
+      function ganttSelectAll() {
+        // Use the public API (Ctrl+A shortcut or this button)
+        gantt.setSelectedTasks([
+          'phase-1',
+          'task-1',
+          'task-2',
+          'task-3',
+          'phase-2',
+          'task-4',
+          'task-5',
+          'group-1',
+          'task-6',
+          'task-7',
+          'milestone-1',
+        ]);
+      }
+
+      function ganttSelectGroup(groupId) {
+        // Example: select a group and all its children via the public API
+        const groupTasks = {
+          'group-1': ['group-1', 'task-6', 'task-7'],
+        };
+        gantt.setSelectedTasks(groupTasks[groupId] || []);
+      }
+
+      function refreshSelectedList() {
+        const el = document.getElementById('selected-list');
+        const tasks = gantt.getSelectedTasks();
+        if (tasks.length === 0) {
+          el.innerHTML = '<span class="empty">No tasks selected</span>';
+        } else {
+          el.innerHTML = tasks.map((t) => `<span class="selected-tag">${t.id}</span>`).join('');
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt — Task List Columns Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .demo-header {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+
+      .demo-header h1 {
+        margin: 0 0 6px;
+        color: #222;
+        font-size: 22px;
+      }
+      .demo-header p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+      }
+
+      #svg-gantt {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        height: 460px;
+      }
+
+      /* ── Controls panel ─────────────────────────────────────────── */
+      .controls-panel {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 20px 24px;
+      }
+
+      .controls-panel h2 {
+        margin: 0 0 16px;
+        font-size: 16px;
+        color: #333;
+      }
+
+      .controls-row {
+        display: flex;
+        gap: 32px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .control-group label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 2px;
+      }
+
+      /* Column toggle checkboxes */
+      .col-toggles {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .col-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #333;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .col-toggle input[type='checkbox'] {
+        width: 15px;
+        height: 15px;
+        cursor: pointer;
+        accent-color: #005fcc;
+      }
+
+      /* Drag-to-reorder list */
+      #order-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 180px;
+      }
+
+      .order-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        background: #f8f9fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        font-size: 13px;
+        color: #333;
+        cursor: grab;
+        transition:
+          background 0.15s,
+          box-shadow 0.15s;
+      }
+
+      .order-item:active {
+        cursor: grabbing;
+      }
+
+      .order-item.dragging {
+        opacity: 0.4;
+      }
+
+      .order-item.drag-over {
+        background: #e8f0fe;
+        border-color: #005fcc;
+        box-shadow: 0 0 0 2px #c7d9f9;
+      }
+
+      .drag-handle {
+        color: #aaa;
+        font-size: 14px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+
+      .order-item-label {
+        flex: 1;
+      }
+
+      .width-input {
+        width: 56px;
+        padding: 2px 5px;
+        border: 1px solid #d0d0d0;
+        border-radius: 4px;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 12px;
+        text-align: right;
+        color: #333;
+      }
+
+      .width-input:focus {
+        outline: none;
+        border-color: #005fcc;
+        box-shadow: 0 0 0 2px #c7d9f9;
+      }
+
+      .width-unit {
+        font-size: 11px;
+        color: #888;
+        flex-shrink: 0;
+      }
+
+      /* Preset buttons */
+      .preset-btns {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .btn {
+        padding: 7px 16px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        background: white;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.15s;
+        white-space: nowrap;
+      }
+
+      .btn:hover {
+        background: #f0f0f0;
+      }
+      .btn.primary {
+        background: #005fcc;
+        color: white;
+        border-color: #005fcc;
+      }
+      .btn.primary:hover {
+        background: #0050b0;
+      }
+
+      /* Info pill showing current column order */
+      .current-config {
+        margin-top: 16px;
+        padding: 10px 14px;
+        background: #f0f4ff;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #333;
+      }
+
+      .current-config strong {
+        color: #005fcc;
+      }
+
+      code {
+        background: #f0f4ff;
+        color: #005fcc;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div class="demo-header">
+        <h1>ApexGantt — Task List Columns</h1>
+        <p>
+          Use <code>columnConfig</code> to control which columns appear in the task list, their order, and width. Toggle
+          columns on/off, drag to reorder, or set a minimum pixel width per column — the chart updates instantly.
+        </p>
+      </div>
+
+      <div id="svg-gantt"></div>
+
+      <div class="controls-panel">
+        <h2>Configure columns</h2>
+        <div class="controls-row">
+          <!-- Column visibility toggles -->
+          <div class="control-group">
+            <label>Show / hide columns</label>
+            <div class="col-toggles" id="col-toggles"></div>
+          </div>
+
+          <!-- Drag-to-reorder -->
+          <div class="control-group">
+            <label>Drag to reorder</label>
+            <div id="order-list"></div>
+          </div>
+
+          <!-- Presets -->
+          <div class="control-group">
+            <label>Presets</label>
+            <div class="preset-btns">
+              <button class="btn" onclick="applyPreset('default')">Default (all 4)</button>
+              <button class="btn" onclick="applyPreset('nameOnly')">Name only</button>
+              <button class="btn" onclick="applyPreset('nameProgress')">Name + Progress</button>
+              <button class="btn" onclick="applyPreset('nameStart')">Name + Start</button>
+              <button class="btn" onclick="applyPreset('compact')">Compact (Name + Duration)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live config display -->
+        <div class="current-config" id="config-display"></div>
+      </div>
+    </div>
+
+    <script>
+      // ── Available columns ────────────────────────────────────────────────────
+
+      const ALL_COLUMNS = [
+        {key: 'name', title: 'Task Name', defaultMinWidth: 120},
+        {key: 'startTime', title: 'Start', defaultMinWidth: 170},
+        {key: 'duration', title: 'Duration', defaultMinWidth: 150},
+        {key: 'progress', title: 'Progress', defaultMinWidth: 50},
+      ];
+
+      // ── Mutable state ────────────────────────────────────────────────────────
+
+      // Current order (array of column keys in display order)
+      let columnOrder = ['name', 'startTime', 'duration', 'progress'];
+      // Visibility map
+      const visible = {name: true, startTime: true, duration: true, progress: true};
+      // Min-width overrides in px (null = use default)
+      const minWidths = {name: 120, startTime: 70, duration: 50, progress: 50};
+
+      // ── Task data ────────────────────────────────────────────────────────────
+
+      const tasks = [
+        {
+          id: 'p1',
+          name: 'Discovery',
+          startTime: '2024-01-02',
+          endTime: '2024-01-31',
+          progress: 100,
+          rowBackgroundColor: '#eef3ff',
+        },
+        {
+          id: 'p1-1',
+          name: 'Stakeholder interviews',
+          startTime: '2024-01-02',
+          endTime: '2024-01-12',
+          progress: 100,
+          parentId: 'p1',
+          rowBackgroundColor: '#eef3ff',
+        },
+        {
+          id: 'p1-2',
+          name: 'Requirements doc',
+          startTime: '2024-01-15',
+          endTime: '2024-01-26',
+          progress: 100,
+          parentId: 'p1',
+          dependency: 'p1-1',
+          rowBackgroundColor: '#eef3ff',
+        },
+        {
+          id: 'p1-3',
+          name: 'Sign-off',
+          startTime: '2024-01-29',
+          endTime: '2024-01-31',
+          progress: 100,
+          parentId: 'p1',
+          dependency: 'p1-2',
+          rowBackgroundColor: '#eef3ff',
+        },
+
+        {
+          id: 'p2',
+          name: 'Design',
+          startTime: '2024-02-01',
+          endTime: '2024-02-29',
+          progress: 90,
+          rowBackgroundColor: '#fdf3ff',
+        },
+        {
+          id: 'p2-1',
+          name: 'UX wireframes',
+          startTime: '2024-02-01',
+          endTime: '2024-02-14',
+          progress: 100,
+          parentId: 'p2',
+          rowBackgroundColor: '#fdf3ff',
+        },
+        {
+          id: 'p2-2',
+          name: 'Visual design',
+          startTime: '2024-02-15',
+          endTime: '2024-02-29',
+          progress: 80,
+          parentId: 'p2',
+          dependency: 'p2-1',
+          rowBackgroundColor: '#fdf3ff',
+        },
+
+        {
+          id: 'p3',
+          name: 'Development',
+          startTime: '2024-03-01',
+          endTime: '2024-04-30',
+          progress: 30,
+          rowBackgroundColor: '#f0fff4',
+        },
+        {
+          id: 'p3-1',
+          name: 'Backend API',
+          startTime: '2024-03-01',
+          endTime: '2024-03-31',
+          progress: 60,
+          parentId: 'p3',
+          rowBackgroundColor: '#f0fff4',
+        },
+        {
+          id: 'p3-2',
+          name: 'Frontend implementation',
+          startTime: '2024-04-01',
+          endTime: '2024-04-25',
+          progress: 15,
+          parentId: 'p3',
+          dependency: 'p3-1',
+          rowBackgroundColor: '#f0fff4',
+        },
+        {
+          id: 'p3-3',
+          name: 'Integration tests',
+          startTime: '2024-04-22',
+          endTime: '2024-04-30',
+          progress: 0,
+          parentId: 'p3',
+          dependency: 'p3-2',
+          rowBackgroundColor: '#f0fff4',
+        },
+
+        {
+          id: 'p4',
+          name: 'QA & Launch',
+          startTime: '2024-05-01',
+          endTime: '2024-05-24',
+          progress: 0,
+          rowBackgroundColor: '#fff8ed',
+        },
+        {
+          id: 'p4-1',
+          name: 'QA regression',
+          startTime: '2024-05-01',
+          endTime: '2024-05-10',
+          progress: 0,
+          parentId: 'p4',
+          dependency: 'p3-3',
+          rowBackgroundColor: '#fff8ed',
+        },
+        {
+          id: 'p4-2',
+          name: 'Bug fixing',
+          startTime: '2024-05-11',
+          endTime: '2024-05-20',
+          progress: 0,
+          parentId: 'p4',
+          dependency: 'p4-1',
+          rowBackgroundColor: '#fff8ed',
+        },
+        {
+          id: 'launch',
+          name: 'Product launch',
+          startTime: '2024-05-24',
+          type: 'milestone',
+          dependency: 'p4-2',
+          rowBackgroundColor: '#fff8ed',
+        },
+      ];
+
+      // ── Build columnConfig from current state ────────────────────────────────
+
+      function buildColumnConfig() {
+        return columnOrder
+          .filter((key) => visible[key])
+          .map((key) => {
+            const col = ALL_COLUMNS.find((c) => c.key === key);
+            return {key, title: col.title, minWidth: `${minWidths[key]}px`};
+          });
+      }
+
+      // Compute task list panel width as sum of visible column min-widths + padding
+      function computeTasksContainerWidth() {
+        const visibleKeys = columnOrder.filter((key) => visible[key]);
+        const total = visibleKeys.reduce((sum, key) => sum + minWidths[key], 0);
+        return total + 20; // 20px padding for borders/scrollbar
+      }
+
+      // ── Gantt init ───────────────────────────────────────────────────────────
+
+      const container = document.getElementById('svg-gantt');
+
+      const gantt = new ApexGantt(container, {
+        viewMode: 'month',
+        series: tasks,
+        columnConfig: buildColumnConfig(),
+        tasksContainerWidth: computeTasksContainerWidth(),
+      });
+
+      gantt.render();
+
+      // ── Apply config to chart ────────────────────────────────────────────────
+
+      function applyColumns() {
+        const config = buildColumnConfig();
+        gantt.update({series: tasks, columnConfig: config, tasksContainerWidth: computeTasksContainerWidth()});
+        updateConfigDisplay(config);
+        syncControls();
+      }
+
+      function updateConfigDisplay(config) {
+        const snippet = JSON.stringify(
+          config.map((c) => ({key: c.key, title: c.title, minWidth: c.minWidth})),
+          null,
+          2
+        );
+        document.getElementById('config-display').innerHTML =
+          `<strong>Current columnConfig</strong><br><pre style="margin:6px 0 0;font-size:11px;line-height:1.6">${snippet}</pre>`;
+      }
+
+      updateConfigDisplay(buildColumnConfig());
+
+      // ── Presets ──────────────────────────────────────────────────────────────
+
+      const PRESETS = {
+        default: ['name', 'startTime', 'duration', 'progress'],
+        nameOnly: ['name'],
+        nameProgress: ['name', 'progress'],
+        compact: ['name', 'duration'],
+        nameStart: ['name', 'startTime'],
+      };
+
+      function applyPreset(name) {
+        const keys = PRESETS[name];
+        Object.keys(visible).forEach((k) => {
+          visible[k] = keys.includes(k);
+        });
+        columnOrder = [...keys, ...columnOrder.filter((k) => !keys.includes(k))];
+        applyColumns();
+      }
+
+      // ── Checkbox toggles ─────────────────────────────────────────────────────
+
+      function buildToggles() {
+        const wrap = document.getElementById('col-toggles');
+        wrap.innerHTML = '';
+        ALL_COLUMNS.forEach(({key, title}) => {
+          const lbl = document.createElement('label');
+          lbl.className = 'col-toggle';
+
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = !!visible[key];
+          // "name" column must always stay visible
+          if (key === 'name') cb.disabled = true;
+
+          cb.addEventListener('change', () => {
+            visible[key] = cb.checked;
+            applyColumns();
+          });
+
+          lbl.appendChild(cb);
+          lbl.appendChild(document.createTextNode(title));
+          wrap.appendChild(lbl);
+        });
+      }
+
+      // ── Drag-to-reorder + width inputs ───────────────────────────────────────
+
+      let dragSrcKey = null;
+
+      function buildOrderList() {
+        const list = document.getElementById('order-list');
+        list.innerHTML = '';
+
+        columnOrder.forEach((key) => {
+          const col = ALL_COLUMNS.find((c) => c.key === key);
+          const item = document.createElement('div');
+          item.className = 'order-item';
+          item.dataset.key = key;
+          item.draggable = true;
+
+          // Drag handle + label
+          const handle = document.createElement('span');
+          handle.className = 'drag-handle';
+          handle.textContent = '⠿';
+
+          const labelEl = document.createElement('span');
+          labelEl.className = 'order-item-label';
+          labelEl.textContent = col.title;
+
+          // Min-width input
+          const widthInput = document.createElement('input');
+          widthInput.type = 'number';
+          widthInput.className = 'width-input';
+          widthInput.min = '30';
+          widthInput.max = '400';
+          widthInput.value = minWidths[key];
+          widthInput.title = `Min width for "${col.title}"`;
+
+          widthInput.addEventListener('mousedown', (e) => e.stopPropagation());
+          widthInput.addEventListener('change', () => {
+            const val = Math.max(30, Math.min(400, parseInt(widthInput.value, 10) || col.defaultMinWidth));
+            widthInput.value = val;
+            minWidths[key] = val;
+            applyColumns();
+          });
+
+          const unit = document.createElement('span');
+          unit.className = 'width-unit';
+          unit.textContent = 'px';
+
+          item.appendChild(handle);
+          item.appendChild(labelEl);
+          item.appendChild(widthInput);
+          item.appendChild(unit);
+
+          item.addEventListener('dragstart', (e) => {
+            dragSrcKey = key;
+            item.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+          });
+
+          item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+            document.querySelectorAll('.order-item').forEach((el) => el.classList.remove('drag-over'));
+          });
+
+          item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            document.querySelectorAll('.order-item').forEach((el) => el.classList.remove('drag-over'));
+            item.classList.add('drag-over');
+          });
+
+          item.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (!dragSrcKey || dragSrcKey === key) return;
+            const srcIdx = columnOrder.indexOf(dragSrcKey);
+            const tgtIdx = columnOrder.indexOf(key);
+            columnOrder.splice(srcIdx, 1);
+            columnOrder.splice(tgtIdx, 0, dragSrcKey);
+            dragSrcKey = null;
+            applyColumns();
+          });
+
+          list.appendChild(item);
+        });
+      }
+
+      // ── Sync controls after any state change ─────────────────────────────────
+
+      function syncControls() {
+        buildToggles();
+        buildOrderList();
+      }
+
+      // ── Initial render of controls ───────────────────────────────────────────
+
+      syncControls();
+    </script>
+  </body>
+</html>

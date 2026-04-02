@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mixed Contexts Demo - Shadow DOM + Regular DOM</title>
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f5f5f5;
+      }
+      .demo-section {
+        margin: 20px 0;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .controls {
+        margin: 10px 0;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      button {
+        padding: 8px 16px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: #fff;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #f0f0f0;
+      }
+      .container {
+        width: 100%;
+        height: 400px;
+        margin: 10px 0;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+      }
+      .shadow-host {
+        width: 100%;
+        height: 400px;
+        border: 2px solid #007bff;
+        border-radius: 4px;
+      }
+      .status {
+        margin: 10px 0;
+        padding: 10px;
+        background: #e3f2fd;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Mixed Contexts Demo: Shadow DOM + Regular DOM</h1>
+    <p>This demo tests the scenario where one Gantt is in Shadow DOM and another is in regular DOM.</p>
+
+    <div class="demo-section">
+      <h2>1. Regular DOM Gantt</h2>
+      <div class="controls">
+        <button onclick="createRegularGantt()">Create Regular Gantt</button>
+        <button onclick="destroyRegularGantt()">Destroy Regular Gantt</button>
+      </div>
+      <div id="regular-gantt" class="container"></div>
+      <div id="regular-status" class="status">Status: Not created</div>
+    </div>
+
+    <div class="demo-section">
+      <h2>2. Shadow DOM Gantt</h2>
+      <div class="controls">
+        <button onclick="createShadowGantt()">Create Shadow Gantt</button>
+        <button onclick="destroyShadowGantt()">Destroy Shadow Gantt</button>
+      </div>
+      <div id="shadow-host" class="shadow-host"></div>
+      <div id="shadow-status" class="status">Status: Not created</div>
+    </div>
+
+    <div class="demo-section">
+      <h2>3. Test Scenarios</h2>
+      <div class="controls">
+        <button onclick="createBothSequentially()">Create Both Sequentially</button>
+        <button onclick="createBothSimultaneously()">Create Both Simultaneously</button>
+        <button onclick="destroyBoth()">Destroy Both</button>
+        <button onclick="recreateAfterDestroy()">Recreate After Destroy</button>
+      </div>
+      <div id="test-status" class="status">Ready for testing</div>
+    </div>
+
+    <script>
+      let regularGanttInstance = null;
+      let shadowGanttInstance = null;
+
+      const sampleData = [
+        {
+          id: 'task1',
+          startTime: '10-11-2024',
+          endTime: '11-01-2024',
+          name: 'Main Task 1',
+          progress: 65,
+        },
+        {
+          id: 'task2',
+          startTime: '11-02-2024',
+          endTime: '11-15-2024',
+          name: 'Main Task 2',
+          progress: 25,
+          dependency: 'task1',
+        },
+        {
+          id: 'task3',
+          startTime: '11-16-2024',
+          endTime: '11-25-2024',
+          name: 'Main Task 3',
+          progress: 75,
+          dependency: 'task2',
+        },
+      ];
+
+      function updateStatus(elementId, message) {
+        document.getElementById(elementId).textContent = `Status: ${message}`;
+      }
+
+      function createRegularGantt() {
+        try {
+          if (regularGanttInstance) {
+            regularGanttInstance.destroy();
+          }
+
+          const container = document.getElementById('regular-gantt');
+          regularGanttInstance = new ApexGantt(container, {
+            series: sampleData,
+            viewMode: 'week',
+          });
+          regularGanttInstance.render();
+          updateStatus('regular-status', 'Created successfully');
+        } catch (error) {
+          updateStatus('regular-status', `Error: ${error.message}`);
+          console.error('Regular gantt error:', error);
+        }
+      }
+
+      function destroyRegularGantt() {
+        try {
+          if (regularGanttInstance) {
+            regularGanttInstance.destroy();
+            regularGanttInstance = null;
+            updateStatus('regular-status', 'Destroyed');
+          } else {
+            updateStatus('regular-status', 'Nothing to destroy');
+          }
+        } catch (error) {
+          updateStatus('regular-status', `Destroy error: ${error.message}`);
+          console.error('Regular gantt destroy error:', error);
+        }
+      }
+
+      function createShadowGantt() {
+        try {
+          if (shadowGanttInstance) {
+            shadowGanttInstance.destroy();
+          }
+
+          const shadowHost = document.getElementById('shadow-host');
+
+          // Clear any existing shadow root
+          if (shadowHost.shadowRoot) {
+            shadowHost.shadowRoot.innerHTML = '';
+          } else {
+            // Create shadow root
+            shadowHost.attachShadow({mode: 'open'});
+          }
+
+          // Create container inside shadow root
+          const shadowContainer = document.createElement('div');
+          shadowContainer.style.width = '100%';
+          shadowContainer.style.height = '100%';
+          shadowHost.shadowRoot.appendChild(shadowContainer);
+
+          shadowGanttInstance = new ApexGantt(shadowContainer, {
+            series: sampleData,
+            viewMode: 'week',
+          });
+          shadowGanttInstance.render();
+          updateStatus('shadow-status', 'Created successfully in Shadow DOM');
+        } catch (error) {
+          updateStatus('shadow-status', `Error: ${error.message}`);
+          console.error('Shadow gantt error:', error);
+        }
+      }
+
+      function destroyShadowGantt() {
+        try {
+          if (shadowGanttInstance) {
+            shadowGanttInstance.destroy();
+            shadowGanttInstance = null;
+
+            // Clear shadow root content
+            const shadowHost = document.getElementById('shadow-host');
+            if (shadowHost.shadowRoot) {
+              shadowHost.shadowRoot.innerHTML = '';
+            }
+
+            updateStatus('shadow-status', 'Destroyed');
+          } else {
+            updateStatus('shadow-status', 'Nothing to destroy');
+          }
+        } catch (error) {
+          updateStatus('shadow-status', `Destroy error: ${error.message}`);
+          console.error('Shadow gantt destroy error:', error);
+        }
+      }
+
+      function createBothSequentially() {
+        updateStatus('test-status', 'Creating regular gantt first...');
+        createRegularGantt();
+
+        setTimeout(() => {
+          updateStatus('test-status', 'Creating shadow gantt second...');
+          createShadowGantt();
+          updateStatus('test-status', 'Both created sequentially - check if both render correctly');
+        }, 1000);
+      }
+
+      function createBothSimultaneously() {
+        updateStatus('test-status', 'Creating both simultaneously...');
+        createRegularGantt();
+        createShadowGantt();
+        updateStatus('test-status', 'Both created simultaneously - check if both render correctly');
+      }
+
+      function destroyBoth() {
+        updateStatus('test-status', 'Destroying both...');
+        destroyRegularGantt();
+        destroyShadowGantt();
+        updateStatus('test-status', 'Both destroyed');
+      }
+
+      function recreateAfterDestroy() {
+        updateStatus('test-status', 'Testing recreate scenario...');
+
+        // Create both
+        createBothSimultaneously();
+
+        setTimeout(() => {
+          updateStatus('test-status', 'Destroying first gantt...');
+          destroyRegularGantt();
+
+          setTimeout(() => {
+            updateStatus('test-status', 'Recreating first gantt - shadow should still work');
+            createRegularGantt();
+            updateStatus('test-status', 'Recreated - check if both still work correctly');
+          }, 1000);
+        }, 2000);
+      }
+    </script>
+  </body>
+</html>

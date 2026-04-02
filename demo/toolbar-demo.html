@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Toolbar Extensibility Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .demo-header {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+
+      .demo-header h1 {
+        margin: 0 0 6px;
+        color: #222;
+        font-size: 22px;
+      }
+
+      .demo-header p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+      }
+
+      #svg-gantt {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        height: 460px;
+      }
+
+      .panels {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .panel {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 20px;
+      }
+
+      .panel h2 {
+        margin: 0 0 14px;
+        font-size: 16px;
+        color: #333;
+      }
+
+      /* Action log */
+      .log-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .log-scroll {
+        max-height: 280px;
+        overflow-y: auto;
+      }
+
+      .log-item {
+        border-left: 3px solid #005fcc;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        background: #f8f9fa;
+        border-radius: 0 4px 4px 0;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .log-item.warn {
+        border-left-color: #f59e0b;
+      }
+
+      .log-item.success {
+        border-left-color: #22c55e;
+      }
+
+      .log-time {
+        color: #999;
+        font-size: 11px;
+      }
+
+      .log-action {
+        font-weight: 600;
+        color: #222;
+      }
+
+      .log-detail {
+        color: #555;
+      }
+
+      .no-log {
+        color: #999;
+        font-style: italic;
+        font-size: 13px;
+        text-align: center;
+        padding: 30px 0;
+      }
+
+      .btn {
+        padding: 6px 14px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        background: white;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn:hover {
+        background: #f0f0f0;
+      }
+
+      /* Feature list */
+      .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-size: 13px;
+        color: #444;
+        line-height: 2;
+      }
+
+      .feature-list li::before {
+        content: '✓ ';
+        color: #22c55e;
+        font-weight: 700;
+      }
+
+      .feature-list code {
+        background: #f0f4ff;
+        color: #005fcc;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+
+      /* Toast notification */
+      #toast {
+        position: fixed;
+        bottom: 32px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: #1a1a1a;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        opacity: 0;
+        transition:
+          opacity 0.2s ease,
+          transform 0.2s ease;
+        pointer-events: none;
+        z-index: 9999;
+        max-width: 360px;
+        text-align: center;
+      }
+
+      #toast.visible {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      /* Tag badge colors on task rows */
+      .tag-urgent {
+        outline: 2px solid #ef4444 !important;
+        outline-offset: -2px;
+      }
+      .tag-review {
+        outline: 2px solid #f59e0b !important;
+        outline-offset: -2px;
+      }
+      .tag-done {
+        outline: 2px solid #22c55e !important;
+        outline-offset: -2px;
+      }
+      .tag-blocked {
+        outline: 2px solid #6b7280 !important;
+        outline-offset: -2px;
+      }
+
+      .tag-badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 5px;
+        border-radius: 10px;
+        margin-left: 6px;
+        vertical-align: middle;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .tag-urgent .tag-badge {
+        background: #fef2f2;
+        color: #ef4444;
+      }
+      .tag-review .tag-badge {
+        background: #fffbeb;
+        color: #d97706;
+      }
+      .tag-done .tag-badge {
+        background: #f0fdf4;
+        color: #16a34a;
+      }
+      .tag-blocked .tag-badge {
+        background: #f9fafb;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div class="demo-header">
+        <h1>ApexGantt — Toolbar Extensibility Demo</h1>
+        <p>
+          Click a task row to select it, then press <kbd>Space</kbd> to toggle selection. Use the
+          <strong>Phase</strong> filter to show only tasks for a phase. Select tasks, then use
+          <strong>Publish</strong> or the <strong>Tag</strong> dropdown to act on them.
+        </p>
+      </div>
+
+      <div id="svg-gantt"></div>
+
+      <div class="panels">
+        <!-- Action log -->
+        <div class="panel">
+          <div class="log-header">
+            <h2>Action Log</h2>
+            <button class="btn" onclick="clearLog()">Clear</button>
+          </div>
+          <div class="log-scroll">
+            <div id="action-log"><div class="no-log">Interact with the toolbar above!</div></div>
+          </div>
+        </div>
+
+        <!-- Feature list -->
+        <div class="panel">
+          <h2>What's demonstrated</h2>
+          <ul class="feature-list">
+            <li>
+              <strong>Phase filter</strong> — calls <code>gantt.update({ series })</code> to re-render only matching
+              tasks
+            </li>
+            <li>
+              <strong>Publish</strong> — <code>requiresSelection</code>, <code>showCount</code>, shows a toast on click
+            </li>
+            <li><strong>Copy IDs</strong> — <code>disabled: fn</code> evaluated live, writes to clipboard</li>
+            <li><strong>Tag select</strong> — applies colored outline + badge to selected task rows in the DOM</li>
+            <li><kbd>Space</kbd> — toggles selection after clicking a row (keyboard focus follows click)</li>
+            <li><kbd>Ctrl/Cmd+A</kbd> — selects all tasks</li>
+            <li><kbd>Escape</kbd> — clears selection</li>
+            <li><kbd>↑ ↓</kbd> — navigate rows, <kbd>→ ←</kbd> expand/collapse groups</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast"></div>
+
+    <script>
+      // ── Logging helper ───────────────────────────────────────────────────
+
+      function log(action, detail, type = 'default') {
+        const el = document.getElementById('action-log');
+        const noLog = el.querySelector('.no-log');
+        if (noLog) noLog.remove();
+
+        const item = document.createElement('div');
+        item.className = `log-item ${type}`;
+        const time = new Date().toLocaleTimeString();
+        item.innerHTML = `
+          <div class="log-time">${time}</div>
+          <div class="log-action">${action}</div>
+          ${detail ? `<div class="log-detail">${detail}</div>` : ''}
+        `;
+        el.insertBefore(item, el.firstChild);
+        if (el.children.length > 40) el.removeChild(el.lastChild);
+      }
+
+      function clearLog() {
+        document.getElementById('action-log').innerHTML = '<div class="no-log">Interact with the toolbar above!</div>';
+      }
+
+      // ── Toast ─────────────────────────────────────────────────────────────
+
+      let toastTimer = null;
+      function showToast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('visible'), 2800);
+      }
+
+      // ── Icons (inline SVG) ───────────────────────────────────────────────
+
+      const icons = {
+        send: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
+        copy: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+      };
+
+      // ── Task data ─────────────────────────────────────────────────────────
+
+      const phaseColors = {
+        discovery: '#eef3ff', // soft indigo
+        design: '#fdf3ff', // soft purple
+        dev: '#f0fff4', // soft green
+        qa: '#fff8ed', // soft amber
+      };
+
+      const allTasks = [
+        {
+          id: 'disc-1',
+          name: 'Stakeholder interviews',
+          startTime: '2024-01-02',
+          endTime: '2024-01-12',
+          progress: 100,
+          phase: 'discovery',
+          rowBackgroundColor: phaseColors.discovery,
+        },
+        {
+          id: 'disc-2',
+          name: 'Requirements doc',
+          startTime: '2024-01-15',
+          endTime: '2024-01-26',
+          progress: 100,
+          phase: 'discovery',
+          dependency: 'disc-1',
+          rowBackgroundColor: phaseColors.discovery,
+        },
+        {
+          id: 'disc-3',
+          name: 'Discovery sign-off',
+          startTime: '2024-01-29',
+          endTime: '2024-01-31',
+          progress: 100,
+          phase: 'discovery',
+          dependency: 'disc-2',
+          rowBackgroundColor: phaseColors.discovery,
+        },
+
+        {
+          id: 'des-1',
+          name: 'UX wireframes',
+          startTime: '2024-02-01',
+          endTime: '2024-02-14',
+          progress: 100,
+          phase: 'design',
+          rowBackgroundColor: phaseColors.design,
+        },
+        {
+          id: 'des-2',
+          name: 'Visual design',
+          startTime: '2024-02-15',
+          endTime: '2024-02-29',
+          progress: 80,
+          phase: 'design',
+          dependency: 'des-1',
+          rowBackgroundColor: phaseColors.design,
+        },
+
+        {
+          id: 'dev-1',
+          name: 'Backend API',
+          startTime: '2024-03-01',
+          endTime: '2024-03-31',
+          progress: 45,
+          phase: 'dev',
+          rowBackgroundColor: phaseColors.dev,
+        },
+        {
+          id: 'dev-2',
+          name: 'Frontend implementation',
+          startTime: '2024-04-01',
+          endTime: '2024-04-25',
+          progress: 10,
+          phase: 'dev',
+          dependency: 'dev-1',
+          rowBackgroundColor: phaseColors.dev,
+        },
+        {
+          id: 'dev-3',
+          name: 'Integration tests',
+          startTime: '2024-04-22',
+          endTime: '2024-04-30',
+          progress: 0,
+          phase: 'dev',
+          dependency: 'dev-2',
+          rowBackgroundColor: phaseColors.dev,
+        },
+
+        {
+          id: 'qa-1',
+          name: 'QA regression',
+          startTime: '2024-05-01',
+          endTime: '2024-05-10',
+          progress: 0,
+          phase: 'qa',
+          dependency: 'dev-3',
+          rowBackgroundColor: phaseColors.qa,
+        },
+        {
+          id: 'qa-2',
+          name: 'Bug fixing',
+          startTime: '2024-05-11',
+          endTime: '2024-05-20',
+          progress: 0,
+          phase: 'qa',
+          dependency: 'qa-1',
+          rowBackgroundColor: phaseColors.qa,
+        },
+        {
+          id: 'launch',
+          name: 'Product launch',
+          startTime: '2024-05-24',
+          type: 'milestone',
+          phase: 'qa',
+          dependency: 'qa-2',
+          rowBackgroundColor: phaseColors.qa,
+        },
+      ];
+
+      // Task tags: id → { value, label }
+      const taskTags = {};
+
+      const tagMeta = {
+        urgent: {label: 'Urgent', cls: 'tag-urgent', badge: '🔴 Urgent'},
+        review: {label: 'Needs Review', cls: 'tag-review', badge: '🟡 Review'},
+        done: {label: 'Done', cls: 'tag-done', badge: '🟢 Done'},
+        blocked: {label: 'Blocked', cls: 'tag-blocked', badge: '⛔ Blocked'},
+      };
+
+      // ── Apply tag visually to task rows ───────────────────────────────────
+
+      function applyTagsToRows(container) {
+        // Remove all existing tag classes + badges from every row
+        const allRows = container.querySelectorAll('.tasks-data-row');
+        allRows.forEach((row) => {
+          Object.values(tagMeta).forEach(({cls}) => row.classList.remove(cls));
+          row.querySelectorAll('.tag-badge').forEach((b) => b.remove());
+        });
+
+        // Re-apply from taskTags map
+        Object.entries(taskTags).forEach(([taskId, tagValue]) => {
+          const row = container.querySelector(`.tasks-data-row[data-taskid="${taskId}"]`);
+          if (!row) return;
+          const meta = tagMeta[tagValue];
+          if (!meta) return;
+          row.classList.add(meta.cls);
+
+          // Insert badge into the name cell (first .tasks-data-cell)
+          const nameCell = row.querySelector('.tasks-data-cell');
+          if (nameCell) {
+            const badge = document.createElement('span');
+            badge.className = 'tag-badge';
+            badge.textContent = meta.badge;
+            nameCell.appendChild(badge);
+          }
+        });
+      }
+
+      // ── Current phase filter ──────────────────────────────────────────────
+
+      let activePhase = null; // null = all
+
+      function getFilteredTasks() {
+        if (!activePhase) return allTasks;
+        return allTasks.filter((t) => t.phase === activePhase);
+      }
+
+      // ── Gantt init ────────────────────────────────────────────────────────
+
+      const container = document.getElementById('svg-gantt');
+
+      const gantt = new ApexGantt(container, {
+        enableSelection: true,
+        viewMode: 'month',
+
+        toolbarItems: [
+          // LEFT: phase filter — re-renders only matching tasks
+          {
+            type: 'select',
+            label: 'Phase',
+            placeholder: 'All phases…',
+            position: 'left',
+            options: [
+              {value: 'discovery', text: 'Discovery'},
+              {value: 'design', text: 'Design'},
+              {value: 'dev', text: 'Development'},
+              {value: 'qa', text: 'QA & Launch'},
+            ],
+            onChange(value, {selectedTasks}) {
+              activePhase = value;
+              // Re-render the chart with only the matching tasks
+              gantt.update({series: getFilteredTasks()});
+              // Re-apply any existing tags after re-render
+              setTimeout(() => applyTagsToRows(container), 0);
+              log(
+                `Phase filter → ${value}`,
+                `Showing ${getFilteredTasks().length} task(s). ${selectedTasks.length} were selected (selection cleared on re-render).`,
+                'default'
+              );
+            },
+          },
+
+          // "Show all" reset button — also position: left
+          {
+            type: 'button',
+            label: 'All',
+            position: 'left',
+            tooltip: 'Show all phases',
+            onClick() {
+              activePhase = null;
+              gantt.update({series: allTasks});
+              setTimeout(() => applyTagsToRows(container), 0);
+              log('Phase filter cleared', 'Showing all 11 tasks', 'default');
+            },
+          },
+
+          // RIGHT items ──────────────────────────────────────────────────
+          {type: 'separator'},
+
+          // Publish — requires selection, shows live count badge, shows toast on click
+          {
+            type: 'button',
+            label: 'Publish',
+            icon: icons.send,
+            tooltip: 'Publish selected tasks to your backend',
+            requiresSelection: true,
+            showCount: true,
+            onClick({selectedTasks}) {
+              const names = selectedTasks.map((t) => t.name).join(', ');
+              showToast(`✅ Published ${selectedTasks.length} task(s) to staging`);
+              log(`Published ${selectedTasks.length} task(s)`, names, 'success');
+            },
+          },
+
+          // Copy IDs — disabled fn re-evaluated live
+          {
+            type: 'button',
+            label: 'Copy IDs',
+            icon: icons.copy,
+            tooltip: 'Copy selected task IDs to clipboard',
+            disabled: ({selectedTasks}) => selectedTasks.length === 0,
+            onClick({selectedTasks}) {
+              const ids = selectedTasks.map((t) => t.id).join(', ');
+              navigator.clipboard?.writeText(ids).catch(() => {});
+              showToast(`📋 Copied: ${ids}`);
+              log('Copied IDs', ids, 'success');
+            },
+          },
+
+          {type: 'separator'},
+
+          // Tag select — applies visual outline + badge to selected task rows
+          {
+            type: 'select',
+            label: 'Tag',
+            placeholder: 'Add tag…',
+            options: [
+              {value: 'urgent', text: '🔴 Urgent'},
+              {value: 'review', text: '🟡 Needs Review'},
+              {value: 'done', text: '🟢 Done'},
+              {value: 'blocked', text: '⛔ Blocked'},
+            ],
+            onChange(value, {selectedTasks}) {
+              if (selectedTasks.length === 0) {
+                log(`Tag "${value}" selected`, 'No tasks selected — select tasks first', 'warn');
+                showToast('⚠️ Select tasks before tagging');
+                return;
+              }
+
+              // Record tags and apply visually
+              selectedTasks.forEach((t) => {
+                taskTags[t.id] = value;
+              });
+              applyTagsToRows(container);
+
+              const meta = tagMeta[value];
+              log(
+                `Tagged ${selectedTasks.length} task(s) as "${meta.label}"`,
+                selectedTasks.map((t) => t.name).join(', '),
+                'success'
+              );
+              showToast(`${meta.badge} applied to ${selectedTasks.length} task(s)`);
+            },
+          },
+        ],
+
+        series: allTasks,
+      });
+
+      gantt.render();
+
+      // Log selection changes
+      container.addEventListener('selectionChange', (e) => {
+        const {selectedIds} = e.detail;
+        if (selectedIds.length > 0) {
+          log(`Selection changed`, `${selectedIds.length} task(s): ${selectedIds.join(', ')}`);
+        } else {
+          log('Selection cleared', null, 'default');
+        }
+      });
+    </script>
+  </body>
+</html>

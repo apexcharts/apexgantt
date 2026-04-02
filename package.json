@@ -1,6 +1,6 @@
 {
   "name": "apexgantt",
-  "version": "3.8.0",
+  "version": "3.9.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/apexcharts/apexgantt"
@@ -11,15 +11,15 @@
   "type": "module",
   "main": "./apexgantt.min.js",
   "module": "./apexgantt.es.min.js",
-  "types": "./index.d.ts",
+  "types": "./apexgantt.d.ts",
   "exports": {
     ".": {
       "import": {
-        "types": "./index.d.ts",
+        "types": "./apexgantt.d.ts",
         "default": "./apexgantt.es.min.js"
       },
       "require": {
-        "types": "./index.d.ts",
+        "types": "./apexgantt.d.ts",
         "default": "./apexgantt.min.js"
       }
     }

@@ -62,49 +62,57 @@ gantt.render();
 
 ## ApexGantt Options
 
-The layout can be configured by either setting the properties in the table below by passing a second arg to ApexGantt with these properties set. The latter takes precedence.
+The layout can be configured by passing a second argument to `ApexGantt` with the properties listed below.
 
-| Options                   | Default                       | Description                                         |
-| ------------------------- | ----------------------------- | --------------------------------------------------- |
-| width                     | `100%`                        | The width of graph container                        |
-| height                    | `500px`                       | The height of graph container                       |
-| series,                   | `[]`                          | Data for gantt. See format below                    |
-| theme,                    | `light`                       | Built in light and dark theme for easy styling      |
-| canvasStyle               | `None`                        | The css styles for canvas root container            |
-| viewMode                  | `ViewMode.Month`              | View mode                                           |
-| arrowColor                | `#0D6EFD`                     | Color for the dependency arrows                     |
-| rowHeight                 | `28`                          | Height for timeline row                             |
-| rowBackgroundColors       | `['#FFFFFF']`                 | Alternate row colors.                               |
-| barBackgroundColor        | `#537CFA`                     | Background color for timeline bar                   |
-| barBorderRadius           | `5px`                         | Border radius for timeline bar                      |
-| barMargin                 | `4`                           | Top and bottom margin for timeline bar              |
-| barTextColor              | `#FFFFFF`                     | Text color for timeline bar                         |
-| cellBorderColor           | `#eff0f0`                     | Border color for all table cells and timeline cells |
-| cellBorderWidth           | `1px`                         | Border width for all table cells and timeline cells |
-| columnConfig              | `undefined`                   | Custom column widths                                |
-| enableToolbar             | `false`                       | Enable/disable graph toolbar                        |
-| enableResize              | `true`                        | Enable/disable gantt sidebar resize                 |
-| enableExport              | `true`                        | Enable/disable gantt export options                 |
-| enableTaskDrag            | `true`                        | Enable/disable gantt export options                 |
-| enableTaskEdit            | `false`                       | Enable/disable gantt export options                 |
-| enableTaskResize          | `true`                        | Enable/disable gantt export options                 |
-| headerBackground          | `#f3f3f3`                     | Background color for header                         |
-| inputDateFormat           | `MM-DD-YYYY`                  | Input date format                                   |
-| tasksContainerWidth       | `425`                         | Task sidebar container width                        |
-| tooltipId                 | `apexgantt-tooltip-container` | The tooltip HTML element id                         |
-| tooltipTemplate           | `tooltipTemplate`             | The HTML template for tooltip                       |
-| tooltipBorderColor        | `#BCBCBC`                     | The border color of tooltip                         |
-| tooltipBGColor            | `#FFFFFF`                     | The background color of tooltip                     |
-| fontSize                  | `14px`                        | The size of font of nodes                           |
-| fontFamily                | `None`                        | The font family of nodes                            |
-| fontWeight                | `400`                         | The font weight of nodes                            |
-| fontColor                 | `#000000`                     | The font color of nodes                             |
-| annotationBgColor         | `#F9D1FC`                     | The backgrond color of annotation                   |
-| annotationBorderColor     | `#E273EA`                     | The backgrond color of annotation                   |
-| annotationBorderDashArray | `[]`                          | The border dash array of annotation                 |
-| annotationBorderWidth     | `2`                           | The border width of annotation                      |
-| annotationOrientation     | `Orientation.Horizontal`      | The orientation of annotation                       |
-| annotations               | `[]`                          | See sample data below                               |
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `series` | `TaskInput[]` | **required** | Task data array. See data format below. |
+| `theme` | `'light' \| 'dark'` | `'light'` | Built-in color theme preset. |
+| `width` | `number \| string` | `'100%'` | Width of the chart container. |
+| `height` | `number \| string` | `500` | Height of the chart container. |
+| `viewMode` | `ViewMode` | `ViewMode.Month` | Timeline granularity: `Day`, `Week`, `Month`, `Quarter`, `Year`. |
+| `inputDateFormat` | `string` | `'MM-DD-YYYY'` | dayjs-compatible format used to parse `startTime` / `endTime` values. |
+| `canvasStyle` | `string` | `''` | Arbitrary CSS injected onto the root container element. |
+| `backgroundColor` | `string` | `'#FFFFFF'` | Background color of the chart container. |
+| `headerBackground` | `string` | `'#f3f3f3'` | Background color of the header row. |
+| `rowHeight` | `number` | `28` | Height of each task row in pixels. |
+| `rowBackgroundColors` | `string[]` | `['#FFFFFF']` | Alternating row background colors; the pattern cycles automatically. |
+| `tasksContainerWidth` | `number` | `425` | Initial pixel width of the task-list panel. |
+| `columnConfig` | `ColumnListItem[]` | `undefined` | Custom column definitions for the task-list panel. Controls which columns are shown, their order, titles, and widths. See [Column Configuration](#column-configuration). |
+| `barBackgroundColor` | `string` | `'#537CFA'` | Default background fill color for task bars. |
+| `barBorderRadius` | `string` | `'5px'` | CSS border-radius applied to task bars. |
+| `barMargin` | `number` | `4` | Top and bottom margin inside each row for the task bar. |
+| `barTextColor` | `string` | `'#FFFFFF'` | Text color rendered inside task bars. |
+| `arrowColor` | `string` | `'#0D6EFD'` | Color of dependency arrows between tasks. |
+| `borderColor` | `string` | `'#eff0f0'` | Color of cell and row divider lines. |
+| `cellBorderColor` | `string` | `'#eff0f0'` | Border color for all cells in the task table and timeline grid. |
+| `cellBorderWidth` | `string` | `'1px'` | CSS border-width for all cell lines. |
+| `enableResize` | `boolean` | `true` | Allow the task-list panel to be resized by dragging the divider. |
+| `enableExport` | `boolean` | `true` | Show the SVG export button in the toolbar. |
+| `enableTaskDrag` | `boolean` | `true` | Allow tasks to be reordered by dragging rows in the task list. |
+| `enableTaskEdit` | `boolean` | `false` | Show the inline task-edit form when a task row is clicked. |
+| `enableTaskResize` | `boolean` | `true` | Allow task bars to be resized by dragging their handles. |
+| `enableTooltip` | `boolean` | `true` | Show a tooltip on task-bar hover. |
+| `enableCriticalPath` | `boolean` | `false` | Calculate and highlight the critical path through dependent tasks. |
+| `criticalBarColor` | `string` | `'#e53935'` | Fill color for task bars on the critical path. |
+| `criticalArrowColor` | `string` | `'#e53935'` | Stroke color for dependency arrows on the critical path. |
+| `baseline` | `Partial<BaselineOptions>` | `undefined` | When `enabled: true`, renders a thin baseline bar below each task bar. |
+| `tooltipId` | `string` | `'apexgantt-tooltip-container'` | HTML `id` for the tooltip container element. |
+| `tooltipTemplate` | `(task, dateFormat) => string` | built-in | Custom function returning an HTML string for the task tooltip. |
+| `tooltipBorderColor` | `string` | `'#BCBCBC'` | Border color of the tooltip. |
+| `tooltipBGColor` | `string` | `'#FFFFFF'` | Background color of the tooltip. |
+| `fontColor` | `string` | `'#000000'` | Color for all text in the chart. |
+| `fontFamily` | `string` | `''` | CSS font-family for the chart. |
+| `fontSize` | `string` | `'14px'` | CSS font-size for the chart. |
+| `fontWeight` | `string` | `'400'` | CSS font-weight for the chart. |
+| `annotationBgColor` | `string` | `'#F9D1FC'` | Background color of annotation markers. |
+| `annotationBorderColor` | `string` | `'#E273EA'` | Border color of annotation markers. |
+| `annotationBorderDashArray` | `number[]` | `[]` | SVG stroke-dasharray for annotation borders, e.g. `[6, 3]`. |
+| `annotationBorderWidth` | `number` | `2` | Border width of annotation markers in pixels. |
+| `annotationOrientation` | `Orientation` | `Orientation.Horizontal` | Whether annotation lines are drawn horizontally or vertically. |
+| `annotations` | `Annotation[]` | `[]` | Array of annotation objects to overlay on the timeline. |
+| `parsing` | `ParsingConfig` | `undefined` | Field-mapping config to parse non-standard task shapes. See Data Parsing below. |
+| `taskListAriaLabel` | `string` | `'Task list'` | `aria-label` for the task-list table, used by screen readers. |
 
 Default tooltip template
 
@@ -202,7 +210,11 @@ Each tasks should be in below format
 
 ## Column Configuration
 
-Customize task table column widths:
+Customize which columns appear in the task-list panel, their order, titles, and widths. When `columnConfig` is provided, **it is authoritative** — only the columns you list are rendered, in the order you specify. Omitted columns are hidden. Each entry is merged with defaults, so you only need to specify overrides.
+
+Available column keys: `Name`, `StartTime`, `EndTime`, `Duration`, `Progress`.
+
+### Customize column widths
 
 ```js
 import {ColumnKey} from 'apexgantt';
@@ -237,6 +249,67 @@ const gantt = new ApexGantt(element, {
   ],
 });
 ```
+
+### Hide columns
+
+Show only the columns you need by omitting the rest:
+
+```js
+const gantt = new ApexGantt(element, {
+  series: tasks,
+  columnConfig: [
+    {key: ColumnKey.Name, title: 'Task Name'},
+    {key: ColumnKey.Progress, title: 'Progress'},
+  ],
+});
+```
+
+You can also use `visible: false` to keep a column in the config but hide it (useful for toggling at runtime via `update()`):
+
+```js
+columnConfig: [
+  {key: ColumnKey.Name, title: 'Task Name'},
+  {key: ColumnKey.StartTime, title: 'Start'},
+  {key: ColumnKey.Duration, title: 'Duration', visible: false}, // hidden
+  {key: ColumnKey.Progress, title: 'Progress'},
+],
+```
+
+### Reorder columns
+
+Change the array order to reorder the rendered columns:
+
+```js
+columnConfig: [
+  {key: ColumnKey.Progress, title: 'Progress'},
+  {key: ColumnKey.Name, title: 'Task Name'},
+  {key: ColumnKey.StartTime, title: 'Start'},
+],
+```
+
+### Include the End Date column
+
+The `EndTime` column is available but not shown by default. Add it to your config:
+
+```js
+columnConfig: [
+  {key: ColumnKey.Name, title: 'Task Name'},
+  {key: ColumnKey.StartTime, title: 'Start'},
+  {key: ColumnKey.EndTime, title: 'End', minWidth: '70px', flexGrow: 1.5},
+  {key: ColumnKey.Duration, title: 'Duration'},
+  {key: ColumnKey.Progress, title: 'Progress'},
+],
+```
+
+### ColumnListItem properties
+
+| Property   | Type        | Default       | Description                                       |
+| ---------- | ----------- | ------------- | ------------------------------------------------- |
+| `key`      | `ColumnKey` | —             | Which data field this column shows (required).    |
+| `title`    | `string`    | from defaults | Header text displayed for the column.             |
+| `minWidth` | `string`    | `'30px'`      | Minimum CSS width (used in `minmax()`).           |
+| `flexGrow` | `number`    | `1`           | Flex proportion (used as `fr` units in CSS Grid). |
+| `visible`  | `boolean`   | `true`        | Set to `false` to hide the column.                |
 
 ## Data Parsing
 
