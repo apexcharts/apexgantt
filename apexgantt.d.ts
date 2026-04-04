@@ -14,7 +14,7 @@ export declare interface Annotation {
 /**
  * Interface representing the label of an annotation.
  */
-declare interface AnnotationLabel {
+export declare interface AnnotationLabel {
     readonly fontColor?: string;
     readonly fontFamily?: string;
     readonly fontSize?: string;
@@ -463,6 +463,10 @@ export declare const GanttEvents: {
      * emits when the set of selected tasks changes
      */
     readonly SELECTION_CHANGE: "selectionChange";
+    /**
+     * emits when a dependency arrow is created, updated, or removed
+     */
+    readonly DEPENDENCY_ARROW_UPDATE: "dependencyArrowUpdate";
 };
 
 /**
