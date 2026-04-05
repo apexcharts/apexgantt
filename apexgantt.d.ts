@@ -369,7 +369,7 @@ export declare class DataParser {
 }
 
 /**
- * Detail payload for the `dependency-arrow-update` event.
+ * Detail payload for the `dependencyArrowUpdate` event.
  *
  * Fires when the user creates, updates, or removes a dependency arrow
  * between two tasks in the interactive dependency editor.
@@ -431,7 +431,7 @@ export declare interface GanttEventMap {
     /** Fires when the set of selected tasks changes. */
     selectionChange: CustomEvent<SelectionChangeEventDetail>;
     /** Fires when a dependency arrow is updated. */
-    'dependency-arrow-update': CustomEvent<DependencyArrowUpdateDetail>;
+    dependencyArrowUpdate: CustomEvent<DependencyArrowUpdateDetail>;
 }
 
 export declare const GanttEvents: {

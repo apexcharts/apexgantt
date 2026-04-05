@@ -97,6 +97,9 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `criticalBarColor` | `string` | `'#e53935'` | Fill color for task bars on the critical path. |
 | `criticalArrowColor` | `string` | `'#e53935'` | Stroke color for dependency arrows on the critical path. |
 | `baseline` | `Partial<BaselineOptions>` | `undefined` | When `enabled: true`, renders a thin baseline bar below each task bar. |
+| `enableSelection` | `boolean` | `false` | Enable row selection (click, Ctrl+Click, Shift+Click, keyboard). |
+| `showCheckboxColumn` | `boolean` | `true` | Show a checkbox column for multi-select. Only applies when `enableSelection` is `true`. |
+| `toolbarItems` | `ToolbarItem[]` | `[]` | Custom controls rendered in the toolbar alongside the built-in zoom and export buttons. See [Custom Toolbar](#custom-toolbar). |
 | `tooltipId` | `string` | `'apexgantt-tooltip-container'` | HTML `id` for the tooltip container element. |
 | `tooltipTemplate` | `(task, dateFormat) => string` | built-in | Custom function returning an HTML string for the task tooltip. |
 | `tooltipBorderColor` | `string` | `'#BCBCBC'` | Border color of the tooltip. |
@@ -173,20 +176,42 @@ tooltipTemplate(task, dateFormat) {
 
 ### Expected data format to set as Options.series
 
-Each tasks should be in below format
+Each task should be in the following format:
 
 ```js
 [
   {
-    id: 'a', // unique id of the task
-    startTime: '10-11-2024', // start time of the task
-    endTime: '11-01-2024', // end time of the task
-    name: 'task 1', // task name
-    parentId: 'a', // parent task id
-    progress: 65, // progress in percentage
+    id: 'a',                  // unique id of the task
+    startTime: '10-11-2024',  // start time of the task
+    endTime: '11-01-2024',    // end time of the task
+    name: 'task 1',           // task name
+    parentId: 'a',            // parent task id
+    progress: 65,             // progress in percentage (0–100)
+    type: 'task',             // 'task' (default) or 'milestone'
+    dependency: 'other-id',   // simple string (Finish-to-Start) or typed object (see below)
+    barBackgroundColor: '#537CFA', // override bar color for this task
+    rowBackgroundColor: '#FFFFFF', // override row background for this task
+    collapsed: false,         // whether child tasks are collapsed
+    baseline: {               // optional planned dates (requires baseline.enabled: true)
+      start: '10-10-2024',
+      end: '10-30-2024',
+    },
   },
 ];
 ```
+
+### Typed dependency
+
+The `dependency` field accepts either a plain task ID string (treated as Finish-to-Start with 0 lag) or a typed object for full control:
+
+```js
+{
+  id: 'task-2',
+  dependency: { taskId: 'task-1', type: 'FS', lag: 2 }, // start 2 days after task-1 finishes
+}
+```
+
+Supported dependency types: `'FS'` (Finish-to-Start, default), `'FF'` (Finish-to-Finish), `'SF'` (Start-to-Finish), `'SS'` (Start-to-Start). `lag` is in days; negative values create lead (overlap).
 
 ### Expected annotation format to set as Options.annotations
 
@@ -370,6 +395,45 @@ const gantt = new ApexGantt(document.getElementById('gantt'), {
 
 **Supported fields:** `id`, `name`, `startTime`, `endTime`, `progress`, `type`, `parentId`, `dependency`, `barBackgroundColor`, `rowBackgroundColor`, `collapsed`
 
+## Theming
+
+ApexGantt ships with built-in light and dark themes. Use the `theme` option to select a preset, or supply a full `GanttTheme` object for complete control.
+
+```js
+import ApexGantt, {LightTheme, DarkTheme, getTheme} from 'apexgantt';
+
+// Built-in presets via string shorthand
+const gantt = new ApexGantt(element, {series: tasks, theme: 'dark'});
+
+// Programmatic preset access
+const dark = getTheme('dark');
+
+// Override individual colors based on a preset
+const gantt = new ApexGantt(element, {
+  series: tasks,
+  theme: {...DarkTheme, barBackgroundColor: '#7C3AED'},
+});
+```
+
+## Enums and Constants
+
+```js
+import {ViewMode, TaskType, ColumnKey, Orientation} from 'apexgantt';
+
+// ViewMode — timeline granularity
+ViewMode.Day | ViewMode.Week | ViewMode.Month | ViewMode.Quarter | ViewMode.Year
+
+// TaskType — how a task is rendered
+TaskType.Task      // horizontal bar
+TaskType.Milestone // diamond marker
+
+// ColumnKey — built-in task-list columns
+ColumnKey.Name | ColumnKey.StartTime | ColumnKey.EndTime | ColumnKey.Duration | ColumnKey.Progress
+
+// Orientation — annotation line direction
+Orientation.Horizontal | Orientation.Vertical
+```
+
 ## 📘 Public API
 
 ### 1. `update(options)`
@@ -424,23 +488,160 @@ ganttInstance.updateTask('task-1', {
 
 ### 3. `zoomIn()`
 
-Zooms in the gantt based on current view mode. View mode direction for zoom in year -> quarter -> month -> week -> day
+Zooms in the gantt based on current view mode. View mode direction for zoom in: year -> quarter -> month -> week -> day
 
 #### Example
 
 ```js
-ganttInstance.zoomOut();
+ganttInstance.zoomIn();
 ```
 
 ### 4. `zoomOut()`
 
-Zooms out the gantt based on current view mode. View mode direction for zoom in day -> week -> month -> quarter -> year
+Zooms out the gantt based on current view mode. View mode direction for zoom out: day -> week -> month -> quarter -> year
 
 #### Example
 
 ```js
 ganttInstance.zoomOut();
 ```
+
+### 5. `getSelectedTasks()`
+
+Returns an array of currently selected `Task` objects. Requires `enableSelection: true`.
+
+```js
+const selected = ganttInstance.getSelectedTasks();
+console.log(selected.map((t) => t.id));
+```
+
+### 6. `setSelectedTasks(ids)`
+
+Programmatically set the selection to the given task IDs. Requires `enableSelection: true`.
+
+```js
+ganttInstance.setSelectedTasks(['task-1', 'task-3']);
+```
+
+### 7. `clearSelection()`
+
+Clear all selected tasks. Requires `enableSelection: true`.
+
+```js
+ganttInstance.clearSelection();
+```
+
+### 8. `renderToolbar(container)`
+
+Render the built-in toolbar into a custom DOM element. Normally called automatically by `render()`. Use this only when you need to mount the toolbar in a custom slot outside the chart.
+
+```js
+const toolbarEl = document.getElementById('my-toolbar');
+ganttInstance.renderToolbar(toolbarEl);
+```
+
+### 9. `isDestroyed()`
+
+Returns `true` after `destroy()` has been called, `false` while the chart is live. Use this guard before calling other methods when you are unsure whether the instance is still active.
+
+```js
+if (!ganttInstance.isDestroyed()) {
+  ganttInstance.update({series: newTasks});
+}
+```
+
+### 10. `destroy()`
+
+Destroy the chart instance and free all associated resources. Removes all event listeners, disconnects `ResizeObserver`s, clears the tooltip, and clears the DOM. After calling `destroy()` the instance cannot be reused — create a new `ApexGantt` instead.
+
+Always call `destroy()` before removing the host element from the DOM or when cleaning up in frameworks.
+
+```js
+// React cleanup example
+useEffect(() => {
+  const gantt = new ApexGantt(ref.current, options);
+  gantt.render();
+  return () => gantt.destroy();
+}, []);
+```
+
+## Custom Toolbar
+
+Add custom buttons, dropdowns, and separators to the toolbar alongside the built-in zoom and export controls. Pass an array of `ToolbarItem` objects to the `toolbarItems` option.
+
+### Toolbar Button
+
+```js
+import ApexGantt, {GanttEvents} from 'apexgantt';
+
+const gantt = new ApexGantt(element, {
+  series: tasks,
+  enableSelection: true,
+  toolbarItems: [
+    {
+      type: 'button',
+      label: 'Export Selected',
+      tooltip: 'Export selected tasks to CSV',
+      position: 'right', // 'left' inserts before built-in controls
+      requiresSelection: true, // auto-disabled when nothing is selected
+      showCount: true,         // label becomes "Export Selected (3)"
+      onClick: ({selectedTasks}) => exportToCsv(selectedTasks),
+    },
+  ],
+});
+```
+
+### Toolbar Select
+
+```js
+toolbarItems: [
+  {
+    type: 'select',
+    label: 'Filter',
+    placeholder: 'All types…',
+    position: 'left',
+    options: [
+      {value: 'task', text: 'Tasks'},
+      {value: 'milestone', text: 'Milestones'},
+    ],
+    onChange: (value, {selectedTasks}) => console.log(value, selectedTasks),
+  },
+],
+```
+
+### Toolbar Separator
+
+```js
+toolbarItems: [
+  {type: 'separator', position: 'right'},
+  {type: 'button', label: 'Save', onClick: () => save()},
+],
+```
+
+### ToolbarButton properties
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `type` | `'button'` | — | Required discriminator. |
+| `label` | `string` | — | Text label inside the button. |
+| `icon` | `string` | — | SVG string rendered as the button icon. |
+| `tooltip` | `string` | — | Tooltip shown on hover. |
+| `position` | `'left' \| 'right'` | `'right'` | Where to insert relative to built-in controls. |
+| `disabled` | `boolean \| (context) => boolean` | — | Static flag or function evaluated on every selection change. |
+| `requiresSelection` | `boolean` | `false` | Auto-disabled when no tasks are selected. |
+| `showCount` | `boolean` | `false` | Appends the selection count to the label, e.g. `"Export (3)"`. |
+| `onClick` | `(context) => void` | — | Called when the button is clicked. |
+
+### ToolbarSelect properties
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `type` | `'select'` | — | Required discriminator. |
+| `label` | `string` | — | Optional label rendered before the `<select>`. |
+| `placeholder` | `string` | — | Placeholder option shown when no value is chosen. |
+| `position` | `'left' \| 'right'` | `'right'` | Where to insert relative to built-in controls. |
+| `options` | `{value, text}[]` | — | Options shown in the dropdown. |
+| `onChange` | `(value, context) => void` | — | Called when the selected value changes. |
 
 ## Events
 
@@ -450,12 +651,14 @@ ApexGantt emits CustomEvents on the container element for various user interacti
 
 | Event | When | Detail |
 | --- | --- | --- |
-| `taskUpdate` | Task is being updated | `{ taskId, updates, updatedTask, timestamp }` |
+| `taskUpdate` | Task is being updated (before completion) | `{ taskId, updates, updatedTask, timestamp }` |
 | `taskUpdateSuccess` | Update completed successfully | `{ taskId, updatedTask, timestamp }` |
 | `taskValidationError` | Form validation failed | `{ taskId, errors, timestamp }` |
 | `taskUpdateError` | Update failed | `{ taskId, error, timestamp }` |
-| `taskDragged` | Task bar is dragged | `{ taskId, oldStartTime, oldEndTime, newStartTime, newEndTime, daysMoved, affectedChildTasks, timestamp }` |
-| `taskResized` | Task bar is resized | `{ taskId, resizeHandle, oldStartTime, oldEndTime, newStartTime, newEndTime, durationChange, timestamp }` |
+| `taskDragged` | Task bar is dragged to a new position | `{ taskId, oldStartTime, oldEndTime, newStartTime, newEndTime, daysMoved, affectedChildTasks, timestamp }` |
+| `taskResized` | Task bar is resized via its handles | `{ taskId, resizeHandle, oldStartTime, oldEndTime, newStartTime, newEndTime, durationChange, timestamp }` |
+| `selectionChange` | Selected task rows change | `{ selectedTasks, selectedIds, timestamp }` |
+| `dependencyArrowUpdate` | Dependency arrow created, updated, or removed | `{ fromId, toId, type, lag, chartInstanceId, arrowLinkInstanceId }` |
 
 ### Events Usage
 
@@ -509,3 +712,29 @@ function GanttChart({tasks}) {
   return <div ref={containerRef} />;
 }
 ```
+
+#### TypeScript — typed events with `GanttEventMap`
+
+Use the `GanttEventMap` interface for fully-typed `CustomEvent.detail` access:
+
+```typescript
+import ApexGantt, {GanttEventMap} from 'apexgantt';
+
+const container = document.getElementById('gantt') as HTMLElement;
+const chart = new ApexGantt(container, {series: tasks, enableSelection: true});
+chart.render();
+
+container.addEventListener('taskDragged', (e: GanttEventMap['taskDragged']) => {
+  console.log(e.detail.taskId, e.detail.daysMoved);
+});
+
+container.addEventListener('selectionChange', (e: GanttEventMap['selectionChange']) => {
+  console.log('selected IDs:', e.detail.selectedIds);
+});
+
+container.addEventListener('dependencyArrowUpdate', (e: GanttEventMap['dependencyArrowUpdate']) => {
+  const {fromId, toId, type, lag} = e.detail;
+  console.log(`${fromId} → ${toId} (${type}, lag: ${lag ?? 0})`);
+});
+```
+
