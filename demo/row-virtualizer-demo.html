@@ -70,7 +70,7 @@
         // Using a seeded sequence (simple LCG) keeps the layout stable across
         // re-renders without needing a library.
         const totalGroups = Math.ceil(count / 5);
-        const WINDOW_DAYS = 120; // scatter within Jan–Apr 2026
+        const WINDOW_DAYS = 120; // scatter within Jan-Apr 2026
         let seed = 42;
         const rand = () => {
           seed = (seed * 1664525 + 1013904223) & 0x7fffffff;

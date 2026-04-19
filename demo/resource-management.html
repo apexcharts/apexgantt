@@ -3,358 +3,372 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ApexGantt - Resource Management Demo</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <title>Resource Management - Office Build-Out</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        background: #fff;
+        padding: 20px 0;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin: 0 0 4px 0;
+        line-height: 1.3;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 16px;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 16px;
+        font-size: 12px;
+        color: #475569;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .legend-swatch {
+        width: 24px;
+        height: 10px;
+        border-radius: 3px;
+      }
+    </style>
   </head>
-  <body
-    style="
-      margin: 0;
-      padding: 20px;
-      background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
-      min-height: 100vh;
-      font-family: 'Poppins', sans-serif;
-    "
-  >
-    <div style="max-width: 1300px; margin: 0 auto">
-      <h1
-        style="
-          color: #2d3748;
-          text-align: center;
-          margin-bottom: 10px;
-          font-weight: 700;
-          font-size: 32px;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        "
-      >
-        Team Resource Allocation
-      </h1>
-      <p style="color: #4a5568; text-align: center; margin-bottom: 30px; font-size: 18px; font-weight: 500">
-        Q1 2025 Project Assignment & Capacity Planning
-      </p>
-
-      <!-- Team Legend -->
-      <div
-        style="
-          background: white;
-          border-radius: 12px;
-          padding: 20px;
-          margin-bottom: 20px;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        "
-      >
-        <h3 style="margin: 0 0 15px 0; color: #2d3748; font-weight: 600">Team Color Legend:</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: 20px">
-          <div style="display: flex; align-items: center; gap: 8px">
-            <div style="width: 20px; height: 12px; background: #ff6b6b; border-radius: 4px"></div>
-            <span style="color: #4a5568; font-weight: 500">Frontend Team</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px">
-            <div style="width: 20px; height: 12px; background: #4ecdc4; border-radius: 4px"></div>
-            <span style="color: #4a5568; font-weight: 500">Backend Team</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px">
-            <div style="width: 20px; height: 12px; background: #45b7d1; border-radius: 4px"></div>
-            <span style="color: #4a5568; font-weight: 500">DevOps Team</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px">
-            <div style="width: 20px; height: 12px; background: #96ceb4; border-radius: 4px"></div>
-            <span style="color: #4a5568; font-weight: 500">QA Team</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px">
-            <div style="width: 20px; height: 12px; background: #ffeaa7; border-radius: 4px"></div>
-            <span style="color: #4a5568; font-weight: 500">Design Team</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px">
-            <div style="width: 20px; height: 12px; background: #dda0dd; border-radius: 4px"></div>
-            <span style="color: #4a5568; font-weight: 500">Product Team</span>
-          </div>
-        </div>
+  <body>
+    <h2>Office Build-Out — Team Allocation</h2>
+    <p class="subtitle">
+      Color-coded by trade/team using per-task
+      <code>barBackgroundColor</code> to visualize resource allocation across parallel work streams
+    </p>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: #3b82f6"></div>
+        <span>Architecture</span>
       </div>
-
-      <div
-        id="svg-gantt"
-        style="background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12); overflow: hidden"
-      ></div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: #f59e0b"></div>
+        <span>General Contractor</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: #ef4444"></div>
+        <span>Electrical</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: #06b6d4"></div>
+        <span>Plumbing</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: #8b5cf6"></div>
+        <span>IT / Low Voltage</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: #10b981"></div>
+        <span>Interior Finish</span>
+      </div>
     </div>
+    <div id="svg-gantt"></div>
     <script>
       const ganttOptions = {
         width: '100%',
-        height: 800,
+        height: 660,
         viewMode: 'week',
-        fontFamily: 'Poppins, sans-serif',
-        fontSize: '13px',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '12px',
         fontWeight: '500',
-        fontColor: '#2D3748',
-        headerBackground: '#F8F9FA',
-        canvasStyle: 'border: none;',
-        rowBackgroundColors: ['#FFFFFF', '#F8F9FA'],
-        barBorderRadius: '10px',
-        barMargin: 5,
-        arrowColor: '#667EEA',
-        tooltipBGColor: '#2D3748',
-        tooltipBorderColor: '#4A5568',
+        fontColor: '#334155',
+        canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; box-sizing: border-box;',
+        barBorderRadius: '6px',
+        barMargin: 4,
+        rowBackgroundColors: ['#ffffff', '#f8fafc'],
         enableTaskDrag: true,
         enableTaskResize: true,
-        series: [
-          // E-commerce Platform Project
-          {
-            id: 'ecommerce-project',
-            startTime: '01-06-2025',
-            endTime: '03-28-2025',
-            name: '🛒 E-commerce Platform (Team: 12 members)',
-            progress: 35,
-            barBackgroundColor: '#667EEA',
-            barTextColor: '#FFFFFF',
-          },
-          {
-            id: 'ecom-frontend',
-            startTime: '01-06-2025',
-            endTime: '02-21-2025',
-            name: '💻 Frontend Development (Sarah, Mike, John)',
-            parentId: 'ecommerce-project',
-            progress: 60,
-            barBackgroundColor: '#FF6B6B',
-            barTextColor: '#FFFFFF',
-          },
-          {
-            id: 'ecom-backend',
-            startTime: '01-13-2025',
-            endTime: '03-07-2025',
-            name: '⚙️ Backend API (David, Lisa, Alex)',
-            parentId: 'ecommerce-project',
-            progress: 45,
-            barBackgroundColor: '#4ECDC4',
-            barTextColor: '#2D3748',
-          },
-          {
-            id: 'ecom-design',
-            startTime: '01-06-2025',
-            endTime: '01-31-2025',
-            name: '🎨 UI/UX Design (Emma, Tom)',
-            parentId: 'ecommerce-project',
-            progress: 85,
-            barBackgroundColor: '#FFEAA7',
-            barTextColor: '#2D3748',
-          },
-          {
-            id: 'ecom-testing',
-            startTime: '02-15-2025',
-            endTime: '03-21-2025',
-            name: '🧪 QA Testing (Maria, James)',
-            parentId: 'ecommerce-project',
-            dependency: 'ecom-frontend',
-            progress: 20,
-            barBackgroundColor: '#96CEB4',
-            barTextColor: '#2D3748',
-          },
-          {
-            id: 'ecom-devops',
-            startTime: '03-08-2025',
-            endTime: '03-28-2025',
-            name: '🚀 DevOps & Deployment (Kevin)',
-            parentId: 'ecommerce-project',
-            dependency: 'ecom-backend',
-            progress: 10,
-            barBackgroundColor: '#45B7D1',
-            barTextColor: '#FFFFFF',
-          },
-
-          // Mobile App Project
-          {
-            id: 'mobile-app-project',
-            startTime: '02-03-2025',
-            endTime: '04-11-2025',
-            name: '📱 Mobile App Development (Team: 8 members)',
-            progress: 25,
-            barBackgroundColor: '#A78BFA',
-            barTextColor: '#FFFFFF',
-          },
-          {
-            id: 'mobile-frontend',
-            startTime: '02-03-2025',
-            endTime: '03-21-2025',
-            name: '📲 Mobile Frontend (React Native - Anna, Chris)',
-            parentId: 'mobile-app-project',
-            progress: 40,
-            barBackgroundColor: '#FF6B6B',
-            barTextColor: '#FFFFFF',
-          },
-          {
-            id: 'mobile-backend',
-            startTime: '02-10-2025',
-            endTime: '03-14-2025',
-            name: '🔗 Mobile API Integration (Paul, Nina)',
-            parentId: 'mobile-app-project',
-            progress: 35,
-            barBackgroundColor: '#4ECDC4',
-            barTextColor: '#2D3748',
-          },
-          {
-            id: 'mobile-design',
-            startTime: '02-03-2025',
-            endTime: '02-28-2025',
-            name: '📐 Mobile UI Design (Sophie, Mark)',
-            parentId: 'mobile-app-project',
-            progress: 70,
-            barBackgroundColor: '#FFEAA7',
-            barTextColor: '#2D3748',
-          },
-          {
-            id: 'mobile-testing',
-            startTime: '03-15-2025',
-            endTime: '04-04-2025',
-            name: '📋 Mobile Testing (Rachel, Steve)',
-            parentId: 'mobile-app-project',
-            dependency: 'mobile-backend',
-            progress: 15,
-            barBackgroundColor: '#96CEB4',
-            barTextColor: '#2D3748',
-          },
-
-          // Analytics Dashboard Project
-          {
-            id: 'analytics-project',
-            startTime: '01-20-2025',
-            endTime: '03-07-2025',
-            name: '📊 Analytics Dashboard (Team: 6 members)',
-            progress: 55,
-            barBackgroundColor: '#F093FB',
-            barTextColor: '#FFFFFF',
-          },
-          {
-            id: 'analytics-frontend',
-            startTime: '01-20-2025',
-            endTime: '02-28-2025',
-            name: '📈 Dashboard Frontend (React - Ben, Kate)',
-            parentId: 'analytics-project',
-            progress: 75,
-            barBackgroundColor: '#FF6B6B',
-            barTextColor: '#FFFFFF',
-          },
-          {
-            id: 'analytics-backend',
-            startTime: '01-27-2025',
-            endTime: '02-21-2025',
-            name: '🗄️ Data Processing Backend (Oliver, Grace)',
-            parentId: 'analytics-project',
-            progress: 80,
-            barBackgroundColor: '#4ECDC4',
-            barTextColor: '#2D3748',
-          },
-          {
-            id: 'analytics-product',
-            startTime: '01-20-2025',
-            endTime: '02-14-2025',
-            name: '📋 Product Requirements (Jennifer, Ryan)',
-            parentId: 'analytics-project',
-            progress: 90,
-            barBackgroundColor: '#DDA0DD',
-            barTextColor: '#2D3748',
-          },
-
-          // Infrastructure Upgrade
-          {
-            id: 'infrastructure-project',
-            startTime: '02-17-2025',
-            endTime: '04-25-2025',
-            name: '🏗️ Infrastructure Modernization (Team: 4 members)',
-            progress: 30,
-            barBackgroundColor: '#74B9FF',
-            barTextColor: '#FFFFFF',
-          },
-          {
-            id: 'infra-planning',
-            startTime: '02-17-2025',
-            endTime: '03-07-2025',
-            name: '📝 Infrastructure Planning (Lucas, Amy)',
-            parentId: 'infrastructure-project',
-            progress: 60,
-            barBackgroundColor: '#DDA0DD',
-            barTextColor: '#2D3748',
-          },
-          {
-            id: 'infra-migration',
-            startTime: '03-08-2025',
-            endTime: '04-11-2025',
-            name: '🔄 Cloud Migration (DevOps - Kevin, Michael)',
-            parentId: 'infrastructure-project',
-            dependency: 'infra-planning',
-            progress: 25,
-            barBackgroundColor: '#45B7D1',
-            barTextColor: '#FFFFFF',
-          },
-          {
-            id: 'infra-testing',
-            startTime: '04-12-2025',
-            endTime: '04-25-2025',
-            name: '✅ Infrastructure Testing (Combined QA)',
-            parentId: 'infrastructure-project',
-            dependency: 'infra-migration',
-            progress: 0,
-            barBackgroundColor: '#96CEB4',
-            barTextColor: '#2D3748',
-          },
-
-          // Maintenance & Bug Fixes (Ongoing)
-          {
-            id: 'maintenance',
-            startTime: '01-06-2025',
-            endTime: '04-25-2025',
-            name: '🔧 Maintenance & Bug Fixes (Rotating Team)',
-            progress: 40,
-            barBackgroundColor: '#FD79A8',
-            barTextColor: '#FFFFFF',
-          },
-        ],
         annotations: [
           {
-            x1: '02-14-2025',
-            x2: '02-21-2025',
-            bgColor: 'rgba(255, 107, 107, 0.1)',
-            label: {
-              text: 'Sprint Review Week',
-            },
+            x1: '07-14-2025',
+            x2: '07-18-2025',
+            bgColor: 'rgba(239, 68, 68, 0.06)',
+            label: {text: 'Code Inspection'},
           },
           {
-            x1: '03-28-2025',
-            x2: '04-04-2025',
-            bgColor: 'rgba(102, 126, 234, 0.1)',
+            x1: '08-29-2025',
             label: {
-              text: 'Major Release Window',
+              text: 'Move-in Day',
+              fontColor: '#059669',
             },
           },
         ],
-        tooltipTemplate(task, dateFormat) {
-          const getTeamInfo = (taskName) => {
-            if (taskName.includes('Frontend') || taskName.includes('UI')) return '👥 Frontend Team';
-            if (taskName.includes('Backend') || taskName.includes('API')) return '👥 Backend Team';
-            if (taskName.includes('DevOps') || taskName.includes('Deployment')) return '👥 DevOps Team';
-            if (taskName.includes('QA') || taskName.includes('Testing')) return '👥 QA Team';
-            if (taskName.includes('Design') || taskName.includes('UI/UX')) return '👥 Design Team';
-            if (taskName.includes('Product') || taskName.includes('Requirements')) return '👥 Product Team';
-            return '👥 Mixed Team';
-          };
-
-          const teamInfo = getTeamInfo(task.name);
-          const progressBar = `
-            <div style="width: 100%; background: #4A5568; border-radius: 4px; height: 8px; margin: 10px 0;">
-              <div style="width: ${task.progress}%; background: ${task.barBackgroundColor || '#667EEA'}; height: 100%; border-radius: 4px;"></div>
-            </div>
-          `;
-
-          return `
-            <div style='background: #2D3748; color: #F7FAFC; padding: 16px 20px; border-radius: 4px; font-family: Poppins, sans-serif; max-width: 320px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); border: 2px solid ${task.barBackgroundColor || '#667EEA'};'>
-              <div style='font-weight: 700; font-size: 15px; margin-bottom: 8px; color: #F7FAFC;'>${task.name}</div>
-              <div style='font-size: 13px; color: #A0AEC0; margin-bottom: 6px;'>${teamInfo}</div>
-              <div style='font-size: 12px; color: #CBD5E0; margin-bottom: 4px;'>Progress: ${task.progress}%</div>
-              ${progressBar}
-              <div style='font-size: 11px; color: #A0AEC0; margin-top: 8px;'>
-                📅 ${task.startTime} - ${task.endTime || 'Ongoing'}
-              </div>
-            </div>
-          `;
-        },
+        series: [
+          // Phase 1 — Design
+          {
+            id: 'design',
+            startTime: '06-02-2025',
+            endTime: '06-20-2025',
+            name: 'Design & Permitting',
+            progress: 100,
+            barBackgroundColor: '#3b82f6',
+            barTextColor: '#ffffff',
+          },
+          {
+            id: 'space-plan',
+            startTime: '06-02-2025',
+            endTime: '06-06-2025',
+            name: 'Space planning',
+            parentId: 'design',
+            progress: 100,
+            barBackgroundColor: '#60a5fa',
+            barTextColor: '#1e3a5f',
+          },
+          {
+            id: 'arch-drawings',
+            startTime: '06-09-2025',
+            endTime: '06-16-2025',
+            name: 'Architectural drawings',
+            parentId: 'design',
+            dependency: 'space-plan',
+            progress: 100,
+            barBackgroundColor: '#60a5fa',
+            barTextColor: '#1e3a5f',
+          },
+          {
+            id: 'permits',
+            startTime: '06-16-2025',
+            endTime: '06-20-2025',
+            name: 'Permit application',
+            parentId: 'design',
+            dependency: 'arch-drawings',
+            progress: 100,
+            barBackgroundColor: '#93c5fd',
+            barTextColor: '#1e3a5f',
+          },
+          {
+            id: 'ms-permits',
+            startTime: '06-21-2025',
+            name: 'Permits Approved',
+            type: 'milestone',
+            dependency: 'permits',
+          },
+          // Phase 2 — Rough-in
+          {
+            id: 'rough-in',
+            startTime: '06-23-2025',
+            endTime: '07-18-2025',
+            name: 'Rough-In Work',
+            progress: 65,
+            dependency: 'ms-permits',
+            barBackgroundColor: '#f59e0b',
+            barTextColor: '#ffffff',
+          },
+          {
+            id: 'demo-walls',
+            startTime: '06-23-2025',
+            endTime: '06-27-2025',
+            name: 'Demo existing walls',
+            parentId: 'rough-in',
+            progress: 100,
+            barBackgroundColor: '#fbbf24',
+            barTextColor: '#451a03',
+          },
+          {
+            id: 'framing',
+            startTime: '06-30-2025',
+            endTime: '07-04-2025',
+            name: 'New wall framing',
+            parentId: 'rough-in',
+            dependency: 'demo-walls',
+            progress: 90,
+            barBackgroundColor: '#fbbf24',
+            barTextColor: '#451a03',
+          },
+          {
+            id: 'elec-rough',
+            startTime: '07-07-2025',
+            endTime: '07-11-2025',
+            name: 'Electrical rough-in',
+            parentId: 'rough-in',
+            dependency: 'framing',
+            progress: 60,
+            barBackgroundColor: '#f87171',
+            barTextColor: '#450a0a',
+          },
+          {
+            id: 'plumb-rough',
+            startTime: '07-07-2025',
+            endTime: '07-14-2025',
+            name: 'Plumbing rough-in',
+            parentId: 'rough-in',
+            dependency: 'framing',
+            progress: 50,
+            barBackgroundColor: '#22d3ee',
+            barTextColor: '#083344',
+          },
+          {
+            id: 'low-volt',
+            startTime: '07-09-2025',
+            endTime: '07-16-2025',
+            name: 'Data/AV cabling',
+            parentId: 'rough-in',
+            dependency: 'framing',
+            progress: 40,
+            barBackgroundColor: '#a78bfa',
+            barTextColor: '#1e1b4b',
+          },
+          {
+            id: 'hvac',
+            startTime: '07-14-2025',
+            endTime: '07-18-2025',
+            name: 'HVAC ductwork',
+            parentId: 'rough-in',
+            dependency: 'elec-rough',
+            progress: 20,
+            barBackgroundColor: '#fbbf24',
+            barTextColor: '#451a03',
+          },
+          {
+            id: 'ms-inspection',
+            startTime: '07-19-2025',
+            name: 'Code Inspection',
+            type: 'milestone',
+            dependency: 'hvac',
+          },
+          // Phase 3 — Finishes
+          {
+            id: 'finishes',
+            startTime: '07-21-2025',
+            endTime: '08-15-2025',
+            name: 'Interior Finishes',
+            progress: 10,
+            dependency: 'ms-inspection',
+            barBackgroundColor: '#10b981',
+            barTextColor: '#ffffff',
+          },
+          {
+            id: 'drywall',
+            startTime: '07-21-2025',
+            endTime: '07-25-2025',
+            name: 'Drywall & tape',
+            parentId: 'finishes',
+            progress: 30,
+            barBackgroundColor: '#34d399',
+            barTextColor: '#064e3b',
+          },
+          {
+            id: 'painting',
+            startTime: '07-28-2025',
+            endTime: '08-01-2025',
+            name: 'Painting',
+            parentId: 'finishes',
+            dependency: 'drywall',
+            progress: 0,
+            barBackgroundColor: '#34d399',
+            barTextColor: '#064e3b',
+          },
+          {
+            id: 'flooring',
+            startTime: '08-04-2025',
+            endTime: '08-08-2025',
+            name: 'Flooring installation',
+            parentId: 'finishes',
+            dependency: 'painting',
+            progress: 0,
+            barBackgroundColor: '#6ee7b7',
+            barTextColor: '#064e3b',
+          },
+          {
+            id: 'elec-finish',
+            startTime: '08-04-2025',
+            endTime: '08-06-2025',
+            name: 'Electrical trim-out',
+            parentId: 'finishes',
+            dependency: 'painting',
+            progress: 0,
+            barBackgroundColor: '#f87171',
+            barTextColor: '#450a0a',
+          },
+          {
+            id: 'plumb-finish',
+            startTime: '08-07-2025',
+            endTime: '08-11-2025',
+            name: 'Plumbing fixtures',
+            parentId: 'finishes',
+            dependency: 'elec-finish',
+            progress: 0,
+            barBackgroundColor: '#22d3ee',
+            barTextColor: '#083344',
+          },
+          {
+            id: 'furniture',
+            startTime: '08-11-2025',
+            endTime: '08-15-2025',
+            name: 'Furniture & signage',
+            parentId: 'finishes',
+            dependency: 'flooring',
+            progress: 0,
+            barBackgroundColor: '#6ee7b7',
+            barTextColor: '#064e3b',
+          },
+          // IT setup
+          {
+            id: 'it-setup',
+            startTime: '08-11-2025',
+            endTime: '08-22-2025',
+            name: 'IT Setup & Testing',
+            progress: 0,
+            dependency: 'elec-finish',
+            barBackgroundColor: '#8b5cf6',
+            barTextColor: '#ffffff',
+          },
+          {
+            id: 'network',
+            startTime: '08-11-2025',
+            endTime: '08-15-2025',
+            name: 'Network equipment',
+            parentId: 'it-setup',
+            progress: 0,
+            barBackgroundColor: '#a78bfa',
+            barTextColor: '#1e1b4b',
+          },
+          {
+            id: 'av-install',
+            startTime: '08-18-2025',
+            endTime: '08-22-2025',
+            name: 'Conference room A/V',
+            parentId: 'it-setup',
+            dependency: 'network',
+            progress: 0,
+            barBackgroundColor: '#c4b5fd',
+            barTextColor: '#1e1b4b',
+          },
+          // Punchlist & handover
+          {
+            id: 'punchlist',
+            startTime: '08-25-2025',
+            endTime: '08-28-2025',
+            name: 'Punchlist & final walk',
+            progress: 0,
+            dependency: 'it-setup',
+          },
+          {
+            id: 'ms-movein',
+            startTime: '08-29-2025',
+            name: 'Move-in Day',
+            type: 'milestone',
+            dependency: 'punchlist',
+          },
+        ],
       };
 
       const gantt = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);

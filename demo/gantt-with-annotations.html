@@ -3,173 +3,246 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ApexGantt</title>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <title>Annotations - Product Launch Timeline</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        background: #fff;
+        padding: 20px 0;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin: 0 0 4px 0;
+        line-height: 1.3;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 16px;
+      }
+    </style>
   </head>
   <body>
-    <div id="svg-gantt" style="margin: 0 auto"></div>
+    <h2>SaaS Product Launch Timeline</h2>
+    <p class="subtitle">
+      Annotation lines mark key dates and annotation rects highlight important periods — use
+      <code>annotations</code> with <code>x1</code> for lines or <code>x1</code>/<code>x2</code> for rectangles
+    </p>
+    <div id="svg-gantt"></div>
     <script>
       const ganttOptions = {
+        width: '100%',
+        height: 580,
+        viewMode: 'week',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '12px',
+        fontWeight: '500',
+        fontColor: '#334155',
+        canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; box-sizing: border-box;',
+        barBorderRadius: '6px',
+        barMargin: 4,
+        enableTaskDrag: false,
+        enableTaskResize: false,
+        annotations: [
+          {
+            x1: '05-01-2025',
+            label: {
+              text: 'Feature Freeze',
+              fontColor: '#b91c1c',
+            },
+          },
+          {
+            x1: '05-19-2025',
+            label: {
+              text: 'Beta Release',
+              fontColor: '#7c3aed',
+            },
+          },
+          {
+            x1: '04-14-2025',
+            x2: '04-18-2025',
+            bgColor: 'rgba(59, 130, 246, 0.08)',
+            label: {
+              text: 'Sprint Review',
+            },
+          },
+          {
+            x1: '05-12-2025',
+            x2: '05-16-2025',
+            bgColor: 'rgba(234, 179, 8, 0.1)',
+            label: {
+              text: 'UAT Window',
+            },
+          },
+          {
+            x1: '06-02-2025',
+            label: {
+              text: 'GA Launch',
+              fontColor: '#059669',
+            },
+          },
+        ],
         series: [
           {
-            id: 'a',
-            startTime: '10-11-2024',
-            endTime: '11-01-2024',
-            name: 'task 1',
-            progress: 65,
+            id: 'discovery',
+            startTime: '04-07-2025',
+            endTime: '04-18-2025',
+            name: 'Discovery & Scoping',
+            progress: 100,
           },
           {
-            id: '5',
-            startTime: '10-11-2024',
-            endTime: '10-26-2024',
-            name: 'subtask 1.1',
-            parentId: 'a',
-            progress: 65,
+            id: 'user-research',
+            startTime: '04-07-2025',
+            endTime: '04-11-2025',
+            name: 'User research interviews',
+            parentId: 'discovery',
+            progress: 100,
           },
           {
-            id: '9',
-            startTime: '10-11-2024',
-            endTime: '10-16-2024',
-            name: 'subtask 1.1.1',
-            parentId: '5',
-            progress: 65,
+            id: 'prd',
+            startTime: '04-14-2025',
+            endTime: '04-18-2025',
+            name: 'PRD & acceptance criteria',
+            parentId: 'discovery',
+            dependency: 'user-research',
+            progress: 100,
           },
           {
-            id: '10',
-            startTime: '10-17-2024',
-            endTime: '10-26-2024',
-            name: 'subtask 1.1.2',
-            parentId: '5',
-            dependency: '9',
-            progress: 65,
-          },
-          {
-            id: '13',
-            startTime: '10-17-2024',
-            endTime: '10-23-2024',
-            name: 'subtask 1.1.2.1',
-            parentId: '10',
-            progress: 65,
-          },
-          {
-            id: '14',
-            startTime: '10-24-2024',
-            endTime: '10-26-2024',
-            name: 'subtask 1.1.2.2',
-            parentId: '10',
-            progress: 65,
-          },
-          {
-            id: '14.1',
-            startTime: '10-27-2024',
-            name: 'Task 2 Milestone',
-            parentId: '10',
-            dependency: '14',
-            type: 'milestone',
-          },
-          {
-            id: '6',
-            startTime: '10-28-2024',
-            endTime: '11-01-2024',
-            name: 'subtask 1.2',
-            parentId: 'a',
-            progress: 65,
-          },
-          {
-            id: 'b',
-            startTime: '11-02-2024',
-            endTime: '11-15-2024',
-            name: 'task 2',
-            progress: 25,
-          },
-          {
-            id: '7',
-            startTime: '11-02-2024',
-            endTime: '11-11-2024',
-            name: 'subtask 2.1',
-            parentId: 'b',
-            dependency: '13',
-            progress: 65,
-          },
-          {
-            id: '11',
-            startTime: '11-02-2024',
-            endTime: '11-06-2024',
-            name: 'subtask 2.1.1',
-            parentId: '7',
-            progress: 65,
-          },
-          {
-            id: '12',
-            startTime: '11-07-2024',
-            endTime: '11-11-2024',
-            name: 'subtask 2.1.2',
-            parentId: '7',
-            dependency: '11',
-            progress: 65,
-          },
-          {
-            id: '12.1',
-            startTime: '11-12-2024',
-            name: 'Task 2 Milestone',
-            parentId: '7',
-            dependency: '12',
-            type: 'milestone',
-          },
-          {
-            id: '8',
-            startTime: '11-13-2024',
-            endTime: '11-15-2024',
-            name: 'subtask 2.2',
-            parentId: 'b',
-            dependency: '12.1',
-            progress: 65,
-          },
-          {
-            id: 'c',
-            startTime: '11-16-2024',
-            endTime: '11-25-2024',
-            name: 'task 3',
+            id: 'core-dev',
+            startTime: '04-21-2025',
+            endTime: '05-09-2025',
+            name: 'Core Development',
             progress: 75,
+            dependency: 'discovery',
           },
           {
-            id: 'd',
-            startTime: '11-26-2024',
-            endTime: '12-01-2024',
-            name: 'task 4',
+            id: 'auth',
+            startTime: '04-21-2025',
+            endTime: '04-25-2025',
+            name: 'Auth & user management',
+            parentId: 'core-dev',
+            progress: 100,
+          },
+          {
+            id: 'dashboard',
+            startTime: '04-28-2025',
+            endTime: '05-02-2025',
+            name: 'Dashboard & analytics',
+            parentId: 'core-dev',
+            dependency: 'auth',
+            progress: 80,
+          },
+          {
+            id: 'billing',
+            startTime: '04-28-2025',
+            endTime: '05-05-2025',
+            name: 'Billing integration',
+            parentId: 'core-dev',
+            dependency: 'auth',
+            progress: 60,
+          },
+          {
+            id: 'api',
+            startTime: '05-05-2025',
+            endTime: '05-09-2025',
+            name: 'Public API endpoints',
+            parentId: 'core-dev',
+            dependency: 'dashboard',
+            progress: 40,
+          },
+          {
+            id: 'qa',
+            startTime: '05-05-2025',
+            endTime: '05-16-2025',
+            name: 'QA & Stabilization',
+            progress: 30,
+          },
+          {
+            id: 'integration-tests',
+            startTime: '05-05-2025',
+            endTime: '05-09-2025',
+            name: 'Integration test suite',
+            parentId: 'qa',
             progress: 50,
           },
           {
-            id: 'e',
-            startTime: '12-02-2024',
-            name: 'Project Milestone',
-            dependency: 'd',
+            id: 'perf-tests',
+            startTime: '05-12-2025',
+            endTime: '05-14-2025',
+            name: 'Performance testing',
+            parentId: 'qa',
+            dependency: 'integration-tests',
+            progress: 20,
+          },
+          {
+            id: 'uat',
+            startTime: '05-14-2025',
+            endTime: '05-16-2025',
+            name: 'User acceptance testing',
+            parentId: 'qa',
+            dependency: 'perf-tests',
+            progress: 0,
+          },
+          {
+            id: 'beta',
+            startTime: '05-19-2025',
+            endTime: '05-30-2025',
+            name: 'Beta Program',
+            progress: 0,
+            dependency: 'qa',
+          },
+          {
+            id: 'beta-onboard',
+            startTime: '05-19-2025',
+            endTime: '05-21-2025',
+            name: 'Beta user onboarding',
+            parentId: 'beta',
+            progress: 0,
+          },
+          {
+            id: 'beta-feedback',
+            startTime: '05-22-2025',
+            endTime: '05-28-2025',
+            name: 'Feedback collection & fixes',
+            parentId: 'beta',
+            dependency: 'beta-onboard',
+            progress: 0,
+          },
+          {
+            id: 'beta-sign-off',
+            startTime: '05-29-2025',
+            name: 'Beta sign-off',
             type: 'milestone',
-          },
-        ],
-        annotations: [
-          {
-            x1: '11-02-2024',
-            // x2: "END_DATE", // optional. If present, draw a rect from x1 to x2. If null, only draw line on x1,
-            label: {
-              text: 'Annotation line',
-            },
+            dependency: 'beta-feedback',
           },
           {
-            x1: '10-25-2024',
-            x2: '10-30-2024',
-            bgColor: 'rgba(249, 209, 252, 0.25)',
-            // x2: "END_DATE", // optional. If present, draw a rect from x1 to x2. If null, only draw line on x1,
-            label: {
-              text: 'Annotation rect',
-            },
+            id: 'launch-prep',
+            startTime: '05-29-2025',
+            endTime: '06-02-2025',
+            name: 'Launch preparation',
+            progress: 0,
+            dependency: 'beta-sign-off',
+          },
+          {
+            id: 'ga-launch',
+            startTime: '06-02-2025',
+            name: 'General Availability',
+            type: 'milestone',
+            dependency: 'launch-prep',
           },
         ],
-        viewMode: 'week',
       };
-      const s = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
-      s.render();
+
+      const gantt = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
+      gantt.render();
     </script>
   </body>
 </html>

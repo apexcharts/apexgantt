@@ -3,165 +3,275 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ApexGantt</title>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <title>Interactions - Conference Planning</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        background: #fff;
+        padding: 20px 0;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin: 0 0 4px 0;
+        line-height: 1.3;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 16px;
+      }
+      #event-log {
+        margin-top: 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #f8fafc;
+        padding: 12px 16px;
+        font-size: 12px;
+        max-height: 140px;
+        overflow-y: auto;
+      }
+      #event-log h3 {
+        margin: 0 0 8px 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+      }
+      .log-entry {
+        padding: 4px 0;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+        font-family: 'Inter', monospace;
+      }
+      .log-entry:last-child {
+        border-bottom: none;
+      }
+      .log-entry .tag {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-right: 6px;
+      }
+      .tag-drag {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+      .tag-resize {
+        background: #fce7f3;
+        color: #be185d;
+      }
+      .tag-edit {
+        background: #dcfce7;
+        color: #15803d;
+      }
+      .empty-log {
+        color: #94a3b8;
+        font-style: italic;
+      }
+    </style>
   </head>
   <body>
-    <div id="svg-gantt" style="margin: 0 auto"></div>
+    <h2>Tech Conference Planning</h2>
+    <p class="subtitle">
+      Drag tasks to reschedule, resize to adjust duration, or double-click to edit — all updates are logged below
+      (<code>enableTaskDrag</code>, <code>enableTaskResize</code>, <code>enableTaskEdit</code>)
+    </p>
+    <div id="svg-gantt"></div>
+    <div id="event-log">
+      <h3>Activity Log</h3>
+      <div class="empty-log">Drag, resize, or edit a task to see events here</div>
+    </div>
     <script>
       const ganttOptions = {
-        width: '90%',
-        enableTooltip: false,
+        width: '100%',
+        height: 540,
+        viewMode: 'week',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '12px',
+        fontWeight: '500',
+        fontColor: '#334155',
+        canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; box-sizing: border-box;',
+        barBorderRadius: '6px',
+        barMargin: 4,
         enableTaskDrag: true,
-        enableTaskEdit: true,
         enableTaskResize: true,
+        enableTaskEdit: true,
+        enableTooltip: true,
         series: [
           {
-            id: 'a',
-            startTime: '10-11-2024',
-            endTime: '11-01-2024',
-            name: 'task 1',
-            progress: 65,
+            id: 'venue',
+            startTime: '06-02-2025',
+            endTime: '06-20-2025',
+            name: 'Venue & Logistics',
+            progress: 70,
           },
           {
-            id: '5',
-            startTime: '10-11-2024',
-            endTime: '10-26-2024',
-            name: 'subtask 1.1',
-            parentId: 'a',
-            progress: 65,
-            rowBackgroundColor: '#d7f1fd',
-            barBackgroundColor: '#e368f8',
+            id: 'venue-search',
+            startTime: '06-02-2025',
+            endTime: '06-06-2025',
+            name: 'Venue shortlisting',
+            parentId: 'venue',
+            progress: 100,
           },
           {
-            id: '9',
-            startTime: '10-11-2024',
-            endTime: '10-16-2024',
-            name: 'subtask 1.1.1',
-            parentId: '5',
-            progress: 65,
+            id: 'venue-contract',
+            startTime: '06-09-2025',
+            endTime: '06-11-2025',
+            name: 'Contract negotiation',
+            parentId: 'venue',
+            dependency: 'venue-search',
+            progress: 80,
           },
           {
-            id: '10',
-            startTime: '10-17-2024',
-            endTime: '10-26-2024',
-            name: 'subtask 1.1.2',
-            parentId: '5',
-            dependency: '9',
-            progress: 65,
+            id: 'av-setup',
+            startTime: '06-12-2025',
+            endTime: '06-18-2025',
+            name: 'A/V equipment booking',
+            parentId: 'venue',
+            dependency: 'venue-contract',
+            progress: 40,
           },
           {
-            id: '13',
-            startTime: '10-17-2024',
-            endTime: '10-23-2024',
-            name: 'subtask 1.1.2.1',
-            parentId: '10',
-            progress: 65,
+            id: 'catering',
+            startTime: '06-16-2025',
+            endTime: '06-20-2025',
+            name: 'Catering arrangements',
+            parentId: 'venue',
+            dependency: 'venue-contract',
+            progress: 30,
           },
           {
-            id: '14',
-            startTime: '10-24-2024',
-            endTime: '10-26-2024',
-            name: 'subtask 1.1.2.2',
-            parentId: '10',
-            progress: 65,
+            id: 'speakers',
+            startTime: '06-09-2025',
+            endTime: '07-04-2025',
+            name: 'Speaker Program',
+            progress: 55,
           },
           {
-            id: '14.1',
-            startTime: '10-27-2024',
-            name: 'Task 2 Milestone',
-            parentId: '10',
-            dependency: '14',
-            type: 'milestone',
+            id: 'cfp',
+            startTime: '06-09-2025',
+            endTime: '06-20-2025',
+            name: 'Call for proposals',
+            parentId: 'speakers',
+            progress: 100,
           },
           {
-            id: '6',
-            startTime: '10-28-2024',
-            endTime: '11-01-2024',
-            name: 'subtask 1.2',
-            parentId: 'a',
-            progress: 65,
-          },
-          {
-            id: 'b',
-            startTime: '11-02-2024',
-            endTime: '11-15-2024',
-            name: 'task 2',
-            progress: 25,
-          },
-          {
-            id: '7',
-            startTime: '11-02-2024',
-            endTime: '11-11-2024',
-            name: 'subtask 2.1',
-            parentId: 'b',
-            dependency: '13',
-            progress: 65,
-          },
-          {
-            id: '11',
-            startTime: '11-02-2024',
-            endTime: '11-06-2024',
-            name: 'subtask 2.1.1',
-            parentId: '7',
-            progress: 65,
-          },
-          {
-            id: '12',
-            startTime: '11-07-2024',
-            endTime: '11-11-2024',
-            name: 'subtask 2.1.2',
-            parentId: '7',
-            dependency: '11',
-            progress: 65,
-          },
-          {
-            id: '12.1',
-            startTime: '11-12-2024',
-            name: 'Task 2 Milestone',
-            parentId: '7',
-            dependency: '12',
-            type: 'milestone',
-          },
-          {
-            id: '8',
-            startTime: '11-13-2024',
-            endTime: '11-15-2024',
-            name: 'subtask 2.2',
-            parentId: 'b',
-            dependency: '12.1',
-            progress: 65,
-          },
-          {
-            id: 'c',
-            startTime: '11-16-2024',
-            endTime: '11-25-2024',
-            name: 'task 3',
-            progress: 75,
-          },
-          {
-            id: 'd',
-            startTime: '11-26-2024',
-            endTime: '12-01-2024',
-            name: 'task 4',
+            id: 'review',
+            startTime: '06-23-2025',
+            endTime: '06-27-2025',
+            name: 'Proposal review',
+            parentId: 'speakers',
+            dependency: 'cfp',
             progress: 50,
           },
           {
-            id: 'e',
-            startTime: '12-02-2024',
-            name: 'Project Milestone',
-            dependency: 'd',
+            id: 'schedule-build',
+            startTime: '06-30-2025',
+            endTime: '07-04-2025',
+            name: 'Build talk schedule',
+            parentId: 'speakers',
+            dependency: 'review',
+            progress: 10,
+          },
+          {
+            id: 'marketing',
+            startTime: '06-16-2025',
+            endTime: '07-18-2025',
+            name: 'Marketing & Outreach',
+            progress: 35,
+          },
+          {
+            id: 'website',
+            startTime: '06-16-2025',
+            endTime: '06-25-2025',
+            name: 'Event website launch',
+            parentId: 'marketing',
+            progress: 60,
+          },
+          {
+            id: 'social',
+            startTime: '06-23-2025',
+            endTime: '07-11-2025',
+            name: 'Social media campaign',
+            parentId: 'marketing',
+            dependency: 'website',
+            progress: 25,
+          },
+          {
+            id: 'email-blast',
+            startTime: '07-07-2025',
+            endTime: '07-18-2025',
+            name: 'Email outreach waves',
+            parentId: 'marketing',
+            dependency: 'social',
+            progress: 0,
+          },
+          {
+            id: 'registration-open',
+            startTime: '06-26-2025',
+            name: 'Registration opens',
             type: 'milestone',
+            dependency: 'website',
+          },
+          {
+            id: 'rehearsal',
+            startTime: '07-21-2025',
+            endTime: '07-23-2025',
+            name: 'Dry run & rehearsal',
+            progress: 0,
+            dependency: 'schedule-build',
+          },
+          {
+            id: 'conference-day',
+            startTime: '07-25-2025',
+            name: 'Conference Day',
+            type: 'milestone',
+            dependency: 'rehearsal',
           },
         ],
       };
-      const s = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
-      s.render();
 
-      s.addEventListener('taskUpdateSuccess', (e) => {
-        const {updatedTask} = e.detail;
-        window.alert(JSON.stringify(updatedTask));
+      const el = document.getElementById('svg-gantt');
+      const gantt = new ApexGantt(el, ganttOptions);
+      gantt.render();
+
+      const logEl = document.getElementById('event-log');
+      let hasEntries = false;
+
+      function addLog(tag, tagClass, message) {
+        if (!hasEntries) {
+          logEl.querySelector('.empty-log')?.remove();
+          hasEntries = true;
+        }
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = `<span class="tag ${tagClass}">${tag}</span>${message}`;
+        logEl.appendChild(entry);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      el.addEventListener('taskDragged', (e) => {
+        const t = e.detail.updatedTask;
+        addLog('DRAG', 'tag-drag', `"${t.name}" moved to ${t.startTime} \u2013 ${t.endTime}`);
+      });
+
+      el.addEventListener('taskResized', (e) => {
+        const t = e.detail.updatedTask;
+        addLog('RESIZE', 'tag-resize', `"${t.name}" now ends ${t.endTime}`);
+      });
+
+      el.addEventListener('taskUpdateSuccess', (e) => {
+        const t = e.detail.updatedTask;
+        addLog('EDIT', 'tag-edit', `"${t.name}" updated`);
       });
     </script>
   </body>

@@ -3,83 +3,286 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ApexGantt</title>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <title>Data Parsing - API Response Mapping</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        background: #fff;
+        padding: 20px 0;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin: 0 0 4px 0;
+        line-height: 1.3;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 16px;
+      }
+      .config-panel {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+      }
+      .config-panel h3 {
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        margin: 0 0 10px 0;
+      }
+      .config-panel pre {
+        margin: 0;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11.5px;
+        line-height: 1.6;
+        color: #1e293b;
+        overflow-x: auto;
+      }
+      .config-panel .key {
+        color: #7c3aed;
+      }
+      .config-panel .str {
+        color: #059669;
+      }
+      .config-panel .fn {
+        color: #d97706;
+      }
+    </style>
   </head>
   <body>
-    <div id="svg-gantt" style="margin: 0 auto"></div>
+    <h2>Data Parsing — API Response Mapping</h2>
+    <p class="subtitle">
+      Map deeply nested JSON structures to Gantt task properties using the
+      <code>parsing</code> option — supports dot-notation paths and <code>transform</code> functions
+    </p>
+
+    <div class="config-panel">
+      <h3>Parsing Configuration</h3>
+      <pre><code>parsing: {
+  <span class="key">id</span>:                 <span class="str">'task.uuid'</span>,
+  <span class="key">name</span>:               <span class="str">'task.meta.title'</span>,
+  <span class="key">startTime</span>:          <span class="str">'task.schedule.start'</span>,
+  <span class="key">endTime</span>:            <span class="str">'task.schedule.end'</span>,
+  <span class="key">parentId</span>:           <span class="str">'task.meta.parent'</span>,
+  <span class="key">dependency</span>:         <span class="str">'task.relations.dependsOn'</span>,
+  <span class="key">type</span>:               <span class="str">'task.meta.kind'</span>,
+  <span class="key">progress</span>:           { key: <span class="str">'task.tracking.ratio'</span>, <span class="fn">transform: v =&gt; v * 100</span> },
+  <span class="key">barBackgroundColor</span>: <span class="str">'task.display.color'</span>,
+}</code></pre>
+    </div>
+
+    <div id="svg-gantt"></div>
     <script>
-      const nestedData = [
+      // Simulated API response with deeply nested task objects
+      const apiResponse = [
         {
-          project: {
-            task: {
-              id: 'T1',
-              details: {
-                title: 'Design Phase',
-                dates: {
-                  start: '01-01-2024',
-                  end: '01-15-2024',
-                },
-              },
-            },
-            metadata: {
-              completion_percentage: 0.75,
-              category: 'design',
-            },
-            styling: {
-              colors: {
-                bar: '#4A90E2',
-                row: '#F0F4F8',
-              },
-            },
+          task: {
+            uuid: 'epic-1',
+            meta: {title: 'Backend API Migration', kind: 'task', parent: null},
+            schedule: {start: '05-05-2025', end: '06-06-2025'},
+            tracking: {ratio: 0.62},
+            relations: {dependsOn: null},
+            display: {color: '#3b82f6'},
           },
         },
         {
-          project: {
-            task: {
-              id: 'T2',
-              details: {
-                title: 'Development Phase',
-                dates: {
-                  start: '01-16-2024',
-                  end: '02-28-2024',
-                },
-              },
-            },
-            metadata: {
-              completion_percentage: 0.45,
-              category: 'task',
-            },
-            styling: {
-              colors: {
-                bar: '#50C878',
-                row: '#F0F8F0',
-              },
-            },
+          task: {
+            uuid: 'api-auth',
+            meta: {title: 'Auth endpoints', kind: 'task', parent: 'epic-1'},
+            schedule: {start: '05-05-2025', end: '05-14-2025'},
+            tracking: {ratio: 1.0},
+            relations: {dependsOn: null},
+            display: {color: '#60a5fa'},
+          },
+        },
+        {
+          task: {
+            uuid: 'api-users',
+            meta: {title: 'User CRUD endpoints', kind: 'task', parent: 'epic-1'},
+            schedule: {start: '05-12-2025', end: '05-21-2025'},
+            tracking: {ratio: 0.85},
+            relations: {dependsOn: 'api-auth'},
+            display: {color: '#60a5fa'},
+          },
+        },
+        {
+          task: {
+            uuid: 'api-billing',
+            meta: {title: 'Billing integration', kind: 'task', parent: 'epic-1'},
+            schedule: {start: '05-19-2025', end: '05-30-2025'},
+            tracking: {ratio: 0.45},
+            relations: {dependsOn: 'api-users'},
+            display: {color: '#93c5fd'},
+          },
+        },
+        {
+          task: {
+            uuid: 'api-webhooks',
+            meta: {title: 'Webhook system', kind: 'task', parent: 'epic-1'},
+            schedule: {start: '05-26-2025', end: '06-04-2025'},
+            tracking: {ratio: 0.2},
+            relations: {dependsOn: 'api-users'},
+            display: {color: '#93c5fd'},
+          },
+        },
+        {
+          task: {
+            uuid: 'ms-api-ready',
+            meta: {title: 'API Ready', kind: 'milestone', parent: 'epic-1'},
+            schedule: {start: '06-06-2025', end: null},
+            tracking: {ratio: 0},
+            relations: {dependsOn: 'api-webhooks'},
+            display: {color: '#1d4ed8'},
+          },
+        },
+        {
+          task: {
+            uuid: 'epic-2',
+            meta: {title: 'Frontend Redesign', kind: 'task', parent: null},
+            schedule: {start: '05-12-2025', end: '06-20-2025'},
+            tracking: {ratio: 0.38},
+            relations: {dependsOn: null},
+            display: {color: '#8b5cf6'},
+          },
+        },
+        {
+          task: {
+            uuid: 'fe-design-system',
+            meta: {title: 'Design system tokens', kind: 'task', parent: 'epic-2'},
+            schedule: {start: '05-12-2025', end: '05-19-2025'},
+            tracking: {ratio: 0.9},
+            relations: {dependsOn: null},
+            display: {color: '#a78bfa'},
+          },
+        },
+        {
+          task: {
+            uuid: 'fe-components',
+            meta: {title: 'Shared component library', kind: 'task', parent: 'epic-2'},
+            schedule: {start: '05-19-2025', end: '05-30-2025'},
+            tracking: {ratio: 0.5},
+            relations: {dependsOn: 'fe-design-system'},
+            display: {color: '#a78bfa'},
+          },
+        },
+        {
+          task: {
+            uuid: 'fe-pages',
+            meta: {title: 'Page-level integration', kind: 'task', parent: 'epic-2'},
+            schedule: {start: '06-02-2025', end: '06-13-2025'},
+            tracking: {ratio: 0.1},
+            relations: {dependsOn: 'fe-components'},
+            display: {color: '#c4b5fd'},
+          },
+        },
+        {
+          task: {
+            uuid: 'fe-a11y',
+            meta: {title: 'Accessibility audit', kind: 'task', parent: 'epic-2'},
+            schedule: {start: '06-16-2025', end: '06-20-2025'},
+            tracking: {ratio: 0},
+            relations: {dependsOn: 'fe-pages'},
+            display: {color: '#c4b5fd'},
+          },
+        },
+        {
+          task: {
+            uuid: 'epic-3',
+            meta: {title: 'DevOps & Infrastructure', kind: 'task', parent: null},
+            schedule: {start: '05-19-2025', end: '06-13-2025'},
+            tracking: {ratio: 0.55},
+            relations: {dependsOn: null},
+            display: {color: '#0d9488'},
+          },
+        },
+        {
+          task: {
+            uuid: 'infra-ci',
+            meta: {title: 'CI/CD pipeline overhaul', kind: 'task', parent: 'epic-3'},
+            schedule: {start: '05-19-2025', end: '05-28-2025'},
+            tracking: {ratio: 0.75},
+            relations: {dependsOn: null},
+            display: {color: '#14b8a6'},
+          },
+        },
+        {
+          task: {
+            uuid: 'infra-k8s',
+            meta: {title: 'K8s cluster migration', kind: 'task', parent: 'epic-3'},
+            schedule: {start: '05-28-2025', end: '06-09-2025'},
+            tracking: {ratio: 0.3},
+            relations: {dependsOn: 'infra-ci'},
+            display: {color: '#2dd4bf'},
+          },
+        },
+        {
+          task: {
+            uuid: 'infra-monitoring',
+            meta: {title: 'Observability stack', kind: 'task', parent: 'epic-3'},
+            schedule: {start: '06-09-2025', end: '06-13-2025'},
+            tracking: {ratio: 0},
+            relations: {dependsOn: 'infra-k8s'},
+            display: {color: '#2dd4bf'},
+          },
+        },
+        {
+          task: {
+            uuid: 'ms-launch',
+            meta: {title: 'Platform Launch', kind: 'milestone', parent: null},
+            schedule: {start: '06-23-2025', end: null},
+            tracking: {ratio: 0},
+            relations: {dependsOn: 'fe-a11y'},
+            display: {color: '#059669'},
           },
         },
       ];
 
       const ganttOptions = {
+        width: '100%',
+        height: 580,
+        viewMode: 'week',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '12px',
+        fontWeight: '500',
+        fontColor: '#334155',
+        canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; box-sizing: border-box;',
+        barBorderRadius: '6px',
+        barMargin: 4,
         enableTaskDrag: false,
         enableTaskResize: false,
-        series: nestedData,
+        series: apiResponse,
         parsing: {
-          id: 'project.task.id',
-          name: 'project.task.details.title',
-          startTime: 'project.task.details.dates.start',
-          endTime: 'project.task.details.dates.end',
+          id: 'task.uuid',
+          name: 'task.meta.title',
+          startTime: 'task.schedule.start',
+          endTime: 'task.schedule.end',
+          parentId: 'task.meta.parent',
+          dependency: 'task.relations.dependsOn',
+          type: 'task.meta.kind',
           progress: {
-            key: 'project.metadata.completion_percentage',
+            key: 'task.tracking.ratio',
             transform: (value) => value * 100,
           },
-          barBackgroundColor: 'project.styling.colors.bar',
-          rowBackgroundColor: 'project.styling.colors.row',
+          barBackgroundColor: 'task.display.color',
         },
       };
-      const chart = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
-      chart.render();
+
+      const gantt = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
+      gantt.render();
     </script>
   </body>
 </html>

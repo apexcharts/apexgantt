@@ -93,6 +93,8 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `enableTaskEdit` | `boolean` | `false` | Show the inline task-edit form when a task row is clicked. |
 | `enableTaskResize` | `boolean` | `true` | Allow task bars to be resized by dragging their handles. |
 | `enableTooltip` | `boolean` | `true` | Show a tooltip on task-bar hover. |
+| `enableSelection` | `boolean` | `false` | Enable row selection (click, Ctrl+Click, Shift+Click, keyboard). |
+| `showCheckboxColumn` | `boolean` | `true` | Show a checkbox column for multi-select. Only applies when `enableSelection` is true. |
 | `enableCriticalPath` | `boolean` | `false` | Calculate and highlight the critical path through dependent tasks. |
 | `criticalBarColor` | `string` | `'#e53935'` | Fill color for task bars on the critical path. |
 | `criticalArrowColor` | `string` | `'#e53935'` | Stroke color for dependency arrows on the critical path. |
@@ -112,6 +114,7 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `annotationOrientation` | `Orientation` | `Orientation.Horizontal` | Whether annotation lines are drawn horizontally or vertically. |
 | `annotations` | `Annotation[]` | `[]` | Array of annotation objects to overlay on the timeline. |
 | `parsing` | `ParsingConfig` | `undefined` | Field-mapping config to parse non-standard task shapes. See Data Parsing below. |
+| `toolbarItems` | `ToolbarItem[]` | `[]` | Custom controls rendered in the toolbar alongside the built-in zoom and export buttons. Each item can be a `ToolbarButton`, `ToolbarSelect`, or `ToolbarSeparator`. |
 | `taskListAriaLabel` | `string` | `'Task list'` | `aria-label` for the task-list table, used by screen readers. |
 
 Default tooltip template
