@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WBS Column - ApexGantt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        max-width: 1200px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        background: #fff;
+        padding: 20px 0;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin: 0 0 4px 0;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 16px;
+      }
+      code {
+        background: #f1f5f9;
+        color: #0f172a;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-family: 'Menlo', monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>WBS column — auto-numbered task hierarchy</h2>
+    <p class="subtitle">
+      Add <code>{ key: ApexGantt.ColumnKey.Wbs, title: 'WBS' }</code> to <code>columnConfig</code>. Codes are derived
+      from each task's position in the parent/child tree (<code>1</code>, <code>1.1</code>, <code>1.1.2</code>,
+      <code>2</code>, …) and recompute automatically when tasks are added, removed, or moved.
+    </p>
+
+    <div id="svg-gantt"></div>
+
+    <script>
+      const series = [
+        {id: 'p1', name: 'Discovery', showSummaryBar: true},
+        {
+          id: 'p1-1',
+          name: 'Stakeholder interviews',
+          startTime: '03-01-2025',
+          endTime: '03-05-2025',
+          parentId: 'p1',
+          progress: 100,
+        },
+        {
+          id: 'p1-2',
+          name: 'Competitive analysis',
+          startTime: '03-04-2025',
+          endTime: '03-08-2025',
+          parentId: 'p1',
+          progress: 100,
+        },
+        {
+          id: 'p1-3',
+          name: 'Requirements doc',
+          startTime: '03-09-2025',
+          endTime: '03-12-2025',
+          parentId: 'p1',
+          progress: 80,
+        },
+
+        {id: 'p2', name: 'Design', showSummaryBar: true},
+        {id: 'p2-1', name: 'Wireframes', startTime: '03-13-2025', endTime: '03-18-2025', parentId: 'p2', progress: 90},
+        {id: 'p2-2', name: 'Visual design', showSummaryBar: true, parentId: 'p2'},
+        {
+          id: 'p2-2-1',
+          name: 'Color system',
+          startTime: '03-19-2025',
+          endTime: '03-22-2025',
+          parentId: 'p2-2',
+          progress: 100,
+        },
+        {
+          id: 'p2-2-2',
+          name: 'Components',
+          startTime: '03-23-2025',
+          endTime: '03-30-2025',
+          parentId: 'p2-2',
+          progress: 60,
+        },
+        {
+          id: 'p2-3',
+          name: 'Design review',
+          startTime: '03-31-2025',
+          endTime: '04-01-2025',
+          parentId: 'p2',
+          progress: 0,
+        },
+
+        {id: 'p3', name: 'Build', showSummaryBar: true},
+        {id: 'p3-1', name: 'Frontend', startTime: '04-02-2025', endTime: '04-15-2025', parentId: 'p3', progress: 30},
+        {id: 'p3-2', name: 'Backend', startTime: '04-02-2025', endTime: '04-18-2025', parentId: 'p3', progress: 25},
+        {id: 'p3-3', name: 'Integration', startTime: '04-19-2025', endTime: '04-25-2025', parentId: 'p3', progress: 0},
+
+        {id: 'p4', name: 'Launch', startTime: '04-26-2025', endTime: '04-28-2025', progress: 0},
+      ];
+
+      const ColumnKey = window.ApexGantt.ColumnKey;
+      const ColumnList = window.ApexGantt.ColumnList;
+
+      const host = document.getElementById('svg-gantt');
+      new ApexGantt(host, {
+        width: '100%',
+        height: 560,
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '13px',
+        canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; box-sizing: border-box;',
+        barBorderRadius: '6px',
+        barMargin: 6,
+        rowHeight: 32,
+        // Insert WBS as the first column; keep the remaining defaults.
+        columnConfig: [{key: ColumnKey.Wbs, title: 'WBS', minWidth: '60px', flexGrow: 0.6}, ...ColumnList],
+        series,
+      }).render();
+    </script>
+  </body>
+</html>

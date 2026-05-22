@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timeline Crosshair</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        background: #fff;
+        padding: 20px 0;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin: 0 0 4px 0;
+        line-height: 1.3;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 16px;
+      }
+      .controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 12px;
+        font-size: 13px;
+      }
+      .controls label {
+        cursor: pointer;
+      }
+      .controls input[type='color'] {
+        width: 32px;
+        height: 24px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 0;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Timeline Crosshair</h2>
+    <p class="subtitle">
+      Move the cursor over the timeline — a vertical guide tracks the pointer and shows the precise date underneath. The
+      label format adapts automatically as you zoom (Ctrl/⌘ + scroll) between day, hour and minute tiers.
+    </p>
+    <div class="controls">
+      <label><input type="checkbox" id="toggle-crosshair" checked /> Enable crosshair</label>
+      <label>Color <input type="color" id="crosshair-color" value="#87B7FE" /></label>
+    </div>
+    <div id="svg-gantt"></div>
+    <script>
+      const ganttOptions = {
+        width: '100%',
+        height: 560,
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '12px',
+        canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; box-sizing: border-box;',
+        barBorderRadius: '6px',
+        enableCrosshair: true,
+        crosshairColor: '#318ce7',
+        series: [
+          {id: 'phase-1', name: 'Discovery'},
+          {
+            id: 'research',
+            startTime: '03-03-2025',
+            endTime: '03-10-2025',
+            name: 'User research',
+            parentId: 'phase-1',
+            progress: 100,
+          },
+          {
+            id: 'audit',
+            startTime: '03-10-2025',
+            endTime: '03-17-2025',
+            name: 'Competitor audit',
+            parentId: 'phase-1',
+            progress: 80,
+          },
+          {id: 'phase-2', name: 'Design'},
+          {
+            id: 'wireframes',
+            startTime: '03-18-2025',
+            endTime: '03-28-2025',
+            name: 'Wireframes',
+            parentId: 'phase-2',
+            progress: 70,
+          },
+          {
+            id: 'mockups',
+            startTime: '03-28-2025',
+            endTime: '04-08-2025',
+            name: 'High-fidelity mockups',
+            parentId: 'phase-2',
+            dependency: 'wireframes',
+            progress: 40,
+          },
+          {id: 'phase-3', name: 'Build'},
+          {
+            id: 'frontend',
+            startTime: '04-09-2025',
+            endTime: '04-25-2025',
+            name: 'Frontend implementation',
+            parentId: 'phase-3',
+            dependency: 'mockups',
+            progress: 20,
+          },
+          {
+            id: 'backend',
+            startTime: '04-09-2025',
+            endTime: '04-30-2025',
+            name: 'Backend services',
+            parentId: 'phase-3',
+            progress: 30,
+          },
+          {id: 'launch', startTime: '05-05-2025', name: 'Launch', type: 'milestone', dependency: 'frontend'},
+        ],
+      };
+
+      const gantt = new ApexGantt(document.getElementById('svg-gantt'), ganttOptions);
+      gantt.render();
+
+      document.getElementById('toggle-crosshair').addEventListener('change', (e) => {
+        gantt.update({enableCrosshair: e.target.checked});
+      });
+      document.getElementById('crosshair-color').addEventListener('input', (e) => {
+        gantt.update({crosshairColor: e.target.value});
+      });
+    </script>
+  </body>
+</html>

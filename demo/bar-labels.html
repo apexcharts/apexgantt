@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bar Labels - ApexGantt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        max-width: 1100px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        background: #fff;
+        padding: 20px 0;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin: 0 0 4px 0;
+        line-height: 1.3;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 16px;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        margin: 12px 0 18px;
+      }
+      .controls button {
+        padding: 6px 12px;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        color: #334155;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .controls button.active {
+        background: #1a6fc4;
+        color: #fff;
+        border-color: #1a6fc4;
+      }
+      /* Priority chip rendered next to each label */
+      .prio-chip {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 1px 6px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.4;
+        vertical-align: middle;
+        color: #fff;
+      }
+      .prio-chip.p0 {
+        background: #ef4444;
+      }
+      .prio-chip.p1 {
+        background: #f59e0b;
+      }
+      .prio-chip.p2 {
+        background: #3b82f6;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Bar Labels — outside positioning + custom render</h2>
+    <p class="subtitle">
+      Names rendered to the right of each bar so narrow tasks aren't truncated. The custom
+      <code>barLabel.render</code> appends a coloured priority chip (P0 / P1 / P2) to the right of the task name.
+    </p>
+
+    <div class="controls">
+      <button data-pos="inside">inside</button>
+      <button data-pos="auto">auto</button>
+      <button data-pos="right">right</button>
+      <button data-pos="left" class="active">left</button>
+    </div>
+
+    <div id="svg-gantt"></div>
+
+    <script>
+      const escape = window.ApexGantt.escapeHtml;
+
+      function chip(task) {
+        const p = task.priority;
+        if (!p) return '';
+        return `<span class="prio-chip ${escape(p.toLowerCase())}">${escape(p)}</span>`;
+      }
+
+      const series = [
+        {id: 'land', name: 'Land Acquisition', startTime: '03-01-2025', endTime: '03-25-2025', progress: 100},
+        {
+          id: 'permit',
+          name: 'Permitting Process',
+          startTime: '03-26-2025',
+          endTime: '04-15-2025',
+          progress: 80,
+          priority: 'P0',
+          dependency: 'land',
+        },
+        {
+          id: 'infra',
+          name: 'Infrastructure Development',
+          startTime: '04-16-2025',
+          endTime: '06-10-2025',
+          progress: 55,
+          dependency: 'permit',
+        },
+        {
+          id: 'house',
+          name: 'House Construction',
+          startTime: '06-11-2025',
+          endTime: '07-25-2025',
+          progress: 30,
+          dependency: 'infra',
+        },
+        {
+          id: 'land2',
+          name: 'Landscaping',
+          startTime: '03-15-2025',
+          endTime: '04-20-2025',
+          progress: 60,
+          priority: 'P1',
+        },
+        {
+          id: 'utils',
+          name: 'Utilities Installation',
+          startTime: '03-15-2025',
+          endTime: '03-25-2025',
+          progress: 100,
+        },
+        {
+          id: 'interior',
+          name: 'Interior Design and Furnishing',
+          startTime: '03-25-2025',
+          endTime: '04-25-2025',
+          progress: 40,
+        },
+        {id: 'finishes-ms', name: 'Interior Finishes Milestone', startTime: '04-26-2025', type: 'milestone'},
+        {
+          id: 'qa',
+          name: 'Quality Assurance',
+          startTime: '04-27-2025',
+          endTime: '05-10-2025',
+          progress: 10,
+          priority: 'P2',
+          dependency: 'finishes-ms',
+        },
+        {
+          id: 'movein',
+          name: 'Client Move-in',
+          startTime: '05-11-2025',
+          endTime: '05-22-2025',
+          progress: 0,
+          dependency: 'qa',
+        },
+        {
+          id: 'closeout',
+          name: 'Project Closeout',
+          startTime: '05-23-2025',
+          endTime: '05-30-2025',
+          progress: 0,
+          dependency: 'movein',
+        },
+      ];
+
+      function buildOptions(position) {
+        return {
+          width: '100%',
+          height: 540,
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '13px',
+          fontWeight: '500',
+          fontColor: '#334155',
+          canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; box-sizing: border-box;',
+          barBorderRadius: '6px',
+          barMargin: 6,
+          rowHeight: 36,
+          // Crosshair lets you verify the date label follows the cursor
+          // accurately even when leading-pad shifts bars/cells right.
+          enableCrosshair: true,
+          barLabel: {
+            position,
+            render: (task) => `${escape(task.name)}${chip(task)}`,
+          },
+          series,
+        };
+      }
+
+      const host = document.getElementById('svg-gantt');
+      let gantt = new ApexGantt(host, buildOptions('left'));
+      gantt.render();
+
+      document.querySelectorAll('.controls button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.controls button').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          gantt.update({barLabel: {position: btn.dataset.pos, render: (task) => `${escape(task.name)}${chip(task)}`}});
+        });
+      });
+    </script>
+  </body>
+</html>

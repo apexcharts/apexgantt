@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task CRUD — ApexGantt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        max-width: 1200px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        background: #fff;
+        color: #1a1a2e;
+        padding: 20px;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 4px 0;
+        line-height: 1.3;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #555;
+        margin-bottom: 12px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 16px;
+        align-items: start;
+      }
+      .gantt-wrap {
+        min-width: 0;
+      }
+      .panel {
+        background: #fafafa;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 14px 16px;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .panel h3 {
+        margin: 0 0 8px 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: #1e293b;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      .panel + .panel {
+        margin-top: 14px;
+      }
+      .panel ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      .panel li {
+        margin-bottom: 4px;
+      }
+      kbd {
+        font-family: 'SFMono-Regular', 'Menlo', monospace;
+        background: #1e293b;
+        color: #fff;
+        border-radius: 3px;
+        padding: 1px 6px;
+        font-size: 11px;
+      }
+      .actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+      .actions button {
+        font: inherit;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 5px 10px;
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        color: #1e293b;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .actions button:hover {
+        background: #f1f5f9;
+      }
+      .actions button.danger {
+        border-color: #ef4444;
+        color: #b91c1c;
+      }
+      #event-log {
+        max-height: 240px;
+        overflow-y: auto;
+        font-family: 'SFMono-Regular', 'Menlo', monospace;
+        font-size: 11px;
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 4px;
+        padding: 8px;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      #event-log .entry {
+        border-left: 3px solid #38bdf8;
+        padding-left: 8px;
+        margin-bottom: 6px;
+      }
+      #event-log .entry.added {
+        border-color: #4ade80;
+      }
+      #event-log .entry.deleted {
+        border-color: #f87171;
+      }
+      #event-log .entry.moved {
+        border-color: #fbbf24;
+      }
+      .veto-toggle {
+        margin-top: 8px;
+        font-size: 12px;
+      }
+      .veto-toggle input {
+        margin-right: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Task CRUD</h2>
+    <p class="subtitle">
+      Exercises every interactive surface added so far: drag/resize/progress, inline + dialog edit, add / delete / move
+      via toolbar / context menu / keyboard / bottom "+ Add task" row. Every mutation routes through the command bus, so
+      <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> undo & redo from anywhere in the chart.
+    </p>
+
+    <div class="layout">
+      <div class="gantt-wrap">
+        <div id="svg-gantt"></div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <h3>Try it</h3>
+          <ul>
+            <li>
+              <strong>Toolbar:</strong> click <kbd>+</kbd> to add a placeholder; select rows then click the trash.
+            </li>
+            <li>
+              <strong>Right-click</strong> a row or bar for Edit / Add child / Add sibling / Indent / Outdent / Delete.
+            </li>
+            <li><strong>Keyboard</strong> (focus a row first):</li>
+            <ul>
+              <li><kbd>Delete</kbd> / <kbd>Backspace</kbd> — remove (cascades children)</li>
+              <li><kbd>Tab</kbd> — indent under previous sibling</li>
+              <li><kbd>Shift</kbd>+<kbd>Tab</kbd> — outdent to grandparent</li>
+              <li><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Space</kbd> <kbd>Enter</kbd> — nav / select / open editor</li>
+            </ul>
+            <li><strong>Inline edit:</strong> double-click any cell in the task list.</li>
+            <li><strong>Dialog edit:</strong> double-click a bar in the timeline.</li>
+            <li>Bottom <kbd>+ Add task</kbd> row inserts a new placeholder at the root.</li>
+            <li>
+              <strong>Draw a dependency:</strong> hover a bar to reveal the two anchor circles at its start/finish
+              edges, then drag from one anchor onto another bar's anchor. Anchor pairs derive the type (right→left = FS,
+              right→right = FF, left→left = SS, left→right = SF). <kbd>Esc</kbd> cancels mid-drag.
+            </li>
+            <li>
+              <strong>Delete a dependency:</strong> click the arrow (it turns red and shows a <kbd>✕</kbd> at the head),
+              then click the <kbd>✕</kbd> — or press <kbd>Delete</kbd> while it's selected.
+            </li>
+            <li>
+              <strong>Undo / Redo:</strong> toolbar Undo/Redo buttons, <kbd>Ctrl</kbd>+<kbd>Z</kbd> /
+              <kbd>Ctrl</kbd>+<kbd>Y</kbd> (or <kbd>⌘</kbd>+<kbd>Z</kbd> / <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>),
+              or the buttons below.
+            </li>
+            <li>
+              <strong>Cascade modes:</strong>
+              <em>children</em> deletes the subtree; <em>orphan</em> keeps children and reparents them to the deleted
+              task's parent. Dependencies touching the deleted task auto-clean — watch the event log.
+            </li>
+          </ul>
+          <div class="actions">
+            <button id="programmatic-add">addTask()</button>
+            <button id="programmatic-move">moveTask first leaf → root</button>
+            <button id="programmatic-link">addDependency a → b</button>
+            <button id="programmatic-unlink">removeDependency a → b</button>
+          </div>
+          <div class="actions">
+            <button id="delete-children">deleteTask('design', children)</button>
+            <button id="delete-orphan">deleteTask('design', orphan)</button>
+          </div>
+          <div class="actions">
+            <button id="programmatic-undo" disabled>undo()</button>
+            <button id="programmatic-redo" disabled>redo()</button>
+            <button id="programmatic-clear-history">clearHistory()</button>
+            <span id="history-size" style="font-size: 11px; color: #64748b; align-self: center"></span>
+          </div>
+          <div class="veto-toggle">
+            <label>
+              <input type="checkbox" id="veto-delete" />
+              veto every deleteTask (set <code>beforeTaskDelete = () => false</code>)
+            </label>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Event log</h3>
+          <div id="event-log"></div>
+          <div class="actions">
+            <button id="clear-log">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const sampleTasks = [
+        {
+          id: 'design',
+          name: 'Design phase',
+          startTime: '03-03-2026',
+          endTime: '03-18-2026',
+          type: ApexGantt.TaskType ? ApexGantt.TaskType.Summary : 'summary',
+          progress: 45,
+        },
+        {
+          id: 'a',
+          name: 'Wireframes',
+          parentId: 'design',
+          startTime: '03-03-2026',
+          endTime: '03-08-2026',
+          progress: 100,
+        },
+        {
+          id: 'b',
+          name: 'Hi-fi mockups',
+          parentId: 'design',
+          startTime: '03-08-2026',
+          endTime: '03-18-2026',
+          progress: 60,
+          dependency: 'a',
+        },
+        {
+          id: 'build',
+          name: 'Build phase',
+          startTime: '03-18-2026',
+          endTime: '04-02-2026',
+          progress: 10,
+        },
+        {
+          id: 'c',
+          name: 'API endpoints',
+          parentId: 'build',
+          startTime: '03-18-2026',
+          endTime: '03-26-2026',
+          progress: 25,
+        },
+        {
+          id: 'd',
+          name: 'Frontend wiring',
+          parentId: 'build',
+          startTime: '03-26-2026',
+          endTime: '04-02-2026',
+          progress: 0,
+          dependency: 'c',
+        },
+      ];
+
+      let vetoDelete = false;
+
+      const ganttOptions = {
+        width: '100%',
+        height: 500,
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '12px',
+        fontWeight: '500',
+        fontColor: '#334155',
+        barBorderRadius: '6px',
+        barMargin: 6,
+        canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; box-sizing: border-box;',
+        series: sampleTasks,
+
+        // Existing editable-tier features
+        enableInlineEdit: true,
+        enableTaskEdit: true,
+        enableTaskDrag: true,
+        enableTaskResize: true,
+        enableProgressDrag: true,
+
+        // Phase 2 new affordances
+        enableSelection: true,
+        enableTaskEditingShortcuts: true,
+        enableTaskCRUDToolbar: true,
+        enableContextMenu: true,
+        enableAddTaskRow: true,
+
+        // Phase 6 — interactive dependency drawing + click-to-delete
+        dependencies: {
+          editable: true,
+          cornerRadius: 6,
+        },
+
+        // Phase 1 validation hook (wired to the checkbox in the side panel)
+        beforeTaskDelete: ({task, descendantIds}) => {
+          if (vetoDelete) {
+            log('blocked', `beforeTaskDelete vetoed delete of "${task.name}" (+${descendantIds.length} children)`);
+            return false;
+          }
+        },
+      };
+
+      const container = document.getElementById('svg-gantt');
+      const gantt = new ApexGantt(container, ganttOptions);
+      gantt.render();
+
+      // ── Event log ────────────────────────────────────────────────────────────
+      const logEl = document.getElementById('event-log');
+      function log(kind, text) {
+        const div = document.createElement('div');
+        div.className = `entry ${kind}`;
+        const ts = new Date().toLocaleTimeString();
+        div.textContent = `[${ts}] ${text}`;
+        logEl.prepend(div);
+      }
+
+      container.addEventListener('taskAdded', (e) =>
+        log(
+          'added',
+          `taskAdded: ${e.detail.task.name} (id=${e.detail.taskId}, parent=${e.detail.parentId ?? '<root>'})`
+        )
+      );
+      container.addEventListener('taskDeleted', (e) =>
+        log(
+          'deleted',
+          `taskDeleted: ${e.detail.task.name} (id=${e.detail.taskId}, removed ${e.detail.removedDescendantIds.length} descendant(s))`
+        )
+      );
+      container.addEventListener('taskMoved', (e) =>
+        log(
+          'moved',
+          `taskMoved: ${e.detail.taskId} from ${e.detail.oldParentId ?? '<root>'} → ${e.detail.newParentId ?? '<root>'}`
+        )
+      );
+      container.addEventListener('taskUpdateSuccess', (e) =>
+        log('', `taskUpdateSuccess: ${e.detail.taskId} → ${JSON.stringify(e.detail.updatedTask).slice(0, 80)}…`)
+      );
+      container.addEventListener('taskDragged', (e) =>
+        log('moved', `taskDragged: ${e.detail.taskId} moved ${e.detail.daysMoved} day(s)`)
+      );
+      container.addEventListener('taskResized', (e) =>
+        log(
+          '',
+          `taskResized: ${e.detail.taskId} (${e.detail.resizeHandle}-handle, ${e.detail.durationChange} day delta)`
+        )
+      );
+      container.addEventListener('taskProgressChanged', (e) =>
+        log('', `taskProgressChanged: ${e.detail.taskId} ${e.detail.oldProgress}% → ${e.detail.newProgress}%`)
+      );
+      container.addEventListener('dependencyAdded', (e) =>
+        log('added', `dependencyAdded: ${e.detail.fromId} → ${e.detail.toId} (${e.detail.type}, lag=${e.detail.lag})`)
+      );
+      container.addEventListener('dependencyRemoved', (e) =>
+        log('deleted', `dependencyRemoved: ${e.detail.fromId} → ${e.detail.toId}`)
+      );
+
+      // ── History UI sync ──────────────────────────────────────────────────────
+      const undoBtn = document.getElementById('programmatic-undo');
+      const redoBtn = document.getElementById('programmatic-redo');
+      const sizeDisplay = document.getElementById('history-size');
+      const syncHistoryUi = () => {
+        undoBtn.disabled = !gantt.canUndo();
+        redoBtn.disabled = !gantt.canRedo();
+        const {undo, redo} = gantt.getHistorySize();
+        sizeDisplay.textContent = `undo: ${undo} · redo: ${redo}`;
+      };
+      syncHistoryUi();
+      container.addEventListener('historyChange', (e) => {
+        log('', `historyChange: ${e.detail.kind} (undo=${e.detail.undoSize}, redo=${e.detail.redoSize})`);
+        syncHistoryUi();
+      });
+
+      undoBtn.addEventListener('click', () => gantt.undo());
+      redoBtn.addEventListener('click', () => gantt.redo());
+      document.getElementById('programmatic-clear-history').addEventListener('click', () => gantt.clearHistory());
+
+      // ── Programmatic API buttons ─────────────────────────────────────────────
+      document.getElementById('programmatic-add').addEventListener('click', () => {
+        const id = 'p-' + Math.random().toString(36).slice(2, 7);
+        gantt.addTask({
+          id,
+          name: 'Programmatic task',
+          startTime: '03-25-2026',
+          endTime: '04-01-2026',
+          progress: 0,
+        });
+      });
+
+      document.getElementById('programmatic-move').addEventListener('click', () => {
+        try {
+          gantt.moveTask('a', {newParentId: null});
+        } catch (err) {
+          log('blocked', err.message);
+        }
+      });
+
+      document.getElementById('programmatic-link').addEventListener('click', () => {
+        try {
+          gantt.addDependency('a', 'b', {type: 'SS', lag: 1});
+        } catch (err) {
+          log('blocked', err.message);
+        }
+      });
+
+      document.getElementById('programmatic-unlink').addEventListener('click', () => {
+        try {
+          gantt.removeDependency('a', 'b');
+        } catch (err) {
+          log('blocked', err.message);
+        }
+      });
+
+      document.getElementById('delete-children').addEventListener('click', () => {
+        try {
+          gantt.deleteTask('design', {cascade: 'children'});
+        } catch (err) {
+          log('blocked', err.message);
+        }
+      });
+
+      document.getElementById('delete-orphan').addEventListener('click', () => {
+        try {
+          gantt.deleteTask('design', {cascade: 'orphan'});
+        } catch (err) {
+          log('blocked', err.message);
+        }
+      });
+
+      document.getElementById('veto-delete').addEventListener('change', (e) => {
+        vetoDelete = e.target.checked;
+      });
+
+      document.getElementById('clear-log').addEventListener('click', () => {
+        logEl.innerHTML = '';
+      });
+    </script>
+  </body>
+</html>

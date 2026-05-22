@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rollups - ApexGantt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        max-width: 1100px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        background: #fff;
+        padding: 20px 0;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin: 0 0 4px 0;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 16px;
+      }
+      code {
+        background: #f1f5f9;
+        color: #0f172a;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-family: 'Menlo', monospace;
+      }
+      .hint {
+        font-size: 12px;
+        color: #64748b;
+        margin: 4px 0 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Rollups — child positions on the parent row</h2>
+    <p class="subtitle">
+      Set <code>enableRollups: true</code> and each summary parent row gets thin markers below its summary bar at every
+      leaf descendant's date range. Each rollup picks up its child's colour, and milestones roll up as miniature
+      diamonds — so the parent row mirrors the underlying task shapes. Try collapsing a parent (click the chevron in the
+      task list) — the rollups stay visible so you can still see the underlying tasks at a glance.
+    </p>
+    <p class="hint">
+      Tip: collapse "Design" or "Build" to see how rollups preserve the children's positions and shapes.
+    </p>
+
+    <div id="svg-gantt"></div>
+
+    <script>
+      new ApexGantt(document.getElementById('svg-gantt'), {
+        width: '100%',
+        height: 480,
+        fontFamily: 'Inter, sans-serif',
+        rowHeight: 40,
+        canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa;',
+        barBorderRadius: '6px',
+        enableRollups: true,
+        series: [
+          {id: 'p1', name: 'Discovery', showSummaryBar: true},
+          {
+            id: 'p1-1',
+            name: 'Stakeholder interviews',
+            startTime: '03-01-2025',
+            endTime: '03-05-2025',
+            parentId: 'p1',
+            progress: 100,
+          },
+          {
+            id: 'p1-2',
+            name: 'Requirements doc',
+            startTime: '03-06-2025',
+            endTime: '03-10-2025',
+            parentId: 'p1',
+            progress: 100,
+          },
+
+          {id: 'p2', name: 'Design', showSummaryBar: true},
+          {
+            id: 'p2-1',
+            name: 'Wireframes',
+            startTime: '03-11-2025',
+            endTime: '03-15-2025',
+            parentId: 'p2',
+            progress: 90,
+          },
+          {
+            id: 'p2-2',
+            name: 'Visual design',
+            startTime: '03-16-2025',
+            endTime: '03-22-2025',
+            parentId: 'p2',
+            progress: 60,
+          },
+          {
+            id: 'p2-3',
+            name: 'Design review',
+            startTime: '03-23-2025',
+            endTime: '03-25-2025',
+            parentId: 'p2',
+            progress: 0,
+          },
+
+          {id: 'p3', name: 'Build', showSummaryBar: true},
+          {
+            id: 'p3-fe',
+            name: 'Frontend',
+            startTime: '03-26-2025',
+            endTime: '04-08-2025',
+            parentId: 'p3',
+            progress: 30,
+            barBackgroundColor: '#10B981',
+          },
+          {
+            id: 'p3-be',
+            name: 'Backend',
+            startTime: '03-26-2025',
+            endTime: '04-12-2025',
+            parentId: 'p3',
+            progress: 25,
+            barBackgroundColor: '#F59E0B',
+          },
+          {
+            id: 'p3-int',
+            name: 'Integration',
+            startTime: '04-13-2025',
+            endTime: '04-18-2025',
+            parentId: 'p3',
+            progress: 0,
+            barBackgroundColor: '#8B5CF6',
+          },
+          {
+            id: 'p3-ms',
+            name: 'Code freeze',
+            type: 'milestone',
+            startTime: '04-18-2025',
+            parentId: 'p3',
+          },
+
+          {id: 'p4', name: 'Launch', startTime: '04-19-2025', endTime: '04-22-2025', progress: 0},
+          {id: 'p4-ms', name: 'Go live', type: 'milestone', startTime: '04-22-2025'},
+        ],
+      }).render();
+    </script>
+  </body>
+</html>

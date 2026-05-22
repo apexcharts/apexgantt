@@ -1,3 +1,7 @@
+declare interface AccessibilityOptions {
+    readonly taskListAriaLabel?: string;
+}
+
 /**
  * Interface representing an annotation in the graph.
  */
@@ -23,9 +27,39 @@ export declare interface AnnotationLabel {
     readonly text?: string;
 }
 
+declare interface AnnotationOptions {
+    readonly annotationBgColor?: string;
+    readonly annotationBorderColor?: string;
+    readonly annotationBorderDashArray?: number[];
+    readonly annotationBorderWidth?: number;
+    readonly annotationOrientation?: Orientation;
+    /**
+     * When true, two vertical lines are drawn across the timeline at the
+     * project's earliest start and latest end, marking the overall span. The
+     * lines auto-adjust as tasks are added, removed, or rescheduled.
+     * @default false
+     */
+    readonly enableProjectBoundary?: boolean;
+    /**
+     * Stroke colour for the project-boundary lines. Falls back to
+     * `annotationBorderColor` when omitted. @default '#7C3AED'
+     */
+    readonly projectBoundaryColor?: string;
+}
+
 declare class ApexGantt extends BaseChart {
     private options;
-    private viewMode;
+    /** Current zoom level as pixels-per-ms. Source of truth for all timeline math. */
+    private pixelsPerMs;
+    /** When non-null, `update()` preserves the previous zoom instead of resetting to a preset. */
+    private _preservedPixelsPerMs;
+    /**
+     * True until we've computed an initial zoom that fits the data span into the
+     * visible timeline area. Set when the user omits `pixelsPerDay`; cleared on
+     * the first render that has both data and a sized container, or as soon as
+     * the user supplies an explicit zoom via `update()` or the toolbar.
+     */
+    private needsAutoFitZoom;
     private arrowLink;
     private dataManager;
     private stateManager;
@@ -36,6 +70,8 @@ declare class ApexGantt extends BaseChart {
     private dependencyArrowHandler;
     private rowHoverHandler;
     private rowHoverLeaveHandler;
+    private _afterActionsRafId;
+    private _destroyed;
     private criticalPathResult;
     /** Cached references to frequently queried DOM elements. Populated by cacheDomElements() after each render. */
     private domCache;
@@ -43,13 +79,30 @@ declare class ApexGantt extends BaseChart {
     private zoomManager;
     private layoutManager;
     private styleManager;
+    private crosshairManager;
     private keyboardNavigationManager;
     private selectionManager;
     private virtualScrollCoordinator;
+    private readonly columnRenderManager;
     /** MediaQueryList for prefers-reduced-motion. Updated dynamically. */
     private reducedMotionMQL;
     private reducedMotionHandler;
     constructor(element: HTMLElement, options?: GanttUserOptions);
+    /**
+     * Compute the initial zoom level (pixels-per-ms) from user options.
+     * Falls back to the library default when `pixelsPerDay` is not provided.
+     */
+    private computeInitialPixelsPerMs;
+    /**
+     * Pick a `pixels-per-ms` that fits the full data span into the visible
+     * timeline area, with ~5% padding on each side. Returns `null` when we
+     * can't measure (no element, zero-width container, no data, or zero-length
+     * range) so the caller can fall back to the library default.
+     *
+     * Clamped to roughly `[0.25, 1280]` pixels-per-day to stay inside the
+     * supported zoom bounds.
+     */
+    private computeAutoFitPixelsPerMs;
     /**
      * Set the global ApexCharts license key.
      *
@@ -105,15 +158,24 @@ declare class ApexGantt extends BaseChart {
     private computeCriticalPath;
     private applyCriticalPathHighlighting;
     private rerenderTimeline;
+    /**
+     * (Re)attach the timeline crosshair using the current zoom/geometry.
+     * Safe to call after every render or zoom-driven rerender — it tears down
+     * any previous attachment first.
+     */
+    private attachCrosshair;
+    /**
+     * Cancel any pending `performAfterActions` rAF callback.
+     */
+    private cancelPendingAfterActionsRaf;
     private cleanupEventListeners;
     private cleanupTooltips;
     private cleanupDependencyArrows;
     private createActionButton;
     private createSeparator;
-    private createViewModeDisplay;
     /**
-     * Render the built-in toolbar (zoom controls, view-mode display, export button,
-     * and any custom `toolbarItems`) into the provided container element.
+     * Render the built-in toolbar (zoom controls, export button, and any custom
+     * `toolbarItems`) into the provided container element.
      *
      * Normally called automatically by `render()`. Use this method directly only
      * when you need to mount the toolbar in a custom DOM slot outside the chart.
@@ -136,20 +198,26 @@ declare class ApexGantt extends BaseChart {
      * you pass are changed; unspecified keys keep their current values. Passing
      * `undefined` for a key resets it to its default value.
      *
-     * Scroll position, collapsed/expanded state, and current view mode are
+     * Scroll position, collapsed/expanded state, and current zoom level are
      * preserved across updates unless explicitly overridden.
      *
      * @param options - Partial or full `GanttUserOptions` to apply.
      *
      * @example
      * ```ts
-     * // Switch to month view and update tasks
-     * gantt.update({ viewMode: ViewMode.Month, series: newTasks });
+     * // Zoom to month density and update tasks
+     * gantt.update({ pixelsPerDay: 4.9, series: newTasks });
      *
      * // Toggle dark theme at runtime
      * gantt.update({ theme: 'dark' });
      * ```
      */
+    /**
+     * Merge nested object option groups (baseline, barLabel) explicitly so a
+     * partial user-supplied override doesn't blow away unspecified subfields.
+     * Spread layers are: theme defaults → carried-over current options → incoming.
+     */
+    private mergeNestedOptionGroups;
     update(options: GanttUserOptions): void;
     private detectCurrentTheme;
     /**
@@ -175,6 +243,14 @@ declare class ApexGantt extends BaseChart {
      * ```
      */
     updateTask(taskId: string, updatedTask: Partial<Task>): void;
+    /**
+     * Internal entry point used by inline editors in the task-list panel.
+     * Applies the partial update via `updateTaskInUI` and emits the same
+     * `taskUpdate` / `taskUpdateSuccess` / `taskUpdateError` events that the
+     * inline TaskForm emits, so consumers see a uniform event stream regardless
+     * of which UI surface produced the change.
+     */
+    private commitInlineEdit;
     /** Returns an array of currently selected task objects. Requires `enableSelection: true`. */
     getSelectedTasks(): Task[];
     /** Programmatically set the selection to the given task IDs. Requires `enableSelection: true`. */
@@ -261,6 +337,100 @@ declare class ApexGantt extends BaseChart {
 export { ApexGantt }
 export default ApexGantt;
 
+/**
+ * A person (or team) assigned to a task. Consumed by the built-in
+ * `renderers.avatars` cell renderer for an "Assigned Resources" column.
+ *
+ * The library does not interpret these values directly; supplying assignees
+ * is only meaningful when an avatar-style column renderer is configured via
+ * `columnConfig`.
+ */
+export declare interface Assignee {
+    /** Display name. Used as the `alt` text on avatars and the initials source. */
+    readonly name: string;
+    /** Optional avatar image URL. When omitted, initials are rendered instead. */
+    readonly avatarUrl?: string;
+    /** Optional initials override. Defaults to the first letters of `name`. */
+    readonly initials?: string;
+    /** Optional background color for the initials fallback. */
+    readonly color?: string;
+}
+
+/**
+ * Configuration for the {@link avatars} column renderer.
+ */
+export declare interface AvatarsRendererOptions {
+    /**
+     * Returns the list of assignees for a task. Typically `(task) => task.assignees`.
+     * Return `null`, `undefined`, or an empty array to render an empty cell.
+     */
+    readonly accessor: (task: Task) => readonly Assignee[] | null | undefined;
+    /** Maximum number of avatars to show. Excess shown as "+N". @default 4 */
+    readonly max?: number;
+    /** Avatar diameter in pixels. @default 24 */
+    readonly size?: number;
+    /** Pixels each avatar overlaps the previous one. @default 8 */
+    readonly overlap?: number;
+    /** Border color around each avatar (matches the row background). @default '#FFFFFF' */
+    readonly borderColor?: string;
+    /** Default background color for the initials fallback when an `Assignee` lacks `color`. */
+    readonly fallbackColor?: string;
+}
+
+/**
+ * Controls how the per-task label is rendered next to each bar. Defaults to
+ * `'right'` so labels stay readable regardless of bar width; set `position`
+ * to `'inside'` to render centered inside the bar instead, or `'auto'` to
+ * pick between the two based on whether the label fits. Use `render` to
+ * compose names with chips, icons, or owner info.
+ *
+ * Outside labels are not currently rendered for milestones (the diamond is a
+ * rotated element); set `render` to return an empty string to opt out for any
+ * task.
+ */
+export declare interface BarLabelOptions {
+    /** Where to render the label relative to the bar. @default 'right' */
+    readonly position?: BarLabelPosition;
+    /** Task field whose value populates the label when `render` is not set. @default 'name' */
+    readonly field?: keyof Task;
+    /** Custom renderer. Overrides `field` when provided. */
+    readonly render?: BarLabelRenderer;
+    /** Extra CSS class added to the label element. */
+    readonly className?: string;
+    /**
+     * Pixels of empty space added to the start of the timeline so left-side
+     * labels have room to render without being hidden behind the task-list
+     * panel. Tune this up if your longest labels still get clipped, or down to
+     * reclaim timeline space when labels are short.
+     *
+     * Auto-defaults to `120` when `position` is `'left'`, and `0` otherwise.
+     * Set explicitly to `0` to disable the padding.
+     */
+    readonly leadingPadding?: number;
+}
+
+/**
+ * Where to render the task label relative to the bar.
+ *
+ * - `'right'` (default) — rendered immediately to the right of the bar;
+ *   always visible regardless of bar width.
+ * - `'inside'` — centered inside the bar; clipped when the bar is narrower
+ *   than the text.
+ * - `'left'` — rendered immediately to the left of the bar.
+ * - `'auto'` — `'inside'` when the label fits, otherwise `'right'`. Uses a
+ *   character-width estimate for plain-text content; falls back to `'right'`
+ *   when a custom `render` returns HTML/elements.
+ */
+export declare type BarLabelPosition = 'inside' | 'left' | 'right' | 'auto';
+
+/**
+ * Custom renderer for the bar label. Receives the resolved task and returns
+ * either an HTML string (assigned via `innerHTML` — escape user input
+ * yourself) or an `HTMLElement` to append. Returning `null` / `undefined`
+ * falls back to rendering the value of `BarLabelOptions.field`.
+ */
+export declare type BarLabelRenderer = (task: Task) => string | HTMLElement | null | undefined;
+
 declare abstract class BaseChart {
     /* Excluded from this release type: element */
     /** Destroys the chart instance and cleans up DOM resources. */
@@ -292,8 +462,19 @@ export declare interface BaselineInput {
 export declare interface BaselineOptions {
     /** Whether to render baseline bars below actual bars. Defaults to false. */
     readonly enabled: boolean;
-    /** Color of the baseline bar. Defaults to '#b0b8c1' (light grey). */
+    /** Color of the baseline bar. Defaults to '#BBD5DA' (light grey). */
     readonly color: string;
+}
+
+declare interface BorderOptions {
+    readonly cellBorderColor: string;
+    readonly cellBorderWidth: string;
+    /**
+     * Whether to draw vertical lines between timeline columns (the cell dividers
+     * in the header and body grid). Set to `false` for a cleaner aesthetic that
+     * keeps only the horizontal row dividers. @default true
+     */
+    readonly columnLines: boolean;
 }
 
 /**
@@ -308,7 +489,9 @@ export declare enum ColumnKey {
     EndTime = "endTime",
     Name = "name",
     Progress = "progress",
-    StartTime = "startTime"
+    ProgressRing = "progressRing",
+    StartTime = "startTime",
+    Wbs = "wbs"
 }
 
 export declare const ColumnList: ColumnListItem[];
@@ -319,13 +502,119 @@ export declare const ColumnList: ColumnListItem[];
  * Pass an array of these to `GanttUserOptions.columnConfig` to override the
  * default column set. Use `ColumnList` as the starting point and filter or
  * reorder as needed.
+ *
+ * Custom columns are supported by setting `key` to any string (other than the
+ * built-in `ColumnKey` values) and supplying a `render` function. Set
+ * `accessor` to expose a comparable/filterable value for future sort/filter
+ * features and SVG export.
  */
 export declare interface ColumnListItem {
-    readonly key: ColumnKey;
+    /**
+     * Identifier for the column. Use a `ColumnKey` value for built-in columns,
+     * or any other string for a custom column with a `render` function.
+     */
+    readonly key: ColumnKey | string;
     readonly title: string;
     readonly minWidth?: string;
     readonly flexGrow?: number;
     readonly visible?: boolean;
+    /**
+     * Custom cell renderer. Required for custom columns; ignored for built-in
+     * columns (built-ins use the library's internal renderer).
+     */
+    readonly render?: ColumnRenderer;
+    /**
+     * Extracts the underlying value of the cell from the task. Used by future
+     * sort/filter features and by SVG export. Optional.
+     */
+    readonly accessor?: (task: Task) => unknown;
+}
+
+declare interface ColumnOptions {
+    readonly columnConfig?: ColumnListItem[];
+}
+
+/**
+ * Context object passed to a custom column `render` function.
+ *
+ * Use `task` for the row's data, `options` to read theme/format settings, and
+ * the `isSummary` / `isMilestone` flags to vary rendering for grouping rows
+ * and milestones.
+ */
+export declare interface ColumnRenderContext {
+    /** The task being rendered for this row. */
+    readonly task: Task;
+    /** Resolved chart options (theme colors, date format, etc.). */
+    readonly options: GanttOptions;
+    /** Zero-based index of the row in the currently visible task list. */
+    readonly rowIndex: number;
+    /** True when the row is a summary (group) bar. */
+    readonly isSummary: boolean;
+    /** True when the row represents a milestone (no end time / diamond marker). */
+    readonly isMilestone: boolean;
+}
+
+/**
+ * Custom cell renderer for a column.
+ *
+ * Three return modes:
+ *
+ * - **Return a `string`** — the library treats it as HTML and assigns it to
+ *   the cell via `innerHTML`. Best for vanilla JS and the built-in presets.
+ *   Remember to escape user-supplied text yourself.
+ * - **Return `void`** — you have already mounted content into the provided
+ *   `el`. The library will not modify `el`'s contents until the next render.
+ *   Use this from frameworks (React's `createRoot`, Angular's
+ *   `ViewContainerRef`, Vue's `createApp().mount(el)`).
+ * - **Return a cleanup function `() => void`** — same as `void`, but the
+ *   library will invoke the returned function before the cell is discarded
+ *   (row removal, full re-render, or `gantt.destroy()`). Required for
+ *   framework adapters that need to unmount components to avoid memory
+ *   leaks or stale change detection.
+ *
+ * @param ctx - Context describing the task and chart options.
+ * @param el - The cell DOM element. Pre-attached, ready to receive content.
+ */
+export declare type ColumnRenderer = (ctx: ColumnRenderContext, el: HTMLElement) => void | string | (() => void);
+
+declare interface CommonOptions {
+    readonly backgroundColor: string;
+    readonly borderColor: string;
+    readonly canvasStyle: string;
+    readonly enableExport: boolean;
+    readonly enableResize: boolean;
+    readonly headerBackground: string;
+    readonly height: number | string;
+    readonly inputDateFormat: string;
+    readonly pixelsPerDay?: number;
+    readonly tasksContainerWidth: number;
+    readonly width: number | string;
+}
+
+declare interface CriticalPathOptions {
+    /** When true, tasks and arrows on the critical path are highlighted. Defaults to false. */
+    readonly enableCriticalPath: boolean;
+    /** Fill color for critical-path task bars. Defaults to '#e53935'. */
+    readonly criticalBarColor: string;
+    /** Stroke color for critical-path dependency arrows. Defaults to '#e53935'. */
+    readonly criticalArrowColor: string;
+}
+
+/**
+ * Custom formatter for the crosshair date label.
+ *
+ * @param date - The date under the cursor.
+ * @param tier - The currently active sub-tier of the timeline header
+ *   (`'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year'`).
+ *   Use this to vary precision based on zoom level.
+ * @returns The string rendered inside the crosshair label.
+ */
+export declare type CrosshairLabelFormatter = (date: Date, tier: TierId) => string;
+
+export declare interface CrosshairOptions {
+    readonly enableCrosshair: boolean;
+    readonly crosshairColor: string;
+    readonly crosshairLabelFormat?: CrosshairLabelFormatter;
 }
 
 export declare const DarkTheme: GanttTheme;
@@ -383,12 +672,125 @@ export declare interface DependencyArrowUpdateDetail {
     arrowLinkInstanceId?: string;
 }
 
+/** Returns CSS class name(s) to add to a dependency arrow path. */
+export declare type DependencyClassBuilder = (ctx: DependencyContext) => string | readonly string[] | undefined;
+
+/**
+ * Context passed to per-arrow `tooltipTemplate` and `classBuilder` callbacks.
+ * Carries the resolved source/target tasks and the dependency metadata so
+ * callers can format custom labels, tag arrows by relationship, etc.
+ */
+export declare interface DependencyContext {
+    /** The predecessor task (the task this dependency points away from). */
+    readonly fromTask: Task;
+    /** The successor task (the task this dependency points to). */
+    readonly toTask: Task;
+    /** The dependency relationship: 'FS' | 'FF' | 'SS' | 'SF'. */
+    readonly type: DependencyType;
+    /** Lag/lead in days (positive = lag, negative = lead, 0 = none). */
+    readonly lag: number;
+}
+
+/**
+ * Visual + interaction options for dependency arrows.
+ *
+ * Arrows are rendered as SVG paths between bars with subtly rounded joints
+ * by default. Tune `cornerRadius` for tighter or looser arcs, set `hitWidth`
+ * for an invisible thicker target zone (so users can hover/click the thin
+ * visible stroke), and use `tooltipTemplate` / `classBuilder` for per-arrow
+ * content and styling.
+ */
+export declare interface DependencyOptions {
+    /**
+     * Pixel radius for rounded joints on dependency arrows. `0` produces sharp
+     * 90° corners; larger values produce smoother arcs (clamped per-corner to
+     * half the shorter adjacent segment so an arc never overshoots).
+     * @default 4
+     */
+    readonly cornerRadius?: number;
+    /**
+     * Invisible hit-area thickness in pixels. When `> 0`, each arrow renders an
+     * additional transparent path of this width that captures pointer events,
+     * making the thin visible stroke easier to hover/click. Required for
+     * `tooltipTemplate` to fire. @default 0
+     */
+    readonly hitWidth?: number;
+    /**
+     * Returns CSS class name(s) for each arrow. Use to tag arrows by
+     * relationship (cross-team, blocked, optional…) and style them via custom
+     * CSS rules on the resulting class.
+     */
+    readonly classBuilder?: DependencyClassBuilder;
+    /**
+     * Returns an HTML string shown when the user hovers an arrow. Requires a
+     * non-zero `hitWidth` (otherwise hovering a 1–2 px stroke is impractical).
+     */
+    readonly tooltipTemplate?: DependencyTooltipTemplate;
+}
+
+/** Returns the HTML string used as a dependency arrow's hover tooltip. */
+export declare type DependencyTooltipTemplate = (ctx: DependencyContext) => string;
+
 /**
  * Finish-to-Finish (`FF`), Finish-to-Start (`FS`), Start-to-Finish (`SF`),
  * or Start-to-Start (`SS`) dependency relationship between two tasks.
  * Defaults to `'FS'` when not specified.
  */
 export declare type DependencyType = 'FF' | 'FS' | 'SF' | 'SS';
+
+/**
+ * Escape a string so it can be safely interpolated into HTML.
+ *
+ * Use this in any custom column `render` function that returns a string and
+ * interpolates user-supplied text (task names, assignee names, etc.). Without
+ * escaping, user-controlled values can break out of the surrounding markup or
+ * inject script tags.
+ *
+ * @example
+ * ```ts
+ * render: (ctx) => `<span title="${escapeHtml(ctx.task.name)}">${escapeHtml(ctx.task.name)}</span>`
+ * ```
+ */
+export declare function escapeHtml(value: unknown): string;
+
+declare interface FontOptions {
+    readonly fontColor: string;
+    readonly fontFamily: string;
+    readonly fontSize: string;
+    readonly fontWeight: string;
+}
+
+declare interface GanttBarOptions {
+    readonly arrowColor: string;
+    readonly barBackgroundColor: string;
+    readonly barBorderRadius: string;
+    readonly barLabel: BarLabelOptions;
+    readonly barMargin: number;
+    readonly barTextColor: string;
+    readonly enableTaskEdit: boolean;
+    /**
+     * When true, summary (parent) rows display thin "rollup" markers below the
+     * summary bar at each leaf descendant's date range — a glance-able overview
+     * of children that stays visible even when the parent is collapsed.
+     * @default false
+     */
+    readonly enableRollups: boolean;
+    readonly summaryBarColor: string;
+    readonly milestoneColor: string;
+}
+
+declare interface GanttBaselineConfig {
+    readonly baseline: BaselineOptions;
+}
+
+declare interface GanttData {
+    readonly annotations: Annotation[];
+    readonly series: TaskInput[];
+}
+
+declare interface GanttDependencyConfig {
+    readonly dependencies: DependencyOptions;
+}
 
 /**
  * chart event names
@@ -428,6 +830,8 @@ export declare interface GanttEventMap {
     taskDragged: CustomEvent<TaskDraggedEventDetail>;
     /** Fires when a task bar is resized via its handles. */
     taskResized: CustomEvent<TaskResizedEventDetail>;
+    /** Fires when the in-bar progress handle is dragged. */
+    taskProgressChanged: CustomEvent<TaskProgressChangedEventDetail>;
     /** Fires when the set of selected tasks changes. */
     selectionChange: CustomEvent<SelectionChangeEventDetail>;
     /** Fires when a dependency arrow is updated. */
@@ -460,6 +864,10 @@ export declare const GanttEvents: {
      */
     readonly TASK_RESIZED: "taskResized";
     /**
+     * emits when the in-bar progress handle is dragged to a new value
+     */
+    readonly TASK_PROGRESS_CHANGED: "taskProgressChanged";
+    /**
      * emits when the set of selected tasks changes
      */
     readonly SELECTION_CHANGE: "selectionChange";
@@ -468,6 +876,15 @@ export declare const GanttEvents: {
      */
     readonly DEPENDENCY_ARROW_UPDATE: "dependencyArrowUpdate";
 };
+
+declare type GanttOptions = GanttOptionsInternal;
+
+declare type GanttOptionsInternal = AccessibilityOptions & AnnotationOptions & BorderOptions & CommonOptions & ColumnOptions & CriticalPathOptions & CrosshairOptions & FontOptions & GanttBarOptions & GanttBaselineConfig & GanttData & GanttDependencyConfig & GanttRowOptions & InteractiveOptions & ParsingOptions & SelectionOptions & ToolbarOptions & TooltipOptions;
+
+declare interface GanttRowOptions {
+    readonly rowBackgroundColors: readonly string[];
+    readonly rowHeight: number;
+}
 
 /**
  * Complete color palette for the chart UI.
@@ -489,6 +906,20 @@ export declare interface GanttTheme {
     readonly barBackgroundColor: string;
     readonly barTextColor: string;
     readonly arrowColor: string;
+    /**
+     * Fill color for summary (group) bars. Renders distinct from regular task bars
+     * to make the parent/child hierarchy visually obvious.
+     */
+    readonly summaryBarColor: string;
+    /**
+     * Fill color for milestone diamonds. Defaults to a violet accent so milestones
+     * pop against the regular task bar palette.
+     */
+    readonly milestoneColor: string;
+    /** Fill color for task bars on the critical path. */
+    readonly criticalBarColor: string;
+    /** Stroke color for dependency arrows on the critical path. */
+    readonly criticalArrowColor: string;
     readonly backgroundColor: string;
     readonly textColor: string;
     readonly borderColor: string;
@@ -523,7 +954,7 @@ export declare interface GanttTheme {
  * ```ts
  * const gantt = new ApexGantt('#chart', {
  *   series: myTasks,
- *   viewMode: ViewMode.Week,
+ *   pixelsPerDay: 80, // day-density timeline
  *   height: 400,
  * });
  * ```
@@ -543,20 +974,56 @@ export declare interface GanttUserOptions {
     readonly annotationOrientation?: Orientation;
     /** Array of annotation objects to overlay on the timeline. @default [] */
     readonly annotations?: Annotation[];
-    /** Color of dependency arrows between tasks. @default '#0D6EFD' */
+    /**
+     * When true, two vertical lines mark the project's earliest start and
+     * latest end across all rows. Auto-recomputes when tasks change.
+     * @default false
+     */
+    readonly enableProjectBoundary?: boolean;
+    /**
+     * Stroke colour for the project-boundary lines. Falls back to
+     * `annotationBorderColor` when omitted. @default '#7C3AED'
+     */
+    readonly projectBoundaryColor?: string;
+    /** Color of dependency arrows between tasks. @default '#94A3B8' */
     readonly arrowColor?: string;
     /** Background color of the whole chart container. @default '#FFFFFF' */
     readonly backgroundColor?: string;
-    /** Default background fill color for task bars. @default '#537CFA' */
+    /** Default background fill color for task bars. @default '#87B7FE' (light) / '#818CF8' (dark) */
     readonly barBackgroundColor?: string;
     /** CSS border-radius applied to task bars. @default '5px' */
     readonly barBorderRadius?: string;
+    /**
+     * Per-task bar label. Default renders the task name immediately to the
+     * right of the bar so narrow bars don't clip the text. Set
+     * `position: 'inside'` to render centered inside the bar instead, or
+     * `'auto'` to pick automatically; supply `render` to compose names with
+     * chips/icons/avatars.
+     */
+    readonly barLabel?: BarLabelOptions;
     /** Top and bottom margin inside each row for the task bar in pixels. @default 4 */
     readonly barMargin?: number;
     /** Text color rendered inside task bars. @default '#FFFFFF' */
     readonly barTextColor?: string;
+    /**
+     * Fill color for summary (group) bars. Renders distinct from regular task
+     * bars to make the parent/child hierarchy visually obvious.
+     * @default '#B9CECE' (light) / '#8FBCBC' (dark)
+     */
+    readonly summaryBarColor?: string;
+    /**
+     * Fill color for milestone diamonds.
+     * @default '#7C3AED' (light) / '#A78BFA' (dark)
+     */
+    readonly milestoneColor?: string;
     /** Baseline options. When `enabled` is true, tasks with a `baseline` field render a thin bar below the actual bar. */
     readonly baseline?: Partial<BaselineOptions>;
+    /**
+     * Dependency arrow polish: rounded joints (`cornerRadius`), invisible hit
+     * area for hover/click (`hitWidth`), per-arrow CSS class (`classBuilder`),
+     * and HTML hover tooltip (`tooltipTemplate`).
+     */
+    readonly dependencies?: DependencyOptions;
     /** Color of the cell and row divider lines. @default '#eff0f0' */
     readonly borderColor?: string;
     /** Arbitrary CSS injected onto the root container element. */
@@ -567,12 +1034,54 @@ export declare interface GanttUserOptions {
     readonly criticalArrowColor?: string;
     /** When true, calculates and highlights the critical path through dependent tasks. @default false */
     readonly enableCriticalPath?: boolean;
-    /** Border color for all cells in the task table and timeline grid. @default '#eff0f0' */
+    /**
+     * Show a vertical crosshair line that follows the cursor across the timeline,
+     * with a label displaying the precise date/time at the pointer position.
+     * Useful for reading exact positions on long timelines.
+     * @default false
+     */
+    readonly enableCrosshair?: boolean;
+    /** Color of the crosshair line and label background. @default '#87B7FE' (light) / '#818CF8' (dark) */
+    readonly crosshairColor?: string;
+    /**
+     * Custom formatter for the crosshair label text. Receives the date under the
+     * cursor and the current sub-tier of the timeline header. When omitted, the
+     * label auto-adapts to the active tier: `'ddd MM/DD/YYYY'` for day/week/
+     * month/quarter/year tiers and `'MM/DD HH:mm'` for hour/minute tiers.
+     */
+    readonly crosshairLabelFormat?: CrosshairLabelFormatter;
+    /** Border color for all cells in the task table and timeline grid. @default '#D0D7DE' */
     readonly cellBorderColor?: string;
     /** CSS border-width for all cell lines, e.g. `'1px'`. @default '1px' */
     readonly cellBorderWidth?: string;
     /** Custom column definitions for the task-list panel. When omitted, all default columns are shown. */
     readonly columnConfig?: ColumnListItem[];
+    /**
+     * Whether to draw vertical lines between timeline columns (the cell
+     * dividers in the header and body grid). Set to `false` for a cleaner
+     * aesthetic that keeps only the horizontal row dividers. @default true
+     */
+    readonly columnLines?: boolean;
+    /**
+     * When `true`, summary (parent) rows display thin rollup markers below the
+     * summary bar at each leaf descendant's date range — a glance-able overview
+     * of children that stays visible even when the parent is collapsed.
+     * @default false
+     */
+    readonly enableRollups?: boolean;
+    /**
+     * Allow editing task fields directly in the task-list cells. When `true`,
+     * double-clicking a `name`, `startTime`, `endTime`, `duration`, or
+     * `progress` cell swaps the cell for an input. Commit with Enter or blur,
+     * cancel with Escape. Summary rows, milestones (date/duration/progress),
+     * and empty rows are not editable.
+     *
+     * Auto-enabled when `enableTaskEdit` is `true` unless explicitly set to
+     * `false`. Set `enableInlineEdit: false` alongside `enableTaskEdit: true`
+     * to keep the bar-click dialog without inline cell editing.
+     * @default false
+     */
+    readonly enableInlineEdit?: boolean;
     /** Enable row selection (click, Ctrl+Click, Shift+Click, keyboard). @default false */
     readonly enableSelection?: boolean;
     /** Show the SVG export button in the toolbar. @default true */
@@ -585,6 +1094,13 @@ export declare interface GanttUserOptions {
     readonly enableTaskEdit?: boolean;
     /** Allow task bars to be resized by dragging their handles. @default true */
     readonly enableTaskResize?: boolean;
+    /**
+     * Allow editing task progress by dragging the small handle at the bottom of
+     * the bar. The handle becomes visible on bar hover and snaps to whole
+     * percent on commit. Emits a `taskProgressChanged` event.
+     * @default true
+     */
+    readonly enableProgressDrag?: boolean;
     /** Show a tooltip on task-bar hover. @default true */
     readonly enableTooltip?: boolean;
     /** Color for all text in the chart. @default '#000000' */
@@ -617,14 +1133,54 @@ export declare interface GanttUserOptions {
     readonly tooltipId?: string;
     /** Custom function returning an HTML string for the task tooltip. */
     readonly tooltipTemplate?: (task: Task, dateFormat: string) => string;
-    /** Timeline granularity. @default ViewMode.Month */
-    readonly viewMode?: ViewMode;
+    /**
+     * Initial zoom level expressed as **pixels per day**. Continuous; the
+     * timeline header automatically picks calendar tiers (year/quarter/month/
+     * week/day/hour/minute) appropriate for the current zoom.
+     *
+     * Reference values (calibrated to match the legacy view-mode presets):
+     * - Year ≈ `0.5`
+     * - Quarter ≈ `1.6`
+     * - Month ≈ `4.9`
+     * - Week ≈ `25.7`
+     * - Day = `80`
+     *
+     * Bounds are clamped to roughly `[0.25, 1280]` px/day. Values outside this
+     * range are clipped.
+     *
+     * **When omitted**, the chart auto-fits the full data range into the visible
+     * timeline area on first render so a long project doesn't open scrolled.
+     * Supply an explicit value here (or zoom via the toolbar) to take control.
+     */
+    readonly pixelsPerDay?: number;
     /** Width of the chart. Accepts a pixel number or a CSS string. @default '100%' */
     readonly width?: number | string;
     /** Field-mapping config to parse non-standard task shapes without manual data transformation. */
     readonly parsing?: ParsingConfig;
     /** Show a checkbox column for multi-select. Only applies when `enableSelection` is true. @default true */
     readonly showCheckboxColumn?: boolean;
+    /**
+     * Granularity at which task drag, resize, and inline edits snap. Affects
+     * data updates only — the timeline header tier is independent and follows
+     * `pixelsPerDay`.
+     *
+     * - `'day'` (default): drags snap to whole days, end-time treated as
+     *   inclusive (a 1-day task spans one cell).
+     * - `'hour'` / `'minute'`: drags snap to whole hours / minutes. Combine
+     *   with `snapValue` (e.g., `snapUnit: 'minute'`, `snapValue: 15` for
+     *   15-minute steps). End-time is treated as the exclusive end timestamp
+     *   when `inputDateFormat` includes time tokens (e.g. `HH:mm`).
+     *
+     * @default 'day'
+     */
+    readonly snapUnit?: SnapUnit;
+    /**
+     * Multiplier applied to `snapUnit`. Examples: `snapUnit: 'minute',
+     * snapValue: 15` snaps to 15-min increments; `snapUnit: 'hour',
+     * snapValue: 6` snaps to 6-hour increments.
+     * @default 1
+     */
+    readonly snapValue?: number;
     /**
      * Custom controls rendered in the toolbar alongside the built-in zoom and export buttons.
      * Each item can be a `ToolbarButton`, `ToolbarSelect`, or `ToolbarSeparator`.
@@ -637,6 +1193,15 @@ export declare interface GanttUserOptions {
 }
 
 export declare function getTheme(mode: ThemeMode): GanttTheme;
+
+declare interface InteractiveOptions {
+    readonly enableInlineEdit: boolean;
+    readonly enableTaskDrag: boolean;
+    readonly enableTaskResize: boolean;
+    readonly enableProgressDrag: boolean;
+    readonly snapUnit: SnapUnit;
+    readonly snapValue: number;
+}
 
 export declare const LightTheme: GanttTheme;
 
@@ -682,6 +1247,10 @@ export declare interface ParsingConfig {
     collapsed?: ParsingValue;
 }
 
+declare interface ParsingOptions {
+    readonly parsing?: ParsingConfig;
+}
+
 /**
  * A field mapping value: either a dot-notation path string to a key in the
  * raw data object, or an object with a `key` path and an optional `transform`
@@ -702,6 +1271,38 @@ export declare type ParsingValue = string | {
 };
 
 /**
+ * Configuration for the {@link progressRing} column renderer.
+ */
+export declare interface ProgressRingRendererOptions {
+    /**
+     * Returns the percentage (0–100) for the task. Defaults to `task.progress`.
+     * Values are clamped to `[0, 100]`; `null`/`undefined` are treated as `0`.
+     */
+    readonly accessor?: (task: Task) => number | null | undefined;
+    /** Outer diameter of the ring in pixels. @default 32 */
+    readonly size?: number;
+    /** Stroke width of the ring in pixels. @default 3 */
+    readonly strokeWidth?: number;
+    /** Color of the progress arc. Accepts a static hex string or a per-task function. @default '#EF4444' */
+    readonly progressColor?: string | ((task: Task, value: number) => string);
+    /** Color of the background track. @default '#E5E7EB' */
+    readonly trackColor?: string;
+    /** Show the percentage as a text label inside the ring. @default true */
+    readonly showLabel?: boolean;
+    /** Label text color. Defaults to `currentColor` (inherits cell color). */
+    readonly labelColor?: string;
+}
+
+export declare namespace renderers {
+        {
+        avatars,
+        AvatarsRendererOptions,
+        progressRing,
+        ProgressRingRendererOptions
+    }
+}
+
+/**
  * Detail payload for the `selectionChange` event.
  *
  * Fires whenever the set of selected task rows changes (click, Ctrl+Click,
@@ -712,6 +1313,13 @@ export declare interface SelectionChangeEventDetail {
     selectedIds: string[];
     timestamp: number;
 }
+
+declare interface SelectionOptions {
+    readonly enableSelection: boolean;
+    readonly showCheckboxColumn: boolean;
+}
+
+export declare type SnapUnit = 'day' | 'hour' | 'minute';
 
 /**
  * Resolved task object used internally and returned from selection/event APIs.
@@ -726,6 +1334,12 @@ export declare interface Task extends TaskInput {
     readonly endTime: string;
     /** Nesting depth in the task hierarchy. `0` = top-level task. */
     readonly level?: number;
+    /**
+     * Work Breakdown Structure code derived from the task's position in the
+     * hierarchy (e.g. `'1'`, `'1.1'`, `'1.1.2'`, `'2'`). Recomputed whenever the
+     * tree changes; render via the `ColumnKey.Wbs` column or read directly.
+     */
+    readonly wbs?: string;
     /** Resolved progress value (0–100). Always present; defaults to `0`. */
     readonly progress: number;
     /** Resolved task type. Always present; defaults to `TaskType.Task`. */
@@ -734,6 +1348,16 @@ export declare interface Task extends TaskInput {
     readonly left?: number;
     /** Computed width in pixels within the timeline body. Set after layout. */
     readonly width?: number;
+    /**
+     * Computed summary start date (ISO string). Set by `DataManager.computeSummaryDates()`
+     * when `showSummaryBar` is `true`; equals the earliest `startTime` among all descendants.
+     */
+    readonly summaryStart?: string;
+    /**
+     * Computed summary end date (ISO string). Set by `DataManager.computeSummaryDates()`
+     * when `showSummaryBar` is `true`; equals the latest `endTime` among all descendants.
+     */
+    readonly summaryEnd?: string;
 }
 
 /**
@@ -764,6 +1388,10 @@ export declare interface TaskDraggedEventDetail {
     oldEndTime: string;
     newStartTime: string;
     newEndTime: string;
+    /**
+     * Days the task moved. Fractional when `snapUnit` is `'hour'` or `'minute'`
+     * (e.g., a 6-hour move reports `0.25`).
+     */
     daysMoved: number;
     affectedChildTasks: Array<{
         taskId: string;
@@ -848,6 +1476,35 @@ export declare interface TaskInput {
      * options update. @default false
      */
     collapsed?: boolean;
+    /**
+     * When `true`, this task renders as a summary (group) bar whose date range
+     * is automatically computed from the earliest start and latest end of all
+     * its descendants. The task's own `startTime`/`endTime` are ignored — a
+     * warning is logged if both are provided. Drag, resize, and progress are
+     * disabled on summary bars; they are always read-only.
+     * @default true
+     */
+    readonly showSummaryBar?: boolean;
+    /**
+     * People (or teams) assigned to this task. Consumed by the built-in
+     * `renderers.avatars` column renderer; ignored unless an avatar-style
+     * column is configured via `columnConfig`.
+     */
+    readonly assignees?: readonly Assignee[];
+}
+
+/**
+ * Detail payload for the `taskProgressChanged` event.
+ *
+ * Fires when the in-bar progress handle is dragged to a new value (the white
+ * wedge that becomes visible on bar hover). Both values are integer percent
+ * 0–100; identical-value drags are suppressed.
+ */
+export declare interface TaskProgressChangedEventDetail {
+    taskId: string;
+    oldProgress: number;
+    newProgress: number;
+    timestamp: number;
 }
 
 /**
@@ -935,6 +1592,9 @@ export declare interface TaskValidationErrorEventDetail {
 /** Color-mode selector. Switches between the built-in `LightTheme` and `DarkTheme` presets. */
 export declare type ThemeMode = 'dark' | 'light';
 
+/** Identifier for a timeline tier. Ordered finest to coarsest. */
+export declare type TierId = 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
+
 /**
  * A plain button in the custom toolbar area.
  *
@@ -997,6 +1657,10 @@ export declare interface ToolbarContext {
 /** Union of all supported toolbar item types. */
 export declare type ToolbarItem = ToolbarButton | ToolbarSelect | ToolbarSeparator;
 
+declare interface ToolbarOptions {
+    readonly toolbarItems: ToolbarItem[];
+}
+
 /**
  * A `<select>` dropdown in the custom toolbar area.
  *
@@ -1038,18 +1702,12 @@ export declare interface ToolbarSeparator {
     position?: 'left' | 'right';
 }
 
-/**
- * Timeline granularity — controls the column width and header labels.
- *
- * Pass as `GanttUserOptions.viewMode`. Use the toolbar's zoom controls
- * or call `gantt.zoomIn()` / `gantt.zoomOut()` to switch dynamically.
- */
-export declare enum ViewMode {
-    Day = "day",
-    Month = "month",
-    Quarter = "quarter",
-    Week = "week",
-    Year = "year"
+declare interface TooltipOptions {
+    readonly enableTooltip: boolean;
+    readonly tooltipBGColor: string;
+    readonly tooltipBorderColor: string;
+    readonly tooltipId: string;
+    readonly tooltipTemplate?: (task: Task, dateFormat: string) => string;
 }
 
 export { }

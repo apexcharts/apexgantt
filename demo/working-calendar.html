@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Working Calendar — ApexGantt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        max-width: 1240px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        background: #fff;
+        padding: 20px;
+        color: #1a1a2e;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 4px 0;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #555;
+        margin-bottom: 16px;
+      }
+      .gantt-wrap {
+        min-width: 0;
+        margin-bottom: 16px;
+      }
+      .panels {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        align-items: start;
+      }
+      .panel {
+        background: #fafafa;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 14px 16px;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .panel h3 {
+        margin: 0 0 8px 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: #1e293b;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .panel ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      .panel li {
+        margin-bottom: 4px;
+      }
+      kbd {
+        font-family: 'SFMono-Regular', 'Menlo', monospace;
+        background: #1e293b;
+        color: #fff;
+        border-radius: 3px;
+        padding: 1px 6px;
+        font-size: 11px;
+      }
+      code {
+        font-family: 'SFMono-Regular', 'Menlo', monospace;
+        background: #eef2f7;
+        padding: 0 4px;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .controls button {
+        font: inherit;
+        font-size: 12px;
+        padding: 5px 10px;
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        color: #1e293b;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .controls button:hover {
+        background: #f1f5f9;
+      }
+      .controls button.active {
+        background: #1e293b;
+        color: #fff;
+        border-color: #1e293b;
+      }
+      .state {
+        font-family: 'SFMono-Regular', 'Menlo', monospace;
+        font-size: 11px;
+        color: #475569;
+        margin-top: 6px;
+      }
+      .legend {
+        display: grid;
+        grid-template-columns: 14px auto;
+        column-gap: 8px;
+        row-gap: 6px;
+        align-items: center;
+        margin-top: 6px;
+        font-size: 12px;
+      }
+      .swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        border: 1px solid #e2e8f0;
+      }
+      .swatch.weekend {
+        background: rgba(15, 23, 42, 0.035);
+      }
+      .swatch.holiday {
+        background: rgba(244, 63, 94, 0.08);
+      }
+      .swatch.critical {
+        background: #e53935;
+      }
+      #event-log {
+        max-height: 180px;
+        overflow-y: auto;
+        font-family: 'SFMono-Regular', 'Menlo', monospace;
+        font-size: 11px;
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 4px;
+        padding: 8px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        margin-top: 6px;
+      }
+      #event-log .entry {
+        border-left: 3px solid #38bdf8;
+        padding-left: 8px;
+        margin-bottom: 6px;
+      }
+      #event-log .entry.snap {
+        border-color: #4ade80;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Working Calendar</h2>
+    <p class="subtitle">
+      Configure non-working days as stripes, count durations in working days, drag and resize bars with weekend-aware
+      snapping, and keep the critical path calendar-correct. Every move is undoable —
+      <kbd>Ctrl</kbd>+<kbd>Z</kbd> rolls back any drag, resize, or snap.
+    </p>
+
+    <div class="gantt-wrap">
+      <div id="gantt"></div>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <h3>Calendar</h3>
+        <div>
+          Workdays: <code>Mon–Fri</code><br />
+          Holidays: <code>May 27</code> (Company offsite), <code>May 29</code> (Team retreat)
+        </div>
+        <div class="legend">
+          <div class="swatch weekend"></div>
+          <div>Weekend stripe</div>
+          <div class="swatch holiday"></div>
+          <div>Holiday stripe (hover for label)</div>
+          <div class="swatch critical"></div>
+          <div>Critical-path bar</div>
+        </div>
+        <div class="controls" style="margin-top: 10px">
+          <button id="toggle-calendar" class="active">Calendar: on</button>
+          <button id="toggle-critical" class="">Critical path: off</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Drag snap mode</h3>
+        Try dragging a bar so its start lands on a Sat/Sun and watch where it actually commits.
+        <div class="controls">
+          <button data-snap-mode="next" class="active">next (default)</button>
+          <button data-snap-mode="previous">previous</button>
+          <button data-snap-mode="allow">allow (no snap)</button>
+        </div>
+        <div class="state">dragSnapMode: <span id="current-mode">next</span></div>
+      </div>
+
+      <div class="panel">
+        <h3>What to look for</h3>
+        <ul>
+          <li>Pale gray bands behind Sat/Sun — the weekend stripes from <code>workingWeekdays</code>.</li>
+          <li>Pinker bands for the two configured holidays — hover for a tooltip.</li>
+          <li><strong>Duration column</strong> shows <code>5 wd</code> not <code>7 d</code> — calendar-aware.</li>
+          <li><strong>Drag</strong> a bar onto a weekend. Its working-day duration is preserved across the snap.</li>
+          <li>
+            <strong>Resize</strong> a bar across a weekend. Only the moving endpoint snaps; the other side stays put.
+          </li>
+          <li>
+            <strong>Summary "Design phase"</strong> aggregates child progress by working-day weight, not raw calendar
+            days.
+          </li>
+          <li>
+            <strong>Critical path</strong> respects the calendar: weekend gaps between FS-linked tasks don't inflate the
+            path.
+          </li>
+          <li>
+            Toggle <em>Calendar: on/off</em> to compare. With calendar off, every day is a working day, no stripes, raw
+            drag.
+          </li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <h3>Event log</h3>
+        <div id="event-log"></div>
+      </div>
+    </div>
+
+    <script>
+      const SummaryType = ApexGantt.TaskType ? ApexGantt.TaskType.Summary : 'summary';
+
+      // A four-week project straddling today, so every weekend / holiday interaction
+      // and the today-line are reachable from one viewport:
+      //   May 11 Mon ─── May 22 Fri (design phase, two child tasks)
+      //   May 25 Mon ─── May 29 Fri (review week with two holidays mid-week)
+      const tasks = [
+        {
+          id: 'design',
+          name: 'Design phase',
+          type: SummaryType,
+          startTime: '05-11-2026',
+          endTime: '05-22-2026',
+          progress: 60,
+        },
+        {
+          id: 'wires',
+          name: 'Wireframes',
+          parentId: 'design',
+          startTime: '05-11-2026',
+          endTime: '05-15-2026',
+          progress: 100,
+        },
+        {
+          id: 'mocks',
+          name: 'Hi-fi mockups',
+          parentId: 'design',
+          startTime: '05-18-2026',
+          endTime: '05-22-2026',
+          progress: 30,
+          dependency: {taskId: 'wires', type: 'FS', lag: 0},
+        },
+        {
+          id: 'review',
+          name: 'Design review (covers two holidays)',
+          startTime: '05-25-2026',
+          endTime: '05-29-2026',
+          progress: 0,
+          dependency: {taskId: 'mocks', type: 'FS', lag: 0},
+        },
+        {
+          id: 'handoff',
+          name: 'Handoff to engineering',
+          startTime: '06-01-2026',
+          endTime: '06-05-2026',
+          progress: 0,
+          dependency: {taskId: 'review', type: 'FS', lag: 0},
+        },
+      ];
+
+      let state = {snapMode: 'next', calendarOn: true, criticalOn: false};
+
+      function buildOptions() {
+        const opts = {
+          viewMode: 'week',
+          height: 420,
+          enableTaskDrag: true,
+          enableTaskResize: true,
+          enableCriticalPath: state.criticalOn,
+          canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; box-sizing: border-box;',
+          series: tasks,
+        };
+        if (state.calendarOn) {
+          opts.calendar = {
+            workingWeekdays: [1, 2, 3, 4, 5],
+            dragSnapMode: state.snapMode,
+            holidays: [
+              {date: '05-27-2026', label: 'Company offsite'},
+              {date: '05-29-2026', label: 'Team retreat'},
+            ],
+            holidayTooltip: (ctx) => {
+              const day = ctx.date.toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'});
+              return `<strong>${ctx.label ?? 'Non-working day'}</strong><br/><span style="opacity:0.7">${day}</span>`;
+            },
+          };
+        }
+        return opts;
+      }
+
+      const logEl = document.getElementById('event-log');
+      function log(kind, text) {
+        const div = document.createElement('div');
+        div.className = `entry ${kind ?? ''}`;
+        const ts = new Date().toLocaleTimeString();
+        div.textContent = `[${ts}] ${text}`;
+        logEl.prepend(div);
+      }
+
+      let gantt;
+      function rebuild() {
+        const container = document.getElementById('gantt');
+        container.innerHTML = '';
+        gantt = new ApexGantt(container, buildOptions());
+        gantt.render();
+        wireEvents(container);
+        document.getElementById('current-mode').textContent = state.snapMode;
+      }
+
+      function wireEvents(container) {
+        container.addEventListener('taskDragged', (e) => {
+          const d = e.detail;
+          log(
+            'snap',
+            `taskDragged: ${d.taskId} → ${d.newStartTime} / ${d.newEndTime} (mode=${state.snapMode}, calendar=${state.calendarOn})`
+          );
+        });
+        container.addEventListener('taskResized', (e) => {
+          const d = e.detail;
+          log('snap', `taskResized (${d.resizeHandle}): ${d.taskId} → start=${d.newStartTime}, end=${d.newEndTime}`);
+        });
+        container.addEventListener('historyChange', (e) => {
+          log('', `historyChange: ${e.detail.kind} (undo=${e.detail.undoSize}, redo=${e.detail.redoSize})`);
+        });
+      }
+
+      // Initial render
+      rebuild();
+
+      // Snap-mode controls
+      document.querySelectorAll('[data-snap-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.snapMode = btn.getAttribute('data-snap-mode');
+          document.querySelectorAll('[data-snap-mode]').forEach((b) => b.classList.toggle('active', b === btn));
+          rebuild();
+        });
+      });
+
+      // Calendar on/off
+      document.getElementById('toggle-calendar').addEventListener('click', (e) => {
+        state.calendarOn = !state.calendarOn;
+        e.currentTarget.textContent = `Calendar: ${state.calendarOn ? 'on' : 'off'}`;
+        e.currentTarget.classList.toggle('active', state.calendarOn);
+        rebuild();
+      });
+
+      // Critical-path on/off
+      document.getElementById('toggle-critical').addEventListener('click', (e) => {
+        state.criticalOn = !state.criticalOn;
+        e.currentTarget.textContent = `Critical path: ${state.criticalOn ? 'on' : 'off'}`;
+        e.currentTarget.classList.toggle('active', state.criticalOn);
+        rebuild();
+      });
+    </script>
+  </body>
+</html>

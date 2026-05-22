@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Basic Gantt - Home Renovation</title>
+    <title>Basic Gantt - ApexGantt</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -31,9 +31,10 @@
     </style>
   </head>
   <body>
-    <h2>Home Renovation Schedule</h2>
+    <h2>Basic Gantt</h2>
     <p class="subtitle">
-      A basic Gantt chart with task hierarchy, progress tracking, dependencies, and milestones — no interactions enabled
+      A basic Gantt chart with task hierarchy, progress tracking, dependencies, and milestones — double-click any cell
+      in the task list to edit it inline (name, dates, duration, progress)
     </p>
     <div id="svg-gantt"></div>
     <script>
@@ -47,16 +48,15 @@
         fontColor: '#334155',
         canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; box-sizing: border-box;',
         barBorderRadius: '6px',
-        barMargin: 4,
+        barMargin: 8,
+        enableInlineEdit: true,
         enableTaskDrag: false,
         enableTaskResize: false,
         series: [
           {
             id: 'demolition',
-            startTime: '03-03-2025',
-            endTime: '03-14-2025',
             name: 'Demolition & Prep',
-            progress: 100,
+            progress: 76,
           },
           {
             id: 'demo-kitchen',
@@ -64,7 +64,7 @@
             endTime: '03-07-2025',
             name: 'Kitchen tear-out',
             parentId: 'demolition',
-            progress: 100,
+            progress: 89,
           },
           {
             id: 'demo-bathroom',
@@ -73,7 +73,7 @@
             name: 'Bathroom tear-out',
             parentId: 'demolition',
             dependency: 'demo-kitchen',
-            progress: 100,
+            progress: 65,
           },
           {
             id: 'demo-disposal',
@@ -82,15 +82,12 @@
             name: 'Debris removal',
             parentId: 'demolition',
             dependency: 'demo-bathroom',
-            progress: 100,
+            progress: 44,
           },
           {
             id: 'structural',
-            startTime: '03-17-2025',
-            endTime: '04-04-2025',
             name: 'Structural Work',
             progress: 80,
-            dependency: 'demolition',
           },
           {
             id: 'framing',
@@ -98,7 +95,7 @@
             endTime: '03-21-2025',
             name: 'Wall framing',
             parentId: 'structural',
-            progress: 100,
+            progress: 77,
           },
           {
             id: 'electrical',
@@ -127,8 +124,6 @@
           },
           {
             id: 'finishes',
-            startTime: '04-07-2025',
-            endTime: '04-25-2025',
             name: 'Finishes',
             progress: 40,
             dependency: 'inspection',
@@ -170,11 +165,8 @@
           },
           {
             id: 'fixtures',
-            startTime: '04-28-2025',
-            endTime: '05-02-2025',
             name: 'Fixture Installation',
             progress: 0,
-            dependency: 'finishes',
           },
           {
             id: 'fixtures-kitchen',

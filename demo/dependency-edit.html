@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive Dependency Editing — ApexGantt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        max-width: 1100px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        background: #fff;
+        padding: 20px;
+        color: #1a1a2e;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 4px 0;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #555;
+        margin-bottom: 16px;
+      }
+      .panel {
+        background: #fafafa;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-size: 13px;
+        line-height: 1.55;
+        margin-bottom: 16px;
+      }
+      .panel ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      kbd {
+        font-family: 'SFMono-Regular', 'Menlo', monospace;
+        background: #1e293b;
+        color: #fff;
+        border-radius: 3px;
+        padding: 1px 6px;
+        font-size: 11px;
+      }
+      #log {
+        margin-top: 14px;
+        font-family: 'SFMono-Regular', 'Menlo', monospace;
+        font-size: 12px;
+        color: #475569;
+        max-height: 100px;
+        overflow: auto;
+        background: #f1f5f9;
+        padding: 8px 10px;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Interactive Dependency Editing</h2>
+    <p class="subtitle">
+      <strong>Draw:</strong> hover any bar — two blue circles appear at its start/finish edges. Drag from a circle onto
+      another bar to create a dependency; the (source-anchor, target-anchor) pair picks the type (FS / SS / FF / SF).
+      <br />
+      <strong>Delete:</strong> hover an arrow → it darkens; click → it turns red with a ✕ at the head; click the ✕,
+      press <kbd>Delete</kbd>, or hit <kbd>Backspace</kbd> to remove. <kbd>Esc</kbd> cancels a drag or clears selection.
+      <br />
+      Every change is undoable with <kbd>Ctrl/Cmd + Z</kbd>.
+    </p>
+
+    <div class="panel">
+      <strong>Try it:</strong>
+      <ul>
+        <li>
+          Hover <em>Design</em> — drag from its right-edge circle onto another bar's left edge → creates an FS edge
+        </li>
+        <li>Drag from left-edge to left-edge → SS; right-edge to right-edge → FF; left-edge to right-edge → SF</li>
+        <li>Try dragging from <em>Launch</em> back to <em>Design</em> — the preview turns red (cycle)</li>
+        <li>Click any existing arrow then the red ✕ to remove it</li>
+        <li>Press <kbd>Ctrl/Cmd + Z</kbd> to undo</li>
+      </ul>
+    </div>
+
+    <div id="gantt"></div>
+
+    <div id="log"></div>
+
+    <script>
+      const gantt = new ApexGantt(document.getElementById('gantt'), {
+        viewMode: 'week',
+        enableTaskDrag: true,
+        enableTaskResize: true,
+        height: 360,
+        dependencies: {
+          editable: true,
+          cornerRadius: 6,
+        },
+        series: [
+          {id: 'design', name: 'Design', startTime: '01-01-2025', endTime: '01-10-2025', progress: 100},
+          {
+            id: 'develop',
+            name: 'Develop',
+            startTime: '01-11-2025',
+            endTime: '01-25-2025',
+            progress: 50,
+            dependency: 'design',
+          },
+          {
+            id: 'qa',
+            name: 'QA',
+            startTime: '01-22-2025',
+            endTime: '01-31-2025',
+            progress: 10,
+            dependency: {taskId: 'develop', type: 'SS', lag: 8},
+          },
+          {
+            id: 'docs',
+            name: 'Docs',
+            startTime: '01-20-2025',
+            endTime: '01-30-2025',
+            dependency: {taskId: 'develop', type: 'FF'},
+          },
+          {
+            id: 'launch',
+            name: 'Launch',
+            startTime: '02-03-2025',
+            endTime: '02-05-2025',
+            dependency: 'qa',
+          },
+        ],
+      });
+
+      gantt.render();
+
+      const log = document.getElementById('log');
+      function append(message) {
+        const line = document.createElement('div');
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        log.appendChild(line);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      document.getElementById('gantt').addEventListener('dependencyRemoved', (e) => {
+        append(`dependency removed: ${e.detail.fromId} → ${e.detail.toId} (${e.detail.type}, lag ${e.detail.lag})`);
+      });
+      document.getElementById('gantt').addEventListener('dependencyAdded', (e) => {
+        append(`dependency restored: ${e.detail.fromId} → ${e.detail.toId} (${e.detail.type})`);
+      });
+    </script>
+  </body>
+</html>

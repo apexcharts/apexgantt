@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Resource Management - Office Build-Out</title>
+    <title>Resource Management - ApexGantt</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -49,7 +49,7 @@
     </style>
   </head>
   <body>
-    <h2>Office Build-Out — Team Allocation</h2>
+    <h2>Resource Management — color-coded by team/trade</h2>
     <p class="subtitle">
       Color-coded by trade/team using per-task
       <code>barBackgroundColor</code> to visualize resource allocation across parallel work streams
@@ -92,14 +92,13 @@
         fontColor: '#334155',
         canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; box-sizing: border-box;',
         barBorderRadius: '6px',
-        barMargin: 4,
+        barMargin: 8,
         rowBackgroundColors: ['#ffffff', '#f8fafc'],
         enableTaskDrag: true,
         enableTaskResize: true,
         annotations: [
           {
             x1: '07-14-2025',
-            x2: '07-18-2025',
             bgColor: 'rgba(239, 68, 68, 0.06)',
             label: {text: 'Code Inspection'},
           },
