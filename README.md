@@ -123,7 +123,7 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `criticalArrowColor` | `string` | `'#E53935'` (light) / `'#F87171'` (dark) | Stroke color for dependency arrows on the critical path. |
 | `enableCrosshair` | `boolean` | `false` | Show a vertical crosshair line that follows the cursor across the timeline, with a label showing the precise date/time at the pointer position. |
 | `crosshairColor` | `string` | `'#318CE7'` (light) / `'#818CF8'` (dark) | Color of the crosshair line and the label background. |
-| `crosshairLabelFormat` | `(date, tier) => string` | _auto_ | Custom formatter for the crosshair label. Receives the date under the cursor and the active sub-tier (`'minute' \| 'hour' \| 'day' \| 'week' \| 'month' \| 'quarter' \| 'year'`). When omitted, the label auto-adapts to the active tier — `'ddd MM/DD/YYYY'` for day-and-coarser tiers, `'MM/DD HH:mm'` for hour/minute tiers. |
+| `crosshairLabelFormat` | `(date, tier) => string` | _auto_ | Custom formatter for the crosshair label. Receives the date under the cursor and the active sub-tier (`'minute' \| 'hour' \| 'halfday' \| 'day' \| 'week' \| 'month' \| 'quarter' \| 'year'`). When omitted, the label auto-adapts to the active tier — `'ddd MM/DD/YYYY'` for day-and-coarser tiers, `'MM/DD HH:mm'` for halfday/hour/minute tiers. |
 | `baseline` | `Partial<BaselineOptions>` | `undefined` | When `enabled: true`, renders a thin baseline bar below each task bar. Hovering the baseline shows a tooltip with its planned start/end dates. When `rowHeight` isn't explicitly set, the default rowHeight is bumped to make room for the baseline without squeezing the actual bar. |
 | `tooltipId` | `string` | `'apexgantt-tooltip-container'` | HTML `id` for the tooltip container element. |
 | `tooltipTemplate` | `(task, dateFormat) => string` | built-in | Custom function returning an HTML string for the task tooltip. |
@@ -538,7 +538,7 @@ Behavior changes when `inputDateFormat` includes time:
 - Inline-edit `startTime` / `endTime` cells switch to `datetime-local` inputs.
 - The Duration column reports in the configured `snapUnit` suffix: `d` / `h` / `m`.
 
-> **Working time / non-working hours** (skipping weekends, after-hours, etc.) is **not yet supported** and is planned for a future major release. For now, the timeline tiles continuously through every hour and day.
+> **Working calendars** (weekends + holidays) are supported via the [`calendar`](#apexgantt-options) option — duration math, drag/resize snapping, and timeline stripes all honour the configured working days. Per-day working **hours** (e.g. skipping after-hours within a working day) are not yet supported and are planned for a future release.
 
 ## Inline Editing
 
@@ -577,7 +577,7 @@ new ApexGantt(element, {
 | `duration` | number input (min `1`) | Edits update `endTime = startTime + duration - 1` day. `startTime` stays fixed. |
 | `progress` | number input (`0`–`100`) | Values clamp to the `0–100` range. |
 
-Hours are not currently supported — all dates are day-precision.
+When `inputDateFormat` includes time tokens (e.g. `'YYYY-MM-DD HH:mm'`), the `startTime` / `endTime` editors switch from `<input type="date">` to `<input type="datetime-local">` automatically so hour/minute edits round-trip correctly.
 
 ### Cells that are not editable
 
