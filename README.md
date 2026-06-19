@@ -2,7 +2,7 @@
 
 A JavaScript Gantt chart library for interactive project timelines. Renders tasks, dependencies, milestones, critical path, baselines, and annotations with drag-and-drop scheduling, multiple view modes, and light/dark themes — no framework required.
 
-📚 **Documentation:** [apexcharts.com/apexgantt/docs](https://apexcharts.com/apexgantt/docs/) · 🎬 **Live demos:** [apexcharts.com/apexgantt/demos](https://apexcharts.com/apexgantt/demos/) · 📦 **npm:** [apexgantt](https://www.npmjs.com/package/apexgantt)
+📚 **Documentation:** [apexcharts.com/apexgantt/docs](https://apexcharts.com/apexgantt/docs/) · 🎬 **Live demos:** [apexcharts.com/apexgantt/demos](https://apexcharts.com/apexgantt/demos/) · 📦 **npm:** [apexgantt](https://www.npmjs.com/package/apexgantt) · 📖 **Guide:** [JavaScript Gantt Chart](https://apexcharts.com/javascript-gantt-chart/)
 
 ## Installation
 
