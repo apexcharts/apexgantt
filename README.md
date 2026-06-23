@@ -1,54 +1,50 @@
-# JavaScript Gantt Chart Component — ApexGantt
+# ApexGantt
 
-A JavaScript Gantt chart library for interactive project timelines. Renders tasks, dependencies, milestones, critical path, baselines, and annotations with drag-and-drop scheduling, multiple view modes, and light/dark themes — no framework required.
-
-📚 **Documentation:** [apexcharts.com/apexgantt/docs](https://apexcharts.com/apexgantt/docs/) · 🎬 **Live demos:** [apexcharts.com/apexgantt/demos](https://apexcharts.com/apexgantt/demos/) · 📦 **npm:** [apexgantt](https://www.npmjs.com/package/apexgantt) · 📖 **Guide:** [JavaScript Gantt Chart](https://apexcharts.com/javascript-gantt-chart/)
+A JavaScript library to create Gantt diagrams built on SVG
 
 ## Installation
+
+To add the ApexGantt to your project and its dependencies, install the package from npm.
 
 ```bash
 npm install apexgantt
 ```
 
-Or include directly via CDN:
+## Usage
 
-```html
-<script src="https://cdn.jsdelivr.net/npm/apexgantt"></script>
+```js
+import ApexGantt from 'apexgantt';
 ```
 
-## Usage
+To create a basic gantt with minimal configuration, write as follows:
 
 ```html
 <div id="gantt-container"></div>
 ```
 
 ```js
-import ApexGantt from 'apexgantt';
-
 const ganttOptions = {
   series: [
-    { id: 'task-1', name: 'Design',      startTime: '01-01-2026', endTime: '01-15-2026', progress: 65 },
-    { id: 'task-2', name: 'Development', startTime: '01-16-2026', endTime: '02-28-2026', dependency: 'task-1' },
-    { id: 'task-3', name: 'QA',          startTime: '03-01-2026', endTime: '03-15-2026', dependency: 'task-2' },
+    {
+      id: 'a',
+      startTime: '10-11-2024',
+      endTime: '11-01-2024',
+      name: 'task 1',
+      progress: 65,
+    },
+    {
+      id: '5',
+      startTime: '10-11-2024',
+      endTime: '10-26-2024',
+      name: 'subtask 1.1',
+      parentId: 'a',
+      progress: 65,
+    },
   ],
-  viewMode: 'week',
 };
-
 const gantt = new ApexGantt(document.getElementById('gantt-container'), ganttOptions);
 gantt.render();
 ```
-
-## Features
-
-- Task dependencies and milestones
-- Critical path highlighting
-- Baselines (planned vs actual)
-- Annotations with date ranges
-- Multiple view modes: day, week, month, quarter, year
-- Drag-and-drop scheduling
-- Light and dark themes
-- SVG export
-- TypeScript type definitions
 
 ## Setting the License
 
@@ -128,7 +124,7 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `enableCrosshair` | `boolean` | `false` | Show a vertical crosshair line that follows the cursor across the timeline, with a label showing the precise date/time at the pointer position. |
 | `crosshairColor` | `string` | `'#318CE7'` (light) / `'#818CF8'` (dark) | Color of the crosshair line and the label background. |
 | `crosshairLabelFormat` | `(date, tier) => string` | _auto_ | Custom formatter for the crosshair label. Receives the date under the cursor and the active sub-tier (`'minute' \| 'hour' \| 'halfday' \| 'day' \| 'week' \| 'month' \| 'quarter' \| 'year'`). When omitted, the label auto-adapts to the active tier — `'ddd MM/DD/YYYY'` for day-and-coarser tiers, `'MM/DD HH:mm'` for halfday/hour/minute tiers. |
-| `baseline` | `Partial<BaselineOptions>` | `undefined` | When `enabled: true`, renders a thin baseline bar below each task bar. Hovering the baseline shows a tooltip with its planned start/end dates. When `rowHeight` isn't explicitly set, the default rowHeight is bumped to make room for the baseline without squeezing the actual bar. |
+| `baseline` | `Partial<BaselineOptions>` | `undefined` | When `enabled: true`, renders a thin baseline bar below each task bar. Hovering the baseline shows a tooltip with its planned start/end dates. When `rowHeight` isn't explicitly set, the default rowHeight is bumped to make room for the baseline without squeezing the actual bar. Fields: `color: string` (primary fill / stripe color; default `'#9E9E9E'`), `striped: boolean` (fill the bar with thick diagonal stripes instead of a flat color; default `true`), `stripeColor: string` (color of the gaps between stripes; default `'#FFFFFF'`), `stripeWidth: number` (px width of each stripe band, larger values = thicker; default `3`), `stripeAngle: number` (stripe angle in degrees; default `45`). By default baselines render as thick grey/white diagonal stripes; set `striped: false` for a solid `color` fill. |
 | `tooltipId` | `string` | `'apexgantt-tooltip-container'` | HTML `id` for the tooltip container element. |
 | `tooltipTemplate` | `(task, dateFormat) => string` | built-in | Custom function returning an HTML string for the task tooltip. |
 | `tooltipBorderColor` | `string` | `'#BCBCBC'` | Border color of the tooltip. |
@@ -673,7 +669,7 @@ Updates the entire Gantt chart with new configuration and task data.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `options` | `Object` | Contains updated config and data. Must include a `series` array and other Gantt configuration options. |
+| `options` | `Object` | Contains updated config and data. Must include a `tasks` array and other Gantt configuration options. |
 
 #### Example
 
@@ -683,8 +679,8 @@ ganttInstance.update({
     {
       id: 'task-1',
       name: 'Design Phase',
-      startTime: '07-01-2025',
-      endTime: '07-10-2025',
+      start: '2025-07-01',
+      end: '2025-07-10',
       progress: 40,
     },
     // more tasks...
@@ -709,8 +705,8 @@ Updates the specific task with provided task data.
 ```js
 ganttInstance.updateTask('task-1', {
   name: 'Design Phase',
-  startTime: '07-01-2025',
-  endTime: '07-10-2025',
+  start: '2025-07-01',
+  end: '2025-07-10',
   progress: 40,
 });
 ```
@@ -1003,20 +999,3 @@ function GanttChart({tasks}) {
   return <div ref={containerRef} />;
 }
 ```
-
-## Framework wrappers
-
-Using a framework? Use the dedicated wrapper — all share the same core engine and task data model:
-
-- **React** — [`react-apexgantt`](https://www.npmjs.com/package/react-apexgantt) ([GitHub](https://github.com/apexcharts/react-apexgantt))
-- **Angular** — [`ngx-apexgantt`](https://www.npmjs.com/package/ngx-apexgantt) ([GitHub](https://github.com/apexcharts/ngx-apexgantt))
-- **Vue** — [`vue-apexgantt`](https://www.npmjs.com/package/vue-apexgantt) ([GitHub](https://github.com/apexcharts/vue-apexgantt))
-- **Blazor** — [`Blazor-ApexGantt`](https://www.nuget.org/packages/Blazor-ApexGantt/) ([GitHub](https://github.com/apexcharts/Blazor-ApexGantt))
-
-## License
-
-See [LICENSE](LICENSE) for details. Commercial licenses available at [apexcharts.com/pricing](https://apexcharts.com/pricing/).
-
-## About ApexGantt
-
-ApexGantt is part of the [ApexCharts](https://apexcharts.com/) family — a Gantt chart component for JavaScript, React, Angular, Vue, and Blazor, with one consistent API across every framework wrapper.

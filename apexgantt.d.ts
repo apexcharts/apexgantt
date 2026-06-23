@@ -1,3 +1,13 @@
+declare abstract class BaseChart {
+  /** @internal */
+  protected element: HTMLElement;
+  /** Destroys the chart instance and cleans up DOM resources. */
+  destroy(): void;
+  /** Returns the unique identifier for this chart instance. */
+  getInstanceId(): string;
+}
+
+
 declare interface AccessibilityOptions {
     readonly taskListAriaLabel?: string;
 }
@@ -51,6 +61,20 @@ declare class ApexGantt extends BaseChart {
     private options;
     /** Current zoom level as pixels-per-ms. Source of truth for all timeline math. */
     private pixelsPerMs;
+    /**
+     * Geometry of the timeline header currently on screen. Captured at every full
+     * render so partial updates (drag/resize commits, inline edits, summary
+     * cascades) can position bars against the SAME origin the header uses.
+     *
+     * Without this, `applyTaskUpdate` would recompute geometry from current data,
+     * and any data change that shifts the `alignToStep(min(startTimes), subTier)`
+     * result (e.g. dragging the earliest task onto a Sunday under the week tier)
+     * would land bars against a different origin than the rendered header — the
+     * bar visibly snaps to a wrong date.
+     *
+     * Cleared on zoom change or anything that triggers a full re-render.
+     */
+    private currentGeometry;
     /** When non-null, `update()` preserves the previous zoom instead of resetting to a preset. */
     private _preservedPixelsPerMs;
     /**
@@ -63,6 +87,55 @@ declare class ApexGantt extends BaseChart {
     private arrowLink;
     private dataManager;
     private stateManager;
+    private history;
+    /**
+     * Bridge handed to every Command. Defined as an arrow-property record so it
+     * captures `this` lexically — commands never see the ApexGantt instance
+     * directly, only the narrow primitives they need.
+     */
+    /**
+     * Bundle of column metadata + dispatcher passed to `updateTaskInUI` and
+     * `refreshSummaryAncestors`. Without this, cells with a custom column
+     * renderer would get overwritten with the default `[object Object]` text
+     * since the rewriters can't tell which columns are custom.
+     */
+    private buildColumnRefreshContext;
+    /**
+     * Project date span padded for the current bar-label leading pad. When the
+     * `barLabel.position` is `'left'` (or the user sets an explicit
+     * `leadingPadding`), the start is extended backward so the leading area
+     * renders as real timeline columns (e.g. Jan/Feb headers + gridlines) rather
+     * than an empty visual gutter.
+     */
+    private getPaddedDateRange;
+    /**
+     * Build a TimelineGeometry from the current data state. Fallback used by
+     * partial-update paths when `currentGeometry` hasn't been captured yet
+     * (i.e., before the first full render). Prefer `this.currentGeometry`
+     * whenever possible — see its declaration.
+     */
+    private buildFreshGeometry;
+    private commandContext;
+    /**
+     * Single funnel for task updates originating from interactive sources
+     * (drag, resize, progress, dialog edit). Builds an `UpdateTaskCommand`,
+     * executes it through the bridge, records it in history, and cascades
+     * summary ancestor recompute. Bound to `this` so it can be passed down to
+     * TimeLine / VirtualScrollCoordinator as a plain callback.
+     */
+    private commitTaskUpdate;
+    /**
+     * Record a single command into history and fire `historyChange`. Centralized
+     * so every recording path (interactive + programmatic) emits the same event
+     * — anything keying off `canUndo` / `canRedo` (e.g. toolbar button enabled
+     * state) stays in sync without per-site bookkeeping.
+     */
+    private recordSingle;
+    /**
+     * Record a pre-built `Transaction` (used when one user action expands to
+     * multiple commands, e.g. delete-with-cascade) and fire `historyChange`.
+     */
+    private recordTransaction;
     private containerResizeObserver;
     private lastKnownWidth;
     private lastKnownHeight;
@@ -81,7 +154,12 @@ declare class ApexGantt extends BaseChart {
     private styleManager;
     private crosshairManager;
     private keyboardNavigationManager;
+    private contextMenuManager;
+    private contextMenuHandler;
+    private undoRedoKeyHandler;
     private selectionManager;
+    private dependencyEditManager;
+    private dependencyDrawManager;
     private virtualScrollCoordinator;
     private readonly columnRenderManager;
     /** MediaQueryList for prefers-reduced-motion. Updated dynamically. */
@@ -244,6 +322,234 @@ declare class ApexGantt extends BaseChart {
      */
     updateTask(taskId: string, updatedTask: Partial<Task>): void;
     /**
+     * Insert a new task into the chart and re-render. The operation is
+     * recorded in the undo history.
+     *
+     * If a `beforeTaskAdd` option is configured and it returns `false`, the
+     * insertion is cancelled and this method returns `null`. Otherwise emits a
+     * `taskAdded` event and returns the inserted task.
+     *
+     * @param input - Task data. `id` is required.
+     * @param options - `parentId` to insert under an existing parent.
+     * @throws When a task with the same `id` already exists in the chart.
+     *
+     * @example
+     * ```ts
+     * gantt.addTask({ id: 't9', name: 'Review', startTime: '2026-08-01', endTime: '2026-08-05' });
+     * gantt.addTask({ id: 'subA', name: 'Subtask', startTime: '2026-08-01', endTime: '2026-08-03' }, { parentId: 't9' });
+     * ```
+     */
+    addTask(input: TaskInput, options?: {
+        parentId?: string;
+    }): Task | null;
+    /**
+     * Remove a task from the chart and re-render. The operation is recorded
+     * in the undo history.
+     *
+     * Cascade modes:
+     * - `'forbid'` (default): throws when the task has children. Safe default
+     *   that prevents accidental data loss.
+     * - `'children'`: deletes the task and every descendant in a single undoable
+     *   transaction.
+     * - `'orphan'`: reparents the immediate children to the deleted task's
+     *   parent (or root if the deleted task was a root), then removes just the
+     *   task. Useful when the children should outlive the group/summary they
+     *   were under.
+     *
+     * Dependency edges that reference the removed task(s) are auto-cleaned in
+     * the same transaction, so undo restores both tasks and edges atomically.
+     * Edges that reference reparented children survive untouched.
+     *
+     * If a `beforeTaskDelete` option is configured and it returns `false`, the
+     * removal is cancelled and this method returns `false`.
+     *
+     * @param taskId - The id of the task to remove.
+     * @param options - `cascade` mode; defaults to `'forbid'`.
+     * @returns `true` if removed, `false` if the hook cancelled.
+     * @throws When no task with the given id exists, or when `cascade: 'forbid'`
+     *   and the task has children.
+     */
+    deleteTask(taskId: string, options?: {
+        cascade?: 'forbid' | 'children' | 'orphan';
+    }): boolean;
+    /**
+     * Re-parent a task. Pass `newParentId: null` (or omit it) to move the task
+     * to the root. The operation is recorded in the undo history and emits a
+     * `taskMoved` event.
+     *
+     * Sibling reordering within a parent is not supported in this release — it
+     * lands alongside Phase-4 cascade work.
+     *
+     * @returns `true` if the move was applied, `false` when the
+     *   `beforeTaskMove` hook cancelled.
+     *
+     * @throws When `taskId` does not exist, when `newParentId` does not exist,
+     *   or when the move would create a cycle (moving a task into its own
+     *   descendant or onto itself).
+     */
+    moveTask(taskId: string, options?: {
+        newParentId?: string | null;
+    }): boolean;
+    /**
+     * Tell whether an edge `fromId → toId` would be accepted right now without
+     * actually committing it. Used by the interactive draw UI to color the
+     * preview red when the drop would be rejected, and shared with
+     * `addDependency()` so the programmatic API and the drag UI apply the same
+     * rules.
+     *
+     * Rules checked, in order:
+     *   1. `self` — `fromId === toId`
+     *   2. `task-missing` — either id not in the data model
+     *   3. `duplicate` — an edge `fromId → toId` already exists
+     *   4. `cycle` — the new edge would close a cycle in the dependency graph
+     *   5. `summary-descendant` — one of the endpoints is a (direct or indirect)
+     *      ancestor of the other in the task tree. Skipped when
+     *      `dependencies.allowSummaryDescendantLinks` is `true`.
+     *   6. `hook-veto` — `beforeDependencyChange` returned `false`
+     */
+    canAddDependency(fromId: string, toId: string, options?: {
+        type?: DependencyType;
+        lag?: number;
+    }): {
+        ok: true;
+    } | {
+        ok: false;
+        reason: 'self' | 'task-missing' | 'duplicate' | 'cycle' | 'summary-descendant' | 'hook-veto';
+    };
+    /**
+     * DFS from `toId` following outgoing edges; if `fromId` is reachable, the
+     * proposed `fromId → toId` edge would close a cycle. The graph is sparse
+     * (typical projects have ≪ #tasks deps), so this stays cheap even at 10k
+     * tasks.
+     */
+    private wouldCreateCycle;
+    /** True when `a` is an ancestor of `b`, or `b` is an ancestor of `a`. */
+    private isAncestorDescendantPair;
+    private isAncestor;
+    /**
+     * Create a dependency edge between two tasks and re-render the arrow.
+     * Recorded in the undo history, emits a `dependencyAdded` event, and runs
+     * through the `beforeDependencyChange` hook.
+     *
+     * @returns `true` if the edge was added, `false` if the hook cancelled.
+     * @throws When either task does not exist, or when the edge already exists.
+     */
+    addDependency(fromId: string, toId: string, options?: {
+        type?: DependencyType;
+        lag?: number;
+    }): boolean;
+    /**
+     * Remove a dependency edge and re-render. Recorded in undo history, emits a
+     * `dependencyRemoved` event, and runs through `beforeDependencyChange`.
+     *
+     * @returns `true` if the edge was removed, `false` if the hook cancelled.
+     * @throws When no edge exists between the two tasks.
+     */
+    removeDependency(fromId: string, toId: string): boolean;
+    /**
+     * Roll back the most recent recorded transaction. The reverse of the
+     * underlying command(s) runs through the same `commandContext` bridge that
+     * forward operations use, so the data and DOM end up in the pre-operation
+     * state and a `historyChange` event fires with `kind: 'undo'`.
+     *
+     * No-op (returns `false`) when the undo stack is empty or `history.enabled`
+     * is `false`.
+     *
+     * @returns `true` if a transaction was undone.
+     */
+    undo(): boolean;
+    /**
+     * Replay the most recently undone transaction. Pops from the redo stack and
+     * re-executes through the command bridge; a `historyChange` event fires with
+     * `kind: 'redo'`.
+     *
+     * Note: any new mutating call between an `undo()` and a `redo()` discards
+     * the redo stack — once a fresh transaction is recorded, future redos are
+     * no longer reachable.
+     *
+     * @returns `true` if a transaction was redone.
+     */
+    redo(): boolean;
+    /** Whether an undoable transaction is currently at the top of the stack. */
+    canUndo(): boolean;
+    /** Whether a redoable transaction is currently at the top of the stack. */
+    canRedo(): boolean;
+    /**
+     * Drop every recorded transaction and emit `historyChange` with
+     * `kind: 'clear'`. Useful after loading a fresh dataset where rolling back
+     * to a previous tree state would be incoherent.
+     */
+    clearHistory(): void;
+    /** Snapshot of the current undo/redo stack sizes. */
+    getHistorySize(): {
+        undo: number;
+        redo: number;
+    };
+    /**
+     * Wire a global keydown listener on the root element so Ctrl/Cmd+Z and
+     * Ctrl+Y / Ctrl/Cmd+Shift+Z work anywhere inside the chart (timeline body,
+     * task list, toolbar). Skipped when history is disabled, when focus is in
+     * a text input/textarea (let the browser handle native undo there), and
+     * when the user holds Alt (avoids stealing browser navigation shortcuts).
+     */
+    private attachUndoRedoShortcuts;
+    /**
+     * Depth of a task in the tree (root tasks = 0). Used to order cascade
+     * deletion so descendants are removed before their parents.
+     */
+    private depthOf;
+    private dispatchTaskAdded;
+    private dispatchTaskDeleted;
+    private dispatchTaskMoved;
+    private dispatchHistoryChange;
+    /**
+     * Wire a single delegated `contextmenu` listener on the root element. The
+     * handler resolves the target task from `[data-taskid]` ancestors (works
+     * for both bar elements and task-list rows), builds the menu entries from
+     * the current task's state, and asks `contextMenuManager` to show it.
+     */
+    private attachContextMenuHandler;
+    /**
+     * Build the entries shown in the context menu for a given task. Capability-
+     * gated — "Edit" only appears when `enableTaskEdit` is on; "Indent" /
+     * "Outdent" only appear when the move is legal.
+     */
+    private buildContextMenuItems;
+    /**
+     * Shared insertion path for the toolbar Add button and context-menu add
+     * entries. Picks placeholder dates from the current project span so the
+     * bar is visible at the default zoom.
+     */
+    private addPlaceholderTask;
+    /**
+     * Toolbar "+ Add task" handler. Inserts a new root-level placeholder task.
+     * Shares the date-derivation logic with `addPlaceholderTask` so context-
+     * menu and toolbar produce visually identical bars.
+     */
+    private addTaskFromToolbar;
+    /**
+     * Toolbar trash-icon handler. Deletes every selected task with
+     * `cascade: 'children'`. Skips tasks whose ancestor is also selected
+     * (since the ancestor's cascade will already remove them), and clears the
+     * selection on completion. Errors per-task are swallowed and logged so one
+     * blocked delete doesn't abort the batch.
+     */
+    private deleteSelectedFromToolbar;
+    /**
+     * Build the editing-command shims handed to the keyboard manager. Each
+     * shim resolves the row-relative meaning of "previous sibling" /
+     * "grandparent" then routes through the public `deleteTask` / `moveTask`
+     * paths so the operations stay undoable and gated by validation hooks.
+     */
+    private buildKeyboardEditingCommands;
+    /**
+     * Find the id of the visible sibling immediately above `taskId` in the
+     * flattened task list — used as the target parent for keyboard indent.
+     * Returns `null` when there is no preceding sibling at the same level.
+     */
+    private findPreviousSiblingId;
+    private dispatchDependencyChanged;
+    /**
      * Internal entry point used by inline editors in the task-list panel.
      * Applies the partial update via `updateTaskInUI` and emits the same
      * `taskUpdate` / `taskUpdateSuccess` / `taskUpdateError` events that the
@@ -357,6 +663,34 @@ export declare interface Assignee {
 }
 
 /**
+ * Built-in column renderer that shows a stacked row of circular avatars for a
+ * task's assignees, with an overflow indicator (`+N`) when the count exceeds
+ * `max`. Falls back to colored initials when an assignee has no `avatarUrl`.
+ *
+ * @example
+ * ```ts
+ * import { ApexGantt, ColumnKey, renderers } from '@apexcharts/apexgantt';
+ *
+ * new ApexGantt('#chart', {
+ *   series,
+ *   columnConfig: [
+ *     { key: ColumnKey.Name, title: 'Task' },
+ *     {
+ *       key: 'assignees',
+ *       title: 'Assigned',
+ *       render: renderers.avatars({
+ *         accessor: (task) => task.assignees,
+ *         max: 4,
+ *         size: 24,
+ *       }),
+ *     },
+ *   ],
+ * });
+ * ```
+ */
+declare function avatars(options: AvatarsRendererOptions): ColumnRenderer;
+
+/**
  * Configuration for the {@link avatars} column renderer.
  */
 export declare interface AvatarsRendererOptions {
@@ -431,14 +765,6 @@ export declare type BarLabelPosition = 'inside' | 'left' | 'right' | 'auto';
  */
 export declare type BarLabelRenderer = (task: Task) => string | HTMLElement | null | undefined;
 
-declare abstract class BaseChart {
-    /* Excluded from this release type: element */
-    /** Destroys the chart instance and cleans up DOM resources. */
-    destroy(): void;
-    /** Returns the unique identifier for this chart instance. */
-    getInstanceId(): string;
-}
-
 /**
  * Planned (baseline) dates for a task, used to visualise schedule variance.
  *
@@ -460,11 +786,94 @@ export declare interface BaselineInput {
  * below the actual task bar to show schedule variance.
  */
 export declare interface BaselineOptions {
-    /** Whether to render baseline bars below actual bars. Defaults to false. */
+    /**
+     * Whether to render baseline bars below actual bars.
+     * @default false
+     */
     readonly enabled: boolean;
-    /** Color of the baseline bar. Defaults to '#BBD5DA' (light grey). */
+    /**
+     * Primary baseline color. When `striped` is true this paints the stripes;
+     * otherwise it fills the whole bar.
+     * @default '#9E9E9E'
+     */
     readonly color: string;
+    /**
+     * Fill the baseline bar with thick diagonal stripes that alternate between
+     * `color` and `stripeColor`, instead of a flat fill.
+     * @default true
+     */
+    readonly striped: boolean;
+    /**
+     * Color of the gaps between stripes. Only used when `striped` is true.
+     * @default '#FFFFFF'
+     */
+    readonly stripeColor: string;
+    /**
+     * Width (px) of each stripe band when `striped` is true. Larger values
+     * produce thicker stripes.
+     * @default 3
+     */
+    readonly stripeWidth: number;
+    /**
+     * Angle (deg) of the stripes when `striped` is true.
+     * @default 45
+     */
+    readonly stripeAngle: number;
 }
+
+/**
+ * Synchronous veto hook for `gantt.addDependency()` and
+ * `gantt.removeDependency()`. `change` distinguishes the direction. Return
+ * `false` to cancel.
+ */
+export declare type BeforeDependencyChangeHook = (context: {
+    change: 'add' | 'remove';
+    fromId: string;
+    toId: string;
+    type: DependencyType;
+    lag: number;
+}) => boolean | undefined | void;
+
+/**
+ * Synchronous veto hook for `gantt.addTask()`. Return `false` to cancel the
+ * insertion; any other return value (including `undefined`) lets it proceed.
+ */
+export declare type BeforeTaskAddHook = (context: {
+    input: TaskInput;
+    parentId?: string;
+}) => boolean | undefined | void;
+
+/**
+ * Synchronous veto hook for `gantt.deleteTask()`. Return `false` to cancel
+ * the removal; any other return value lets it proceed.
+ */
+export declare type BeforeTaskDeleteHook = (context: {
+    task: Task;
+    /** Descendant ids that would be removed in the same transaction (empty for `'orphan'` or when the task has no descendants). */
+    descendantIds: string[];
+    cascade: 'forbid' | 'children' | 'orphan';
+}) => boolean | undefined | void;
+
+/**
+ * Synchronous veto hook for `gantt.moveTask()`. `oldParentId` and
+ * `newParentId` are `undefined` when the task is at (or becomes) a root.
+ * Return `false` to cancel.
+ */
+export declare type BeforeTaskMoveHook = (context: {
+    task: Task;
+    oldParentId?: string;
+    newParentId?: string;
+}) => boolean | undefined | void;
+
+/**
+ * Synchronous veto hook for `gantt.updateTask()` and inline edits. Receives
+ * the task as it exists in the chart plus the partial update about to be
+ * applied. Return `false` to cancel.
+ */
+export declare type BeforeTaskUpdateHook = (context: {
+    task: Task;
+    updates: Partial<TaskInput>;
+}) => boolean | undefined | void;
 
 declare interface BorderOptions {
     readonly cellBorderColor: string;
@@ -475,6 +884,49 @@ declare interface BorderOptions {
      * keeps only the horizontal row dividers. @default true
      */
     readonly columnLines: boolean;
+}
+
+/**
+ * Working calendar configuration. When set, weekends + holidays drive
+ * duration math, summary aggregation, and (in 5.1.B) timeline stripes.
+ * Absent = today's behavior (every day is a working day, no stripes).
+ */
+export declare interface CalendarOptions {
+    /**
+     * Weekdays that count as working days. 0 = Sunday, 6 = Saturday.
+     * @default [1, 2, 3, 4, 5]
+     */
+    readonly workingWeekdays?: number[];
+    /**
+     * Specific dates that are non-working regardless of weekday. Each entry
+     * may be a date string, Date object, or `{date, label}` for tooltipped
+     * entries.
+     * @default []
+     */
+    readonly holidays?: ReadonlyArray<HolidayEntry>;
+    /**
+     * Render hatched / tinted bands over non-working columns in the timeline.
+     * @default true
+     */
+    readonly showNonWorkingStripes?: boolean;
+    /**
+     * Optional HTML tooltip rendered when the user hovers a holiday stripe.
+     * Receives `{date, label}` where `label` is whichever string was supplied
+     * in the matching `HolidayEntry` (or `undefined` for plain-date entries).
+     */
+    readonly holidayTooltip?: (ctx: HolidayTooltipContext) => string;
+    /**
+     * What happens when a drag or resize commit lands on a non-working day.
+     * - `'next'`: snap forward to the next working day (typical PM behavior).
+     * - `'previous'`: snap backward to the previous working day.
+     * - `'allow'`: permit non-working start/end — useful for ad-hoc weekend work.
+     *
+     * Drag preserves the source task's working-day duration across the snap;
+     * resize snaps the moving endpoint only (left handle → start, right handle
+     * → end). Has no effect when no calendar is configured.
+     * @default 'next'
+     */
+    readonly dragSnapMode?: 'next' | 'previous' | 'allow';
 }
 
 /**
@@ -605,7 +1057,7 @@ declare interface CriticalPathOptions {
  *
  * @param date - The date under the cursor.
  * @param tier - The currently active sub-tier of the timeline header
- *   (`'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year'`).
+ *   (`'minute' | 'hour' | 'halfday' | 'day' | 'week' | 'month' | 'quarter' | 'year'`).
  *   Use this to vary precision based on zoom level.
  * @returns The string rendered inside the crosshair label.
  */
@@ -660,8 +1112,9 @@ export declare class DataParser {
 /**
  * Detail payload for the `dependencyArrowUpdate` event.
  *
- * Fires when the user creates, updates, or removes a dependency arrow
- * between two tasks in the interactive dependency editor.
+ * Internal "redraw the arrow" signal fired when a task connected to the edge
+ * moves and the arrow path needs recomputing. Not a CRUD event — use
+ * `dependencyAdded` / `dependencyRemoved` for create / remove notifications.
  */
 export declare interface DependencyArrowUpdateDetail {
     fromId: string;
@@ -670,6 +1123,19 @@ export declare interface DependencyArrowUpdateDetail {
     lag?: number;
     chartInstanceId: string;
     arrowLinkInstanceId?: string;
+}
+
+/**
+ * Detail payload for `dependencyAdded` and `dependencyRemoved`. Identifies the
+ * edge and includes the `type` / `lag` that was active at the time of the
+ * change. For removal, the values are the captured pre-removal values.
+ */
+export declare interface DependencyChangeEventDetail {
+    fromId: string;
+    toId: string;
+    type: 'FF' | 'FS' | 'SF' | 'SS';
+    lag: number;
+    timestamp: number;
 }
 
 /** Returns CSS class name(s) to add to a dependency arrow path. */
@@ -726,6 +1192,37 @@ export declare interface DependencyOptions {
      * non-zero `hitWidth` (otherwise hovering a 1–2 px stroke is impractical).
      */
     readonly tooltipTemplate?: DependencyTooltipTemplate;
+    /**
+     * Enables interactive editing of dependency arrows: hover darkens the arrow,
+     * clicking selects it and reveals a "✕" affordance at the head; clicking the
+     * "✕" (or pressing Delete on a focused arrow) removes the edge via the same
+     * undoable command path as `gantt.removeDependency()`.
+     *
+     * Also enables drawing new dependencies: on bar hover, two solid circles
+     * appear at the bar's start and finish edges. Drag from a circle onto
+     * another bar's start or finish edge to create a dependency. The
+     * (source anchor, target anchor) pair determines the type:
+     * right→left = FS, left→left = SS, right→right = FF, left→right = SF.
+     *
+     * When `true`, `hitWidth` is auto-bumped to at least 12 px unless the user
+     * supplied a larger value — without a hit area, the thin visible stroke is
+     * effectively unclickable.
+     *
+     * @default false
+     */
+    readonly editable?: boolean;
+    /**
+     * Allow drawing dependencies between a summary task and one of its own
+     * descendants (or vice versa). Off by default because a summary's dates
+     * are derived from its descendants, so such links are semantically
+     * meaningless and confuse downstream date math (e.g. critical path).
+     *
+     * Only consulted when `editable: true`. The same rule applies to the
+     * programmatic `gantt.addDependency()` and `gantt.canAddDependency()`.
+     *
+     * @default false
+     */
+    readonly allowSummaryDescendantLinks?: boolean;
 }
 
 /** Returns the HTML string used as a dependency arrow's hover tooltip. */
@@ -783,6 +1280,10 @@ declare interface GanttBaselineConfig {
     readonly baseline: BaselineOptions;
 }
 
+declare interface GanttCalendarConfig {
+    readonly calendar: CalendarOptions;
+}
+
 declare interface GanttData {
     readonly annotations: Annotation[];
     readonly series: TaskInput[];
@@ -826,6 +1327,16 @@ export declare interface GanttEventMap {
     taskUpdateSuccess: CustomEvent<TaskUpdateSuccessEventDetail>;
     /** Fires when a task update fails with an error. */
     taskUpdateError: CustomEvent<TaskUpdateErrorEventDetail>;
+    /** Fires after a task is inserted via `gantt.addTask()`. */
+    taskAdded: CustomEvent<TaskAddedEventDetail>;
+    /** Fires after a task is removed via `gantt.deleteTask()`. */
+    taskDeleted: CustomEvent<TaskDeletedEventDetail>;
+    /** Fires after a task is re-parented via `gantt.moveTask()`. */
+    taskMoved: CustomEvent<TaskMovedEventDetail>;
+    /** Fires after a dependency edge is created via `gantt.addDependency()`. */
+    dependencyAdded: CustomEvent<DependencyChangeEventDetail>;
+    /** Fires after a dependency edge is removed via `gantt.removeDependency()`. */
+    dependencyRemoved: CustomEvent<DependencyChangeEventDetail>;
     /** Fires when a task bar is dragged to a new position. */
     taskDragged: CustomEvent<TaskDraggedEventDetail>;
     /** Fires when a task bar is resized via its handles. */
@@ -836,6 +1347,8 @@ export declare interface GanttEventMap {
     selectionChange: CustomEvent<SelectionChangeEventDetail>;
     /** Fires when a dependency arrow is updated. */
     dependencyArrowUpdate: CustomEvent<DependencyArrowUpdateDetail>;
+    /** Fires after a record/undo/redo/clear mutates the history stack. */
+    historyChange: CustomEvent<HistoryChangeEventDetail>;
 }
 
 export declare const GanttEvents: {
@@ -856,6 +1369,26 @@ export declare const GanttEvents: {
      */
     readonly TASK_UPDATE_ERROR: "taskUpdateError";
     /**
+     * emits after a task is inserted via `gantt.addTask()`
+     */
+    readonly TASK_ADDED: "taskAdded";
+    /**
+     * emits after a task is removed via `gantt.deleteTask()`
+     */
+    readonly TASK_DELETED: "taskDeleted";
+    /**
+     * emits after a task is re-parented via `gantt.moveTask()`
+     */
+    readonly TASK_MOVED: "taskMoved";
+    /**
+     * emits after a dependency edge is created via `gantt.addDependency()`
+     */
+    readonly DEPENDENCY_ADDED: "dependencyAdded";
+    /**
+     * emits after a dependency edge is removed via `gantt.removeDependency()`
+     */
+    readonly DEPENDENCY_REMOVED: "dependencyRemoved";
+    /**
      * emits when a task bar is dragged to a new position
      */
     readonly TASK_DRAGGED: "taskDragged";
@@ -875,11 +1408,15 @@ export declare const GanttEvents: {
      * emits when a dependency arrow is created, updated, or removed
      */
     readonly DEPENDENCY_ARROW_UPDATE: "dependencyArrowUpdate";
+    /**
+     * emits after the undo/redo stack changes — record, undo, redo, or clear
+     */
+    readonly HISTORY_CHANGE: "historyChange";
 };
 
 declare type GanttOptions = GanttOptionsInternal;
 
-declare type GanttOptionsInternal = AccessibilityOptions & AnnotationOptions & BorderOptions & CommonOptions & ColumnOptions & CriticalPathOptions & CrosshairOptions & FontOptions & GanttBarOptions & GanttBaselineConfig & GanttData & GanttDependencyConfig & GanttRowOptions & InteractiveOptions & ParsingOptions & SelectionOptions & ToolbarOptions & TooltipOptions;
+declare type GanttOptionsInternal = AccessibilityOptions & AnnotationOptions & BorderOptions & CommonOptions & ColumnOptions & CriticalPathOptions & CrosshairOptions & FontOptions & GanttBarOptions & GanttBaselineConfig & GanttCalendarConfig & GanttData & GanttDependencyConfig & GanttRowOptions & InteractiveOptions & ParsingOptions & SelectionOptions & ToolbarOptions & TooltipOptions;
 
 declare interface GanttRowOptions {
     readonly rowBackgroundColors: readonly string[];
@@ -1019,6 +1556,12 @@ export declare interface GanttUserOptions {
     /** Baseline options. When `enabled` is true, tasks with a `baseline` field render a thin bar below the actual bar. */
     readonly baseline?: Partial<BaselineOptions>;
     /**
+     * Working calendar config. When set, weekends + holidays drive duration
+     * math, summary aggregation, and timeline stripes. Absent = every day
+     * is a working day. See {@link CalendarOptions}.
+     */
+    readonly calendar?: CalendarOptions;
+    /**
      * Dependency arrow polish: rounded joints (`cornerRadius`), invisible hit
      * area for hover/click (`hitWidth`), per-arrow CSS class (`classBuilder`),
      * and HTML hover tooltip (`tooltipTemplate`).
@@ -1101,6 +1644,70 @@ export declare interface GanttUserOptions {
      * @default true
      */
     readonly enableProgressDrag?: boolean;
+    /**
+     * Enable keyboard shortcuts for task editing: `Delete` / `Backspace` to
+     * delete the focused row (cascade: 'children'), `Tab` / `Shift+Tab` to
+     * indent / outdent in the tree. Off by default because mutations from
+     * navigation keys can surprise users — opt in once you've decided the
+     * shortcuts are right for your app.
+     *
+     * Requires the task-list panel to have keyboard focus; the existing
+     * roving-tabindex navigation (ArrowUp/Down, Home/End) is unaffected.
+     *
+     * @default false
+     */
+    readonly enableTaskEditingShortcuts?: boolean;
+    /**
+     * Show built-in `+ Add Task` and trash-icon `Delete` buttons in the toolbar.
+     * The delete button is auto-disabled when nothing is selected; clicking it
+     * deletes every selected task (cascade: 'children') and clears the selection.
+     * The add button inserts a new task at the root level with placeholder
+     * dates derived from the current project span — the user can then rename or
+     * reposition it via inline / dialog edit.
+     *
+     * Off by default; opt in to expose CRUD affordances in the toolbar. The
+     * delete button works against the current `selectionManager` selection, so
+     * `enableSelection: true` is also required for it to do anything useful.
+     *
+     * @default false
+     */
+    readonly enableTaskCRUDToolbar?: boolean;
+    /**
+     * Show a built-in right-click context menu on task bars and task-list rows
+     * with entries for Edit, Add child / sibling task, Indent, Outdent, and
+     * Delete (cascade). Off by default so consumers can ship their own menu
+     * without competing with the built-in one. Entries are gated by the
+     * underlying capability — e.g. Indent / Outdent only appear when a sibling
+     * / parent exists; Edit only appears when `enableTaskEdit` is on.
+     *
+     * @default false
+     */
+    readonly enableContextMenu?: boolean;
+    /**
+     * Show a single-line "+ Add task" row at the bottom of the task list. The
+     * row renders below the last real task and reads like a button: clicking
+     * it inserts a new root-level placeholder task and emits `taskAdded`.
+     *
+     * Disabled while row virtualisation is active (dataset >= 50 rows) — at
+     * that point the toolbar Add button or context menu is the better
+     * affordance. Off by default.
+     *
+     * @default false
+     */
+    readonly enableAddTaskRow?: boolean;
+    /**
+     * Configures the undo/redo history stack. Every mutating call (drag, resize,
+     * inline / dialog edit, add, delete, move, dependency change) is recorded
+     * unless `enabled: false`. Use `gantt.undo()` / `gantt.redo()` to traverse,
+     * `gantt.canUndo()` / `gantt.canRedo()` to gate UI affordances, and the
+     * `historyChange` event to react to changes.
+     *
+     * The stack is bounded by `maxSize` (FIFO eviction) so a long editing session
+     * doesn't grow unbounded; bump it when you need a longer trail.
+     *
+     * @default { enabled: true, maxSize: 100 }
+     */
+    readonly history?: Partial<HistoryOptions>;
     /** Show a tooltip on task-bar hover. @default true */
     readonly enableTooltip?: boolean;
     /** Color for all text in the chart. @default '#000000' */
@@ -1190,17 +1797,143 @@ export declare interface GanttUserOptions {
     readonly toolbarItems?: ToolbarItem[];
     /** `aria-label` for the task-list table, used by screen readers. @default 'Task list' */
     readonly taskListAriaLabel?: string;
+    /**
+     * Veto hook called immediately before a task is inserted via `gantt.addTask()`.
+     * Return `false` (or a promise resolving to `false`) to cancel the insertion.
+     * Useful for confirming with the user, enforcing permissions, or validating
+     * the payload against external rules.
+     *
+     * Synchronous returns are honoured; async returns are awaited but the
+     * `gantt.addTask()` call itself stays synchronous, so vetoing an
+     * already-resolved insertion is best done by emitting an event from a
+     * companion `taskAdded` listener.
+     *
+     * @default undefined
+     */
+    readonly beforeTaskAdd?: BeforeTaskAddHook;
+    /**
+     * Veto hook called before any update path (drag, resize, progress drag,
+     * inline edit, dialog edit, or `gantt.updateTask()`) commits. Return `false`
+     * to reject the change.
+     *
+     * @default undefined
+     */
+    readonly beforeTaskUpdate?: BeforeTaskUpdateHook;
+    /**
+     * Veto hook called immediately before a task is re-parented via
+     * `gantt.moveTask()`. Return `false` to cancel. The hook receives the task
+     * plus the resolved old and new parent ids (`undefined` for root).
+     *
+     * @default undefined
+     */
+    readonly beforeTaskMove?: BeforeTaskMoveHook;
+    /**
+     * Veto hook called immediately before a task is removed via
+     * `gantt.deleteTask()`. Return `false` to cancel. The hook receives the
+     * full snapshot of the task plus the descendants that *would* be removed
+     * when `cascade: 'children'` is requested.
+     *
+     * @default undefined
+     */
+    readonly beforeTaskDelete?: BeforeTaskDeleteHook;
+    /**
+     * Veto hook called immediately before a dependency edge is added or removed
+     * via `gantt.addDependency()` / `gantt.removeDependency()`. `change`
+     * distinguishes the direction. Return `false` to cancel.
+     *
+     * @default undefined
+     */
+    readonly beforeDependencyChange?: BeforeDependencyChangeHook;
 }
 
 export declare function getTheme(mode: ThemeMode): GanttTheme;
+
+/**
+ * Detail payload for the `historyChange` event.
+ *
+ * Fires after every mutation that touches the undo/redo stacks — recording a
+ * new command, undo, redo, or `clearHistory()`. Use it to keep external
+ * Undo/Redo UI affordances in sync with the gantt's internal state.
+ *
+ * `kind` identifies what triggered the change:
+ * - `'record'` — a new command was pushed; `canUndo` is now true and the redo
+ *   stack was cleared.
+ * - `'undo'` — `gantt.undo()` ran successfully; the popped transaction moved
+ *   to the redo stack.
+ * - `'redo'` — `gantt.redo()` ran successfully; the popped transaction moved
+ *   back to the undo stack.
+ * - `'clear'` — `gantt.clearHistory()` (or disabling the stack via
+ *   `update({history: {enabled: false}})`) emptied both stacks.
+ */
+export declare interface HistoryChangeEventDetail {
+    kind: 'record' | 'undo' | 'redo' | 'clear';
+    canUndo: boolean;
+    canRedo: boolean;
+    undoSize: number;
+    redoSize: number;
+    /** Label of the transaction at the top of the undo stack, if any. */
+    topUndoLabel?: string;
+    /** Label of the transaction at the top of the redo stack, if any. */
+    topRedoLabel?: string;
+    timestamp: number;
+}
+
+/**
+ * Configures the undo/redo history stack that backs every mutating API on the
+ * Gantt instance. Every command (drag, resize, inline / dialog edit, add,
+ * delete, move, dependency change, programmatic `updateTask` / `addTask` /
+ * `moveTask` / `addDependency` / `removeDependency`) is captured here so the
+ * caller can roll the state back through `gantt.undo()` / `gantt.redo()`.
+ *
+ * Set `enabled: false` to opt out completely — useful when the host app
+ * implements its own history layer (e.g. CRDT-backed sync). When disabled,
+ * `gantt.undo()` / `gantt.redo()` are no-ops and `canUndo()` / `canRedo()`
+ * return false.
+ */
+export declare interface HistoryOptions {
+    /** When false, no commands are recorded and `undo`/`redo` are no-ops. @default true */
+    readonly enabled: boolean;
+    /** Maximum number of undo entries retained. Older entries drop off the bottom. @default 100 */
+    readonly maxSize: number;
+}
+
+/**
+ * A single holiday or non-working calendar entry. Accept plain dates for
+ * one-line config or an object form when you want a label that appears in
+ * the holiday tooltip.
+ */
+export declare type HolidayEntry = string | Date | {
+    readonly date: string | Date;
+    readonly label?: string;
+};
+
+/**
+ * Tooltip context passed to {@link CalendarOptions.holidayTooltip}. The
+ * `label` is whichever string the host supplied in {@link HolidayEntry}, or
+ * `undefined` for plain-date entries.
+ */
+export declare interface HolidayTooltipContext {
+    readonly date: Date;
+    readonly label?: string;
+}
 
 declare interface InteractiveOptions {
     readonly enableInlineEdit: boolean;
     readonly enableTaskDrag: boolean;
     readonly enableTaskResize: boolean;
     readonly enableProgressDrag: boolean;
+    readonly enableTaskEditingShortcuts: boolean;
+    readonly enableTaskCRUDToolbar: boolean;
+    readonly enableContextMenu: boolean;
+    readonly enableAddTaskRow: boolean;
+    readonly history: HistoryOptions;
     readonly snapUnit: SnapUnit;
     readonly snapValue: number;
+    readonly beforeTaskAdd?: BeforeTaskAddHook;
+    readonly beforeTaskUpdate?: BeforeTaskUpdateHook;
+    readonly beforeTaskMove?: BeforeTaskMoveHook;
+    readonly beforeTaskDelete?: BeforeTaskDeleteHook;
+    readonly beforeDependencyChange?: BeforeDependencyChangeHook;
 }
 
 export declare const LightTheme: GanttTheme;
@@ -1271,6 +2004,36 @@ export declare type ParsingValue = string | {
 };
 
 /**
+ * Built-in column renderer that draws an SVG progress ring for the task's
+ * completion percentage, with an optional centered numeric label.
+ *
+ * Reads from `task.progress` by default; override with `accessor` for
+ * computed values.
+ *
+ * @example
+ * ```ts
+ * import { ApexGantt, ColumnKey, renderers } from '@apexcharts/apexgantt';
+ *
+ * new ApexGantt('#chart', {
+ *   series,
+ *   columnConfig: [
+ *     { key: ColumnKey.Name, title: 'Task' },
+ *     {
+ *       key: 'progressRing',
+ *       title: '%',
+ *       render: renderers.progressRing({
+ *         size: 28,
+ *         strokeWidth: 3,
+ *         progressColor: (_task, value) => value > 80 ? '#22C55E' : value >= 40 ? '#3B82F6' : '#EF4444',
+ *       }),
+ *     },
+ *   ],
+ * });
+ * ```
+ */
+declare function progressRing(options?: ProgressRingRendererOptions): ColumnRenderer;
+
+/**
  * Configuration for the {@link progressRing} column renderer.
  */
 export declare interface ProgressRingRendererOptions {
@@ -1293,14 +2056,15 @@ export declare interface ProgressRingRendererOptions {
     readonly labelColor?: string;
 }
 
-export declare namespace renderers {
-        {
+declare namespace renderers {
+    export {
         avatars,
         AvatarsRendererOptions,
         progressRing,
         ProgressRingRendererOptions
     }
 }
+export { renderers }
 
 /**
  * Detail payload for the `selectionChange` event.
@@ -1361,6 +2125,37 @@ export declare interface Task extends TaskInput {
 }
 
 /**
+ * Detail payload for the `taskAdded` event.
+ *
+ * Fires after a task has been inserted via `gantt.addTask()`. `parentId` is
+ * the resolved parent (root tasks omit it). Listen to this to mirror the
+ * insertion in a backend or external store.
+ */
+export declare interface TaskAddedEventDetail {
+    taskId: string;
+    task: Task;
+    parentId?: string;
+    timestamp: number;
+}
+
+/**
+ * Detail payload for the `taskDeleted` event.
+ *
+ * Fires after a task has been removed via `gantt.deleteTask()`. When
+ * `cascade: 'children'` was used, one event fires per removed task and
+ * `removedDescendantIds` lists every descendant included in the same
+ * transaction. `task` is the snapshot of the task at the moment it was
+ * removed — useful for backend sync.
+ */
+export declare interface TaskDeletedEventDetail {
+    taskId: string;
+    task: Task;
+    /** Sibling descendant ids removed in the same transaction (empty for leaf or non-cascading deletes). */
+    removedDescendantIds: string[];
+    timestamp: number;
+}
+
+/**
  * Declares a predecessor/successor relationship between two tasks.
  *
  * Attach one or more of these to `TaskInput.dependency` to draw arrows between
@@ -1373,6 +2168,14 @@ export declare interface TaskDependency {
     readonly type?: DependencyType;
     /** Lag/lead in days. Positive = lag (delay), negative = lead (overlap). Defaults to 0. */
     readonly lag?: number;
+    /**
+     * Unit for `lag`. When a working calendar is configured (`GanttUserOptions.calendar`),
+     * the default is `'working'` — lag is interpreted as working days, so weekends and
+     * holidays don't count. Without a calendar, working and calendar days coincide so
+     * the setting has no effect. `'calendar'` forces raw calendar-day lag regardless.
+     * @default 'working'
+     */
+    readonly lagUnit?: 'working' | 'calendar';
 }
 
 /**
@@ -1494,6 +2297,19 @@ export declare interface TaskInput {
 }
 
 /**
+ * Detail payload for the `taskMoved` event.
+ *
+ * Fires after a task is re-parented via `gantt.moveTask()`. `oldParentId` and
+ * `newParentId` are `undefined` when the task was (or becomes) a root.
+ */
+export declare interface TaskMovedEventDetail {
+    taskId: string;
+    oldParentId?: string;
+    newParentId?: string;
+    timestamp: number;
+}
+
+/**
  * Detail payload for the `taskProgressChanged` event.
  *
  * Fires when the in-bar progress handle is dragged to a new value (the white
@@ -1593,7 +2409,7 @@ export declare interface TaskValidationErrorEventDetail {
 export declare type ThemeMode = 'dark' | 'light';
 
 /** Identifier for a timeline tier. Ordered finest to coarsest. */
-export declare type TierId = 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
+export declare type TierId = 'minute' | 'hour' | 'halfday' | 'day' | 'week' | 'month' | 'quarter' | 'year';
 
 /**
  * A plain button in the custom toolbar area.
