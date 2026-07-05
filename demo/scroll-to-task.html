@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Scroll to Task</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .demo-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .demo-header,
+      .toolbar {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+      .demo-header h1 {
+        margin: 0 0 6px;
+        color: #222;
+        font-size: 22px;
+      }
+      .demo-header p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+      }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 16px 24px;
+      }
+      .btn {
+        padding: 6px 14px;
+        border-radius: 4px;
+        border: 1px solid #c0c0c0;
+        background: #fff;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn:hover {
+        background: #f0f0f0;
+      }
+      #svg-gantt {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        height: 460px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div class="demo-header">
+        <h1>ApexGantt — Scroll to Task</h1>
+        <p>
+          The chart is zoomed in, so many bars sit outside the visible window. A chevron appears at the edge of any row
+          whose bar is off-screen — click it to jump to the bar. Or use the buttons below, which call
+          <code>gantt.scrollToTask(id)</code>.
+        </p>
+      </div>
+
+      <div class="toolbar">
+        <span style="font-weight: 600; font-size: 13px">Locate:</span>
+        <button class="btn" onclick="gantt.scrollToTask('kickoff')">Kickoff (Jan)</button>
+        <button class="btn" onclick="gantt.scrollToTask('build')">Build (Apr)</button>
+        <button class="btn" onclick="gantt.scrollToTask('launch')">Launch (Nov)</button>
+      </div>
+
+      <div id="svg-gantt"></div>
+    </div>
+
+    <script>
+      const container = document.getElementById('svg-gantt');
+
+      const gantt = new ApexGantt(container, {
+        height: 440,
+        // Zoom in so the full year doesn't fit — bars go off-screen.
+        pixelsPerDay: 26,
+        enableScrollButtons: true,
+        series: [
+          {id: 'kickoff', name: 'Kickoff', startTime: '2026-01-06', endTime: '2026-01-20', progress: 100},
+          {id: 'design', name: 'Design', startTime: '2026-02-02', endTime: '2026-03-06', progress: 80},
+          {id: 'build', name: 'Build', startTime: '2026-04-01', endTime: '2026-07-10', progress: 45},
+          {id: 'qa', name: 'QA & Hardening', startTime: '2026-08-03', endTime: '2026-09-25', progress: 10},
+          {id: 'launch', name: 'Launch', startTime: '2026-11-02', endTime: '2026-11-20', progress: 0},
+        ],
+      });
+
+      gantt.render();
+    </script>
+  </body>
+</html>

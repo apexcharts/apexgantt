@@ -111,11 +111,14 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `exportFormat` | `'svg' \| 'png' \| 'pdf'` | `'svg'` | Format produced by the toolbar export button. `svg` is vector; `png` rasterizes the chart; `pdf` embeds a raster on a single page. Any format is also available programmatically via `gantt.exportChart(format)`. |
 | `autoSizeColumns` | `boolean` | `true` | Auto-size each task-list column to fit its header title and cell content, growing the panel (never below `tasksContainerWidth`) so nothing is clipped. `minWidth` sets a column's preferred (default) width and `maxWidth` (default `320px`) the ceiling. The panel stays freely resizable: dragging the divider stretches columns proportionally or shrinks them (down to a small floor, so a large `minWidth` never blocks resizing). Set `false` for the legacy behavior where the panel width is split purely by `flexGrow`. See [Column Configuration](#column-configuration). |
 | `resizableColumns` | `boolean` | `true` | Allow individual columns to be resized by dragging the handle at the trailing edge of each column header. A resized column is pinned to its chosen pixel width and the other columns absorb the remaining space, so you can keep some columns wide and others thin. Double-click a handle to reset that column to its auto width. Opt a single column out with `columnConfig[].resizable: false`. Also available programmatically via `gantt.setColumnWidth()` / `gantt.resetColumnWidths()`. See [Column Configuration](#column-configuration). |
+| `reorderableColumns` | `boolean` | `true` | Allow columns to be reordered by dragging a column header left or right onto another column (a drop indicator shows the insertion point). The new order is reflected in the grid, included in `getState()` / `setState()`, and emitted as a `columnReorder` event. Also available programmatically via `gantt.setColumnOrder()`. See [Column Configuration](#column-configuration). |
 | `persistState` <a id="uistate"></a> | `boolean \| { key?: string }` | `false` | Persist and restore the UI view state (zoom, scroll, sort, filter, collapse, selection) via `localStorage`. `true` uses the default key (`'apexgantt-state'`); an object sets a custom `key`. Restored on the first `render()`; saved (debounced) whenever the view changes. Also available programmatically via `gantt.getState()` / `gantt.setState()`. See [UI state persistence](#ui-state-persistence). |
 | `enableInlineEdit` | `boolean` | `false` | Allow editing task fields directly in the task-list cells (double-click to edit `name`, `startTime`, `endTime`, `duration`, `progress`). Auto-enabled when `enableTaskEdit` is `true`; set explicitly to `false` to opt out. See [Inline Editing](#inline-editing). |
 | `enableTaskDrag` | `boolean` | `true` | Allow tasks to be reordered by dragging rows in the task list. |
 | `enableTaskEdit` | `boolean` | `false` | Show the inline task-edit form when a task row is clicked. |
 | `enableTaskResize` | `boolean` | `true` | Allow task bars to be resized by dragging their handles. |
+| `enableDrawTask` | `boolean` | `false` | Allow creating a task by dragging across an empty stretch of the timeline: press on an empty row, drag horizontally to sweep out the date range, and release to add a task with those (snapped) start/end dates. Press `Escape` mid-drag to cancel. Off by default so existing empty-area drags stay inert. Respects `beforeTaskAdd` and is recorded in undo history. See [Drawing tasks on the timeline](#drawing-tasks-on-the-timeline). |
+| `enableScrollButtons` | `boolean` | `true` | Show a small chevron at the edge of a task's row when that task's bar is scrolled out of the visible timeline window; clicking it scrolls the bar back into view (nearest-edge). Also available programmatically via `gantt.scrollToTask()`. |
 | `enableProgressDrag` | `boolean` | `true` | Allow editing task progress by dragging the small handle that appears at the bottom of the bar on hover. Snaps to whole percent on commit and emits a `taskProgressChanged` event. |
 | `enableTaskEditingShortcuts` | `boolean` | `false` | Enable keyboard shortcuts on the task-list panel: `Delete` / `Backspace` removes the focused task (cascade: children), `Tab` indents under the previous sibling, `Shift+Tab` outdents to the grandparent. Off by default; opt in once you've decided the shortcuts fit your app. All operations are recorded in the undo history and respect `beforeTaskDelete` / `beforeTaskMove` hooks. |
 | `enableTaskCRUDToolbar` | `boolean` | `false` | Show built-in `+ Add task` and trash-icon `Delete` buttons in the toolbar. Delete is auto-disabled when nothing is selected and deletes every selected task (cascade: children) on click; Add inserts a root-level "New task" using placeholder dates derived from the current project span. Combine with `enableSelection: true` for the delete button to be useful. |
@@ -136,7 +139,7 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `enableCrosshair` | `boolean` | `false` | Show a vertical crosshair line that follows the cursor across the timeline, with a label showing the precise date/time at the pointer position. |
 | `crosshairColor` | `string` | `'#3B82F6'` (light) / `'#818CF8'` (dark) | Color of the crosshair line and the label background. |
 | `crosshairLabelFormat` | `(date, tier) => string` | _auto_ | Custom formatter for the crosshair label. Receives the date under the cursor and the active sub-tier (`'minute' \| 'hour' \| 'halfday' \| 'day' \| 'week' \| 'month' \| 'quarter' \| 'year'`). When omitted, the label auto-adapts to the active tier — `'ddd MM/DD/YYYY'` for day-and-coarser tiers, `'MM/DD HH:mm'` for halfday/hour/minute tiers. |
-| `baseline` | `Partial<BaselineOptions>` | `undefined` | When `enabled: true`, renders a thin baseline bar below each task bar. Hovering the baseline shows a tooltip with its planned start/end dates. When `rowHeight` isn't explicitly set, the default rowHeight is bumped to make room for the baseline without squeezing the actual bar. Fields: `color: string` (primary fill / stripe color; default `'#9E9E9E'`), `striped: boolean` (fill the bar with thick diagonal stripes instead of a flat color; default `true`), `stripeColor: string` (color of the gaps between stripes; default `'#FFFFFF'`), `stripeWidth: number` (px width of each stripe band, larger values = thicker; default `3`), `stripeAngle: number` (stripe angle in degrees; default `45`). By default baselines render as thick grey/white diagonal stripes; set `striped: false` for a solid `color` fill. |
+| `baseline` | `Partial<BaselineOptions>` | `undefined` | When `enabled: true`, renders a thin baseline bar below each task bar. Hovering the baseline shows a tooltip with its planned start/end dates. When `rowHeight` isn't explicitly set, the default rowHeight is bumped to make room for the baseline without squeezing the actual bar. Fields: `color: string` (fill / stripe color; when omitted it defaults to the task bar's progress shade, i.e. the darker tone of the bar drawn above, so the baseline matches its bar; set an explicit color to override), `striped: boolean` (fill the bar with thick diagonal stripes instead of a flat color; default `true`), `stripeColor: string` (color of the gaps between stripes; default `'#FFFFFF'`), `stripeWidth: number` (px width of each stripe band, larger values = thicker; default `3`), `stripeAngle: number` (stripe angle in degrees; default `45`). By default baselines render as thick diagonal stripes tinted with the bar's progress color over a white background; set `striped: false` for a solid fill. |
 | `tooltipId` | `string` | `'apexgantt-tooltip-container'` | HTML `id` for the tooltip container element. |
 | `tooltipTemplate` | `(task, dateFormat) => string` | built-in | Custom function returning an HTML string for the task tooltip. |
 | `tooltipBorderColor` | `string` | `'#E5E7EB'` (light) / `'#444444'` (dark) | Border color of the tooltip. |
@@ -302,6 +305,8 @@ Customize which columns appear in the task-list panel, their order, titles, and 
 By default ([`autoSizeColumns`](#options)), each column is sized to fit its header title and the widest cell content, and the task-list panel grows so nothing is clipped. `minWidth` sets a column's preferred (default) width and `maxWidth` (default `320px`) the ceiling. The panel remains freely resizable: dragging the divider distributes width proportionally to content when widening, and shrinks columns toward a small floor when narrowing (so a large `minWidth` never blocks the resize). Set `autoSizeColumns: false` to split the fixed `tasksContainerWidth` purely by `flexGrow` (the legacy behavior), in which case columns clip to their `minWidth` when the panel is too narrow.
 
 **Resizing a single column.** With `resizableColumns` on (the default), each column header has a drag handle at its trailing edge. Drag it to pin that column to an exact pixel width; the remaining columns absorb the leftover panel space, so you can keep some columns wide and others thin. Double-click a handle to reset that column to its auto width. Lock one column with `resizable: false` in its `columnConfig` entry. The same overrides are available programmatically via `gantt.setColumnWidth(key, px)`, `gantt.resetColumnWidths(key?)`, and `gantt.getColumnWidths()`, are included in `getState()` / `setState()`, and emit a `columnResize` event.
+
+**Reordering columns.** With `reorderableColumns` on (the default), drag a column header left or right onto another column to move it; a vertical drop indicator shows where it will land, and a short drag threshold keeps a plain click sorting as usual. Drive it programmatically with `gantt.setColumnOrder([...keys])` / `gantt.getColumnOrder()`. The order is included in `getState()` / `setState()` and emits a `columnReorder` event.
 
 Available built-in column keys:
 
@@ -476,8 +481,8 @@ const gantt = new ApexGantt(element, {
 });
 
 gantt.sort({key: ColumnKey.Progress, direction: 'desc'}); // replace the sort
-gantt.getSort();                                          // [{ key: 'progress', direction: 'desc' }]
-gantt.clearSort();                                        // back to natural (input) order
+gantt.getSort(); // [{ key: 'progress', direction: 'desc' }]
+gantt.clearSort(); // back to natural (input) order
 ```
 
 **Clicking a sortable column header** cycles its sort ascending → descending → none (natural order), showing a ▲ / ▼ caret. **Shift+click** a header to add it as an additional sort key (multi-column sort) — each Shift+clicked column cycles ascending → descending → removed, the others are kept, and a small precedence number (1, 2, 3…) appears next to each caret. A plain click always collapses back to a single-key sort. Built-in value columns are sortable out of the box; `Wbs` is not (it is purely positional). A custom column becomes sortable when you give it an `accessor` (or a `comparator`). Override per column with `sortable`.
@@ -495,8 +500,8 @@ const gantt = new ApexGantt(element, {
 });
 
 gantt.filter((task) => /design/i.test(task.name)); // apply a filter
-gantt.isFiltered();                                  // true
-gantt.clearFilter();                                 // show every row again
+gantt.isFiltered(); // true
+gantt.clearFilter(); // show every row again
 ```
 
 **Built-in quick filter.** Set `enableQuickFilter: true` to render a search box in the toolbar; typing filters by the configured `quickFilter.fields` (default `['name']`).
@@ -529,7 +534,7 @@ gantt.setFilterRules({
 });
 
 gantt.getFilterRules(); // the active FilterRuleSet, or null
-gantt.clearFilter();    // drop it
+gantt.clearFilter(); // drop it
 ```
 
 A custom column is filterable when it exposes an `accessor` (treated as text). For fully bespoke logic, wire `gantt.filter(predicate)` to your own controls (see the `sort-filter` demo).
@@ -629,6 +634,20 @@ gantt.updateTask('t1', {segments: []}); // back to one contiguous bar
 Interactions are preserved: dragging a split task moves all its segments together, and resizing adjusts its outer segment — both inferred automatically, so the same drag/resize handles work as for a normal bar.
 
 > v1 is API-driven. Interactive split gestures (double-click / context-menu "split here"), per-segment drag/resize, and critical-path math that excludes gap time are not yet implemented; the envelope is treated as the task's span.
+
+## Drawing tasks on the timeline
+
+Set `enableDrawTask: true` to let users create a task by dragging across an empty stretch of the timeline: press on an empty row, drag horizontally to sweep out the range, and release. A preview bar tracks the cursor during the drag, and on release a task is added with the swept start/end **snapped to the active snap unit** (`snapUnit` / `snapValue`). A press that doesn't move far enough counts as a click and creates nothing; press `Escape` mid-drag to cancel.
+
+```js
+const gantt = new ApexGantt(element, {
+  series: tasks,
+  enableDrawTask: true,
+  snapUnit: 'day',
+});
+```
+
+The gesture only starts on empty timeline background (never on an existing bar or its handles), goes through the same path as `gantt.addTask()` (respects `beforeTaskAdd`, recorded in undo history, emits `taskAdded`), and the new root task then sorts into position by its dates like any other add. It's off by default so existing charts' empty-area drags stay inert.
 
 ## Custom column renderers
 
@@ -1300,6 +1319,26 @@ gantt.resetColumnWidths(); // all columns
 
 Return the active manual column-width overrides as a plain object (`key` → pixels). Included in `getState()` and restorable via `setState({ columnWidths })`.
 
+### 35. `setColumnOrder(keys)`
+
+Set the left-to-right order of the task-list columns by key. Keys you list are placed first in that order; any visible columns you omit keep their relative position at the end. Mirrors dragging a column header. Re-renders and emits `columnReorder`.
+
+```js
+gantt.setColumnOrder([ColumnKey.Name, ColumnKey.Progress, ColumnKey.StartTime]);
+```
+
+### 36. `getColumnOrder()`
+
+Return the current column order as an array of keys (left-to-right), reflecting any reorder. Included in `getState()` and restorable via `setState({ columnOrder })`.
+
+### 37. `scrollToTask(taskId)`
+
+Scroll the timeline (and, if needed, the row list) so a task's bar is in view, using nearest-edge alignment. Backs the per-row scroll chevrons; call it directly to "locate" a task from search results, selection, or your own toolbar button. Returns `true` when a scroll was applied, `false` when the task is unknown or already fully visible.
+
+```js
+gantt.scrollToTask('task-42');
+```
+
 ## Events
 
 ApexGantt emits CustomEvents on the container element for various user interactions, allowing you to track and respond to changes in real-time.
@@ -1325,6 +1364,7 @@ ApexGantt emits CustomEvents on the container element for various user interacti
 | `filterChange` | Active filter changed | `{ active, visibleCount, timestamp }` |
 | `groupChange` | Active grouping changed via `gantt.groupBy()` / `gantt.clearGrouping()` | `{ active, field, groupCount, timestamp }` |
 | `columnResize` | A task-list column was resized (header drag or API) | `{ key, width, widths, timestamp }` |
+| `columnReorder` | Task-list columns were reordered (header drag or API) | `{ order, movedKey, timestamp }` |
 
 ### Events Usage
 

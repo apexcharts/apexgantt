@@ -110,14 +110,24 @@
         <ul>
           <li>"Implementation" starts pre-split into two worked spans with a gap.</li>
           <li><strong>Split "Testing"</strong> cuts it at Jun 18 and resumes Jun 22 (a 3-day gap).</li>
-          <li><strong>Drag</strong> a split bar — all its segments move together. <strong>Resize</strong> a handle — the outer segment adjusts.</li>
+          <li>
+            <strong>Drag</strong> a split bar — all its segments move together. <strong>Resize</strong> a handle — the
+            outer segment adjusts.
+          </li>
           <li><strong>Clear split</strong> restores a single contiguous bar.</li>
         </ul>
       </div>
 
       <div class="toolbar">
-        <button class="btn btn-primary" onclick="gantt.splitTask('t3', '2026-06-18', { resumeAt: '2026-06-22' }); refresh();">Split "Testing" (gap Jun 18–22)</button>
-        <button class="btn" onclick="gantt.updateTask('t3', { segments: [] }); refresh();">Clear "Testing" split</button>
+        <button
+          class="btn btn-primary"
+          onclick="gantt.splitTask('t3', '2026-06-18', { resumeAt: '2026-06-22' }); refresh();"
+        >
+          Split "Testing" (gap Jun 18–22)
+        </button>
+        <button class="btn" onclick="gantt.updateTask('t3', { segments: [] }); refresh();">
+          Clear "Testing" split
+        </button>
       </div>
 
       <div id="svg-gantt"></div>

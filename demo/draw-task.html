@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Draw Tasks on the Timeline</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .demo-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .demo-header,
+      .instructions {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+      .demo-header h1 {
+        margin: 0 0 6px;
+        color: #222;
+        font-size: 22px;
+      }
+      .demo-header p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+      }
+      .instructions {
+        background: #e8f0fe;
+        border: 1px solid #a8c7fa;
+        color: #1a56a0;
+        font-size: 13px;
+        line-height: 1.7;
+        box-shadow: none;
+      }
+      .instructions strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+      .instructions ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      #svg-gantt {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        height: 520px;
+      }
+      .status {
+        font-size: 13px;
+        color: #444;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div class="demo-header">
+        <h1>ApexGantt — Draw Tasks on the Timeline</h1>
+        <p>
+          With <code>enableDrawTask: true</code>, drag across an empty part of the timeline to create a task. A preview
+          bar follows the cursor; on release a task is added with the swept date range snapped to the day.
+        </p>
+      </div>
+
+      <div class="instructions">
+        <strong>How to interact</strong>
+        <ul>
+          <li>
+            <strong>Press and drag</strong> horizontally across an empty row in the timeline to sweep out a date range.
+          </li>
+          <li><strong>Release</strong> to create a task; a quick click (no drag) creates nothing.</li>
+          <li>Press <strong>Escape</strong> mid-drag to cancel.</li>
+          <li>Existing bars stay draggable/resizable — the draw gesture only starts on empty space.</li>
+        </ul>
+      </div>
+
+      <div id="svg-gantt"></div>
+      <div class="status" id="status">Tasks: 2</div>
+    </div>
+
+    <script>
+      const container = document.getElementById('svg-gantt');
+
+      const gantt = new ApexGantt(container, {
+        height: 500,
+        enableDrawTask: true,
+        snapUnit: 'day',
+        series: [
+          {id: 't1', name: 'Design', startTime: '2026-06-01', endTime: '2026-06-08', progress: 100},
+          {id: 't2', name: 'Implementation', startTime: '2026-06-09', endTime: '2026-06-20', progress: 40},
+        ],
+      });
+
+      gantt.render();
+
+      const status = document.getElementById('status');
+      let count = 2;
+      container.addEventListener('taskAdded', (e) => {
+        count++;
+        status.textContent = `Tasks: ${count} (last added ${e.detail.task.startTime} → ${e.detail.task.endTime})`;
+      });
+    </script>
+  </body>
+</html>

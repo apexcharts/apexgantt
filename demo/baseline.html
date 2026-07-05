@@ -51,7 +51,7 @@
         height: 14px;
         border-radius: 3px;
         background-color: #ffffff;
-        background-image: repeating-linear-gradient(45deg, #9e9e9e 0, #9e9e9e 3px, #ffffff 3px, #ffffff 6px);
+        background-image: repeating-linear-gradient(45deg, #3b89fd 0, #3b89fd 3px, #ffffff 3px, #ffffff 6px);
       }
     </style>
   </head>
@@ -76,10 +76,11 @@
         enableTaskResize: false,
         baseline: {
           enabled: true,
-          // Defaults shown for clarity: thick grey/white stripes at 45 degrees.
-          // Set `striped: false` for a flat `color` fill, or tweak any field.
+          // Defaults shown for clarity: thick stripes at 45 degrees. `color` is
+          // omitted on purpose, so each baseline auto-tints to its own bar's
+          // progress shade. Pass `color` to override, or `striped: false` for a
+          // flat fill.
           striped: true,
-          color: '#9e9e9e',
           stripeColor: '#ffffff',
           stripeWidth: 3,
           stripeAngle: 45,

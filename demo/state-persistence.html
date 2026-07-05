@@ -138,16 +138,29 @@
       <div class="instructions">
         <strong>How to interact</strong>
         <ul>
-          <li>Change the view: <strong>sort</strong> a column, <strong>collapse</strong> a phase, <strong>select</strong> a row, or <strong>zoom</strong> (Ctrl + scroll).</li>
-          <li>This chart has <code>persistState: true</code> — <strong>reload the page</strong> and the view comes back exactly as you left it.</li>
-          <li><strong>Save snapshot</strong> captures the current state; <strong>mess it up</strong> then <strong>Restore snapshot</strong> to see <code>setState()</code> put it back.</li>
+          <li>
+            Change the view: <strong>sort</strong> a column, <strong>collapse</strong> a phase,
+            <strong>select</strong> a row, or <strong>zoom</strong> (Ctrl + scroll).
+          </li>
+          <li>
+            This chart has <code>persistState: true</code> — <strong>reload the page</strong> and the view comes back
+            exactly as you left it.
+          </li>
+          <li>
+            <strong>Save snapshot</strong> captures the current state; <strong>mess it up</strong> then
+            <strong>Restore snapshot</strong> to see <code>setState()</code> put it back.
+          </li>
           <li><strong>Reset</strong> clears the persisted state from localStorage.</li>
         </ul>
       </div>
 
       <div class="toolbar">
-        <button class="btn" onclick="gantt.sort({ key: ApexGantt.ColumnKey.Name, direction: 'asc' })">Sort by name ↑</button>
-        <button class="btn" onclick="gantt.setState({ collapsed: ['phase-1', 'phase-3'] })">Collapse phases 1 &amp; 3</button>
+        <button class="btn" onclick="gantt.sort({ key: ApexGantt.ColumnKey.Name, direction: 'asc' })">
+          Sort by name ↑
+        </button>
+        <button class="btn" onclick="gantt.setState({ collapsed: ['phase-1', 'phase-3'] })">
+          Collapse phases 1 &amp; 3
+        </button>
         <button class="btn" onclick="gantt.setState({ collapsed: [] })">Expand all</button>
         <div class="sep"></div>
         <button class="btn btn-primary" onclick="saveSnapshot()">Save snapshot</button>
@@ -175,24 +188,66 @@
         height: 440,
         enableSelection: true,
         enableQuickFilter: true,
-        quickFilter: { placeholder: 'Search tasks…', fields: ['name'] },
+        quickFilter: {placeholder: 'Search tasks…', fields: ['name']},
         // Auto-save/restore the view under a custom localStorage key.
-        persistState: { key: STORAGE_KEY },
+        persistState: {key: STORAGE_KEY},
         columnConfig: [
-          { key: ApexGantt.ColumnKey.Name, title: 'Task Name', flexGrow: 3 },
-          { key: ApexGantt.ColumnKey.StartTime, title: 'Start', flexGrow: 1.5 },
-          { key: ApexGantt.ColumnKey.Progress, title: 'Progress', flexGrow: 1 },
+          {key: ApexGantt.ColumnKey.Name, title: 'Task Name', flexGrow: 3},
+          {key: ApexGantt.ColumnKey.StartTime, title: 'Start', flexGrow: 1.5},
+          {key: ApexGantt.ColumnKey.Progress, title: 'Progress', flexGrow: 1},
         ],
         series: [
-          { id: 'phase-1', name: 'Phase 1 — Discovery', startTime: '2024-01-01', endTime: '2024-01-31', progress: 100 },
-          { id: 'task-1', name: 'Stakeholder interviews', startTime: '2024-01-01', endTime: '2024-01-10', parentId: 'phase-1', progress: 100 },
-          { id: 'task-2', name: 'Requirements doc', startTime: '2024-01-11', endTime: '2024-01-25', parentId: 'phase-1', progress: 100 },
-          { id: 'phase-2', name: 'Phase 2 — Design', startTime: '2024-02-01', endTime: '2024-02-29', progress: 60 },
-          { id: 'task-3', name: 'UX wireframes', startTime: '2024-02-01', endTime: '2024-02-14', parentId: 'phase-2', progress: 100 },
-          { id: 'task-4', name: 'Visual design', startTime: '2024-02-15', endTime: '2024-02-29', parentId: 'phase-2', progress: 40 },
-          { id: 'phase-3', name: 'Phase 3 — Development', startTime: '2024-03-01', endTime: '2024-04-30', progress: 20 },
-          { id: 'task-5', name: 'Backend API', startTime: '2024-03-01', endTime: '2024-03-31', parentId: 'phase-3', progress: 35 },
-          { id: 'task-6', name: 'Frontend implementation', startTime: '2024-04-01', endTime: '2024-04-25', parentId: 'phase-3', progress: 5 },
+          {id: 'phase-1', name: 'Phase 1 — Discovery', startTime: '2024-01-01', endTime: '2024-01-31', progress: 100},
+          {
+            id: 'task-1',
+            name: 'Stakeholder interviews',
+            startTime: '2024-01-01',
+            endTime: '2024-01-10',
+            parentId: 'phase-1',
+            progress: 100,
+          },
+          {
+            id: 'task-2',
+            name: 'Requirements doc',
+            startTime: '2024-01-11',
+            endTime: '2024-01-25',
+            parentId: 'phase-1',
+            progress: 100,
+          },
+          {id: 'phase-2', name: 'Phase 2 — Design', startTime: '2024-02-01', endTime: '2024-02-29', progress: 60},
+          {
+            id: 'task-3',
+            name: 'UX wireframes',
+            startTime: '2024-02-01',
+            endTime: '2024-02-14',
+            parentId: 'phase-2',
+            progress: 100,
+          },
+          {
+            id: 'task-4',
+            name: 'Visual design',
+            startTime: '2024-02-15',
+            endTime: '2024-02-29',
+            parentId: 'phase-2',
+            progress: 40,
+          },
+          {id: 'phase-3', name: 'Phase 3 — Development', startTime: '2024-03-01', endTime: '2024-04-30', progress: 20},
+          {
+            id: 'task-5',
+            name: 'Backend API',
+            startTime: '2024-03-01',
+            endTime: '2024-03-31',
+            parentId: 'phase-3',
+            progress: 35,
+          },
+          {
+            id: 'task-6',
+            name: 'Frontend implementation',
+            startTime: '2024-04-01',
+            endTime: '2024-04-25',
+            parentId: 'phase-3',
+            progress: 5,
+          },
         ],
       });
 
@@ -214,7 +269,7 @@
       function messItUp() {
         gantt.clearSort();
         gantt.clearFilter();
-        gantt.setState({ collapsed: [] });
+        gantt.setState({collapsed: []});
         gantt.clearSelection();
       }
 
@@ -227,7 +282,8 @@
       const status = document.getElementById('status');
       function renderStatus() {
         const s = gantt.getState();
-        const sortText = s.sort && s.sort.length ? s.sort.map((c) => `${c.key} ${c.direction}`).join(', ') : 'natural order';
+        const sortText =
+          s.sort && s.sort.length ? s.sort.map((c) => `${c.key} ${c.direction}`).join(', ') : 'natural order';
         status.innerHTML =
           `Sort: <b>${sortText}</b> &nbsp;·&nbsp; Collapsed: <b>${(s.collapsed || []).length}</b>` +
           ` &nbsp;·&nbsp; Selected: <b>${(s.selected || []).length}</b> &nbsp;·&nbsp; Filter: <b>${gantt.isFiltered() ? 'active' : 'none'}</b>`;

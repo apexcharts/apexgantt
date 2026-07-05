@@ -130,8 +130,14 @@
       <div class="instructions">
         <strong>How to interact</strong>
         <ul>
-          <li><strong>Click a column header</strong> (Task Name, Start, Duration, Progress) to cycle ascending → descending → none.</li>
-          <li><strong>Shift+click</strong> headers to sort by several columns at once (a precedence number appears by each caret).</li>
+          <li>
+            <strong>Click a column header</strong> (Task Name, Start, Duration, Progress) to cycle ascending →
+            descending → none.
+          </li>
+          <li>
+            <strong>Shift+click</strong> headers to sort by several columns at once (a precedence number appears by each
+            caret).
+          </li>
           <li>Use the <strong>Sort by</strong> buttons to drive sorting through the public API.</li>
           <li>Type in the <strong>search box</strong> to filter by task name; ancestors of matches stay visible.</li>
           <li><strong>Show incomplete only</strong> filters to tasks with progress &lt; 100%.</li>
@@ -141,12 +147,18 @@
       <div class="toolbar">
         <label>Sort by:</label>
         <button class="btn" onclick="gantt.sort({ key: ApexGantt.ColumnKey.Name, direction: 'asc' })">Name ↑</button>
-        <button class="btn" onclick="gantt.sort({ key: ApexGantt.ColumnKey.StartTime, direction: 'asc' })">Start ↑</button>
-        <button class="btn" onclick="gantt.sort({ key: ApexGantt.ColumnKey.Progress, direction: 'desc' })">Progress ↓</button>
+        <button class="btn" onclick="gantt.sort({ key: ApexGantt.ColumnKey.StartTime, direction: 'asc' })">
+          Start ↑
+        </button>
+        <button class="btn" onclick="gantt.sort({ key: ApexGantt.ColumnKey.Progress, direction: 'desc' })">
+          Progress ↓
+        </button>
         <button class="btn" onclick="gantt.clearSort()">Clear sort</button>
         <div class="sep"></div>
         <label>Filter:</label>
-        <span style="font-size: 13px; color: #666">Use the search box or <b>Filter</b> builder in the chart toolbar ↗</span>
+        <span style="font-size: 13px; color: #666"
+          >Use the search box or <b>Filter</b> builder in the chart toolbar ↗</span
+        >
         <button class="btn" onclick="gantt.filter((t) => (t.progress ?? 0) < 100)">Show incomplete only</button>
         <button class="btn btn-primary" onclick="gantt.clearFilter()">Clear filter</button>
       </div>
@@ -162,25 +174,74 @@
       const gantt = new ApexGantt(container, {
         height: 440,
         enableQuickFilter: true,
-        quickFilter: { placeholder: 'Search tasks…', fields: ['name'] },
+        quickFilter: {placeholder: 'Search tasks…', fields: ['name']},
         enableFilterBuilder: true,
         columnConfig: [
-          { key: ApexGantt.ColumnKey.Name, title: 'Task Name', flexGrow: 3 },
-          { key: ApexGantt.ColumnKey.StartTime, title: 'Start', flexGrow: 1.5 },
-          { key: ApexGantt.ColumnKey.Duration, title: 'Duration', flexGrow: 1 },
-          { key: ApexGantt.ColumnKey.Progress, title: 'Progress', flexGrow: 1 },
+          {key: ApexGantt.ColumnKey.Name, title: 'Task Name', flexGrow: 3},
+          {key: ApexGantt.ColumnKey.StartTime, title: 'Start', flexGrow: 1.5},
+          {key: ApexGantt.ColumnKey.Duration, title: 'Duration', flexGrow: 1},
+          {key: ApexGantt.ColumnKey.Progress, title: 'Progress', flexGrow: 1},
         ],
         series: [
-          { id: 'phase-2', name: 'Phase 2 — Design', startTime: '2024-02-01', endTime: '2024-02-29', progress: 60 },
-          { id: 'task-5', name: 'Visual design', startTime: '2024-02-15', endTime: '2024-02-29', parentId: 'phase-2', progress: 40 },
-          { id: 'task-4', name: 'UX wireframes', startTime: '2024-02-01', endTime: '2024-02-14', parentId: 'phase-2', progress: 100 },
-          { id: 'phase-1', name: 'Phase 1 — Discovery', startTime: '2024-01-01', endTime: '2024-01-31', progress: 100 },
-          { id: 'task-3', name: 'Sign-off', startTime: '2024-01-28', endTime: '2024-01-31', parentId: 'phase-1', progress: 100 },
-          { id: 'task-1', name: 'Stakeholder interviews', startTime: '2024-01-01', endTime: '2024-01-10', parentId: 'phase-1', progress: 100 },
-          { id: 'task-2', name: 'Requirements doc', startTime: '2024-01-11', endTime: '2024-01-25', parentId: 'phase-1', progress: 100 },
-          { id: 'phase-3', name: 'Phase 3 — Development', startTime: '2024-03-01', endTime: '2024-04-30', progress: 20 },
-          { id: 'task-7', name: 'Frontend implementation', startTime: '2024-04-01', endTime: '2024-04-25', parentId: 'phase-3', progress: 5 },
-          { id: 'task-6', name: 'Backend API', startTime: '2024-03-01', endTime: '2024-03-31', parentId: 'phase-3', progress: 35 },
+          {id: 'phase-2', name: 'Phase 2 — Design', startTime: '2024-02-01', endTime: '2024-02-29', progress: 60},
+          {
+            id: 'task-5',
+            name: 'Visual design',
+            startTime: '2024-02-15',
+            endTime: '2024-02-29',
+            parentId: 'phase-2',
+            progress: 40,
+          },
+          {
+            id: 'task-4',
+            name: 'UX wireframes',
+            startTime: '2024-02-01',
+            endTime: '2024-02-14',
+            parentId: 'phase-2',
+            progress: 100,
+          },
+          {id: 'phase-1', name: 'Phase 1 — Discovery', startTime: '2024-01-01', endTime: '2024-01-31', progress: 100},
+          {
+            id: 'task-3',
+            name: 'Sign-off',
+            startTime: '2024-01-28',
+            endTime: '2024-01-31',
+            parentId: 'phase-1',
+            progress: 100,
+          },
+          {
+            id: 'task-1',
+            name: 'Stakeholder interviews',
+            startTime: '2024-01-01',
+            endTime: '2024-01-10',
+            parentId: 'phase-1',
+            progress: 100,
+          },
+          {
+            id: 'task-2',
+            name: 'Requirements doc',
+            startTime: '2024-01-11',
+            endTime: '2024-01-25',
+            parentId: 'phase-1',
+            progress: 100,
+          },
+          {id: 'phase-3', name: 'Phase 3 — Development', startTime: '2024-03-01', endTime: '2024-04-30', progress: 20},
+          {
+            id: 'task-7',
+            name: 'Frontend implementation',
+            startTime: '2024-04-01',
+            endTime: '2024-04-25',
+            parentId: 'phase-3',
+            progress: 5,
+          },
+          {
+            id: 'task-6',
+            name: 'Backend API',
+            startTime: '2024-03-01',
+            endTime: '2024-03-31',
+            parentId: 'phase-3',
+            progress: 35,
+          },
         ],
       });
 
