@@ -1,12 +1,4 @@
-declare abstract class BaseChart {
-  /** @internal */
-  protected element: HTMLElement;
-  /** Destroys the chart instance and cleans up DOM resources. */
-  destroy(): void;
-  /** Returns the unique identifier for this chart instance. */
-  getInstanceId(): string;
-}
-
+import { TextDirection } from '@apex/commons';
 
 declare interface AccessibilityOptions {
     readonly taskListAriaLabel?: string;
@@ -61,6 +53,10 @@ declare class ApexGantt extends BaseChart {
     private options;
     /** Current zoom level as pixels-per-ms. Source of truth for all timeline math. */
     private pixelsPerMs;
+    /** Resolved, localized user-facing strings (English defaults + `locale.messages`). */
+    private get messages();
+    /** Whether the current `locale.direction` resolves to right-to-left (mirrors the time axis). */
+    private get isRtl();
     /**
      * Geometry of the timeline header currently on screen. Captured at every full
      * render so partial updates (drag/resize commits, inline edits, summary
@@ -663,34 +659,6 @@ export declare interface Assignee {
 }
 
 /**
- * Built-in column renderer that shows a stacked row of circular avatars for a
- * task's assignees, with an overflow indicator (`+N`) when the count exceeds
- * `max`. Falls back to colored initials when an assignee has no `avatarUrl`.
- *
- * @example
- * ```ts
- * import { ApexGantt, ColumnKey, renderers } from '@apexcharts/apexgantt';
- *
- * new ApexGantt('#chart', {
- *   series,
- *   columnConfig: [
- *     { key: ColumnKey.Name, title: 'Task' },
- *     {
- *       key: 'assignees',
- *       title: 'Assigned',
- *       render: renderers.avatars({
- *         accessor: (task) => task.assignees,
- *         max: 4,
- *         size: 24,
- *       }),
- *     },
- *   ],
- * });
- * ```
- */
-declare function avatars(options: AvatarsRendererOptions): ColumnRenderer;
-
-/**
  * Configuration for the {@link avatars} column renderer.
  */
 export declare interface AvatarsRendererOptions {
@@ -764,6 +732,14 @@ export declare type BarLabelPosition = 'inside' | 'left' | 'right' | 'auto';
  * falls back to rendering the value of `BarLabelOptions.field`.
  */
 export declare type BarLabelRenderer = (task: Task) => string | HTMLElement | null | undefined;
+
+declare abstract class BaseChart {
+    /* Excluded from this release type: element */
+    /** Destroys the chart instance and cleans up DOM resources. */
+    destroy(): void;
+    /** Returns the unique identifier for this chart instance. */
+    getInstanceId(): string;
+}
 
 /**
  * Planned (baseline) dates for a task, used to visualise schedule variance.
@@ -1110,6 +1086,13 @@ export declare class DataParser {
 }
 
 /**
+ * English defaults for every {@link GanttMessages} string. These reproduce the
+ * exact text the Gantt rendered before localization support, so a chart with no
+ * `locale.messages` overrides is visually and semantically unchanged.
+ */
+export declare const DEFAULT_GANTT_MESSAGES: GanttMessages;
+
+/**
  * Detail payload for the `dependencyArrowUpdate` event.
  *
  * Internal "redraw the arrow" signal fired when a task connected to the edge
@@ -1289,6 +1272,30 @@ declare interface GanttData {
     readonly series: TaskInput[];
 }
 
+/**
+ * A dayjs-compatible locale object (the shape exported by `dayjs/locale/*`
+ * modules). Pass one to {@link LocaleOptions.dateLocale} to localize every date,
+ * month, and weekday the timeline renders. ApexGantt registers it on its own
+ * bundled dayjs instance, so the host does not need to import dayjs locales.
+ *
+ * Structurally mirrors dayjs's `ILocale`; an imported `dayjs/locale/*` object
+ * satisfies it directly. Only `name` is required.
+ */
+export declare interface GanttDateLocale {
+    readonly name: string;
+    readonly weekdays?: string[];
+    readonly weekdaysShort?: string[];
+    readonly weekdaysMin?: string[];
+    readonly months?: string[];
+    readonly monthsShort?: string[];
+    readonly weekStart?: number;
+    readonly yearStart?: number;
+    readonly formats?: Partial<Record<string, string>>;
+    readonly relativeTime?: Partial<Record<string, string>>;
+    readonly meridiem?: (hour: number, minute: number, isLowercase: boolean) => string;
+    readonly ordinal?: (n: number) => string;
+}
+
 declare interface GanttDependencyConfig {
     readonly dependencies: DependencyOptions;
 }
@@ -1414,9 +1421,103 @@ export declare const GanttEvents: {
     readonly HISTORY_CHANGE: "historyChange";
 };
 
+/**
+ * Every user-facing string the Gantt generates internally (toolbar, context
+ * menu, task form, validation, baseline tooltip, add-task row, and bar
+ * aria-labels). Override any subset via {@link LocaleOptions.messages}; unset
+ * keys keep their English defaults ({@link DEFAULT_GANTT_MESSAGES}). Strings
+ * that embed runtime values are functions so each locale controls grammar.
+ */
+export declare interface GanttMessages {
+    /** "Add task" toolbar button. @default 'Add task' */
+    readonly addTask: string;
+    /** "Delete selected" toolbar button. @default 'Delete selected' */
+    readonly deleteSelected: string;
+    /** Undo toolbar button. @default 'Undo (Ctrl+Z)' */
+    readonly undo: string;
+    /** Redo toolbar button. @default 'Redo (Ctrl+Y)' */
+    readonly redo: string;
+    /** Export toolbar button. @default 'Export as SVG' */
+    readonly exportAsSvg: string;
+    /** Alert when export cannot find the chart. @default 'Export failed: Chart not found. Please refresh and try again.' */
+    readonly exportFailedNoChart: string;
+    /** Generic export-failure alert. @default 'Export failed. Please check the console for details.' */
+    readonly exportFailedGeneric: string;
+    /** Context-menu "Edit task". @default 'Edit task' */
+    readonly editTask: string;
+    /** Context-menu "Add child task". @default 'Add child task' */
+    readonly addChildTask: string;
+    /** Context-menu "Add sibling task". @default 'Add sibling task' */
+    readonly addSiblingTask: string;
+    /** Context-menu "Indent". @default 'Indent' */
+    readonly indent: string;
+    /** Context-menu "Outdent". @default 'Outdent' */
+    readonly outdent: string;
+    /** Context-menu delete for a leaf task. @default 'Delete task' */
+    readonly deleteTask: string;
+    /** Context-menu delete for a task with children. @default 'Delete (with children)' */
+    readonly deleteTaskWithChildren: string;
+    /** Task-form name label. @default 'Task Name' */
+    readonly formTaskName: string;
+    /** Task-form start-date label. @default 'Start Date' */
+    readonly formStartDate: string;
+    /** Task-form end-date label. @default 'End Date' */
+    readonly formEndDate: string;
+    /** Task-form progress label. @default 'Progress (%)' */
+    readonly formProgress: string;
+    /** Task-form submit button. @default 'Update' */
+    readonly formSubmit: string;
+    /** Edit-task dialog title. @default `Edit Task: ${name}` */
+    readonly editTaskTitle: (name: string) => string;
+    /** @default 'Start date is required' */
+    readonly validationStartRequired: string;
+    /** @default 'End date is required' */
+    readonly validationEndRequired: string;
+    /** @default 'End date must be after start date' */
+    readonly validationEndAfterStart: string;
+    /** @default 'Task name is required' */
+    readonly validationNameRequired: string;
+    /** @default 'Progress is required' */
+    readonly validationProgressRequired: string;
+    /** @default 'Progress must be between 0 and 100' */
+    readonly validationProgressRange: string;
+    /** Visible label on the inline add-task row. @default '+ Add task' */
+    readonly addTaskRowLabel: string;
+    /** Baseline tooltip "Baseline:" label. @default 'Baseline:' */
+    readonly baselineLabel: string;
+    /** Baseline tooltip "Start:" label. @default 'Start:' */
+    readonly startLabel: string;
+    /** Baseline tooltip "End:" label. @default 'End:' */
+    readonly endLabel: string;
+    /** Builds a summary-bar aria-label. */
+    readonly summaryAriaLabel: (ctx: {
+        name: string;
+        canToggle: boolean;
+        collapsed: boolean;
+    }) => string;
+    /** Builds an interactive/read-only bar aria-label. `progress` is set for read-only bars. */
+    readonly barAriaLabel: (ctx: {
+        name: string;
+        start: string;
+        end: string;
+        progress?: number;
+    }) => string;
+    /** Builds the bar aria-valuetext (interactive bars). */
+    readonly barAriaValueText: (ctx: {
+        start: string;
+        end: string;
+        durationDays: number;
+    }) => string;
+    /** Builds the progress-handle aria-label. @default `${name} progress` */
+    readonly progressAriaLabel: (name: string) => string;
+}
+
 declare type GanttOptions = GanttOptionsInternal;
 
-declare type GanttOptionsInternal = AccessibilityOptions & AnnotationOptions & BorderOptions & CommonOptions & ColumnOptions & CriticalPathOptions & CrosshairOptions & FontOptions & GanttBarOptions & GanttBaselineConfig & GanttCalendarConfig & GanttData & GanttDependencyConfig & GanttRowOptions & InteractiveOptions & ParsingOptions & SelectionOptions & ToolbarOptions & TooltipOptions;
+declare type GanttOptionsInternal = AccessibilityOptions & AnnotationOptions & BorderOptions & CommonOptions & ColumnOptions & CriticalPathOptions & CrosshairOptions & FontOptions & GanttBarOptions & GanttBaselineConfig & GanttCalendarConfig & GanttData & GanttDependencyConfig & GanttRowOptions & InteractiveOptions & ParsingOptions & SelectionOptions & ToolbarOptions & TooltipOptions & {
+    /** Localization, date-locale, and text-direction options. See {@link LocaleOptions}. */
+    readonly locale?: LocaleOptions;
+};
 
 declare interface GanttRowOptions {
     readonly rowBackgroundColors: readonly string[];
@@ -1499,6 +1600,8 @@ export declare interface GanttTheme {
 export declare interface GanttUserOptions {
     /** Color theme preset. `'light'` (default) or `'dark'`. */
     readonly theme?: ThemeMode;
+    /** Localization, date-locale, and text-direction (RTL) options. See {@link LocaleOptions}. @default { direction: 'ltr' } */
+    readonly locale?: LocaleOptions;
     /** Background color of annotation markers. @default '#F9D1FC' */
     readonly annotationBgColor?: string;
     /** Border color of annotation markers. @default '#E273EA' */
@@ -1939,6 +2042,31 @@ declare interface InteractiveOptions {
 export declare const LightTheme: GanttTheme;
 
 /**
+ * Localization, date-locale, and text-direction options.
+ *
+ * With the defaults (`direction: 'ltr'`, no `dateLocale`, no message overrides)
+ * the output is byte-for-byte identical to builds that predate i18n support.
+ */
+export declare interface LocaleOptions {
+    /**
+     * Text and layout direction. `'rtl'` mirrors the timeline horizontally
+     * (time flows right-to-left, the task list moves to the right) and sets
+     * `dir="rtl"` on the container; `'auto'` defers to the document/element.
+     * @default 'ltr'
+     */
+    readonly direction?: TextDirection;
+    /**
+     * dayjs-compatible locale object used to format every date, month, and
+     * weekday in the timeline. Import one from `dayjs/locale/*` (e.g.
+     * `import localeFr from 'dayjs/locale/fr'`) and pass it here. See
+     * {@link GanttDateLocale}.
+     */
+    readonly dateLocale?: GanttDateLocale;
+    /** Overrides for the Gantt's generated strings. See {@link GanttMessages}. */
+    readonly messages?: Partial<GanttMessages>;
+}
+
+/**
  * Controls whether an annotation line or region is drawn horizontally
  * (spanning the full chart width) or vertically (spanning the full chart height).
  */
@@ -2004,36 +2132,6 @@ export declare type ParsingValue = string | {
 };
 
 /**
- * Built-in column renderer that draws an SVG progress ring for the task's
- * completion percentage, with an optional centered numeric label.
- *
- * Reads from `task.progress` by default; override with `accessor` for
- * computed values.
- *
- * @example
- * ```ts
- * import { ApexGantt, ColumnKey, renderers } from '@apexcharts/apexgantt';
- *
- * new ApexGantt('#chart', {
- *   series,
- *   columnConfig: [
- *     { key: ColumnKey.Name, title: 'Task' },
- *     {
- *       key: 'progressRing',
- *       title: '%',
- *       render: renderers.progressRing({
- *         size: 28,
- *         strokeWidth: 3,
- *         progressColor: (_task, value) => value > 80 ? '#22C55E' : value >= 40 ? '#3B82F6' : '#EF4444',
- *       }),
- *     },
- *   ],
- * });
- * ```
- */
-declare function progressRing(options?: ProgressRingRendererOptions): ColumnRenderer;
-
-/**
  * Configuration for the {@link progressRing} column renderer.
  */
 export declare interface ProgressRingRendererOptions {
@@ -2056,15 +2154,14 @@ export declare interface ProgressRingRendererOptions {
     readonly labelColor?: string;
 }
 
-declare namespace renderers {
-    export {
+export declare namespace renderers {
+        {
         avatars,
         AvatarsRendererOptions,
         progressRing,
         ProgressRingRendererOptions
     }
 }
-export { renderers }
 
 /**
  * Detail payload for the `selectionChange` event.
@@ -2404,6 +2501,8 @@ export declare interface TaskValidationErrorEventDetail {
     }>;
     timestamp: number;
 }
+
+export { TextDirection }
 
 /** Color-mode selector. Switches between the built-in `LightTheme` and `DarkTheme` presets. */
 export declare type ThemeMode = 'dark' | 'light';

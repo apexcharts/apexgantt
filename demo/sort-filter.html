@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Sorting & Filtering Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .demo-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .demo-header {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+      .demo-header h1 {
+        margin: 0 0 6px;
+        color: #222;
+        font-size: 22px;
+      }
+      .demo-header p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+      }
+      .instructions {
+        background: #e8f0fe;
+        border: 1px solid #a8c7fa;
+        border-radius: 6px;
+        padding: 14px 18px;
+        color: #1a56a0;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .instructions strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+      .instructions ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .toolbar {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .toolbar label {
+        font-size: 13px;
+        color: #555;
+        font-weight: 600;
+      }
+      .btn {
+        padding: 6px 14px;
+        border-radius: 4px;
+        border: 1px solid #c0c0c0;
+        background: #fff;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn:hover {
+        background: #f0f0f0;
+      }
+      .btn-primary {
+        background: #005fcc;
+        color: white;
+        border-color: #004fa8;
+      }
+      .sep {
+        width: 1px;
+        align-self: stretch;
+        background: #e0e0e0;
+        margin: 0 4px;
+      }
+      input[type='text'] {
+        padding: 6px 10px;
+        border: 1px solid #c0c0c0;
+        border-radius: 4px;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 13px;
+        width: 200px;
+      }
+      #svg-gantt {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        height: 460px;
+      }
+      .status {
+        font-size: 13px;
+        color: #444;
+      }
+      .status b {
+        color: #005fcc;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div class="demo-header">
+        <h1>ApexGantt — Sorting & Filtering</h1>
+        <p>
+          Hierarchy-preserving sort (siblings reorder within their parent) plus a view-only filter that keeps matching
+          tasks and their ancestors.
+        </p>
+      </div>
+
+      <div class="instructions">
+        <strong>How to interact</strong>
+        <ul>
+          <li><strong>Click a column header</strong> (Task Name, Start, Duration, Progress) to cycle ascending → descending → none.</li>
+          <li><strong>Shift+click</strong> headers to sort by several columns at once (a precedence number appears by each caret).</li>
+          <li>Use the <strong>Sort by</strong> buttons to drive sorting through the public API.</li>
+          <li>Type in the <strong>search box</strong> to filter by task name; ancestors of matches stay visible.</li>
+          <li><strong>Show incomplete only</strong> filters to tasks with progress &lt; 100%.</li>
+        </ul>
+      </div>
+
+      <div class="toolbar">
+        <label>Sort by:</label>
+        <button class="btn" onclick="gantt.sort({ key: ApexGantt.ColumnKey.Name, direction: 'asc' })">Name ↑</button>
+        <button class="btn" onclick="gantt.sort({ key: ApexGantt.ColumnKey.StartTime, direction: 'asc' })">Start ↑</button>
+        <button class="btn" onclick="gantt.sort({ key: ApexGantt.ColumnKey.Progress, direction: 'desc' })">Progress ↓</button>
+        <button class="btn" onclick="gantt.clearSort()">Clear sort</button>
+        <div class="sep"></div>
+        <label>Filter:</label>
+        <span style="font-size: 13px; color: #666">Use the search box or <b>Filter</b> builder in the chart toolbar ↗</span>
+        <button class="btn" onclick="gantt.filter((t) => (t.progress ?? 0) < 100)">Show incomplete only</button>
+        <button class="btn btn-primary" onclick="gantt.clearFilter()">Clear filter</button>
+      </div>
+
+      <div id="svg-gantt"></div>
+
+      <div class="status" id="status"></div>
+    </div>
+
+    <script>
+      const container = document.getElementById('svg-gantt');
+
+      const gantt = new ApexGantt(container, {
+        height: 440,
+        enableQuickFilter: true,
+        quickFilter: { placeholder: 'Search tasks…', fields: ['name'] },
+        enableFilterBuilder: true,
+        columnConfig: [
+          { key: ApexGantt.ColumnKey.Name, title: 'Task Name', flexGrow: 3 },
+          { key: ApexGantt.ColumnKey.StartTime, title: 'Start', flexGrow: 1.5 },
+          { key: ApexGantt.ColumnKey.Duration, title: 'Duration', flexGrow: 1 },
+          { key: ApexGantt.ColumnKey.Progress, title: 'Progress', flexGrow: 1 },
+        ],
+        series: [
+          { id: 'phase-2', name: 'Phase 2 — Design', startTime: '2024-02-01', endTime: '2024-02-29', progress: 60 },
+          { id: 'task-5', name: 'Visual design', startTime: '2024-02-15', endTime: '2024-02-29', parentId: 'phase-2', progress: 40 },
+          { id: 'task-4', name: 'UX wireframes', startTime: '2024-02-01', endTime: '2024-02-14', parentId: 'phase-2', progress: 100 },
+          { id: 'phase-1', name: 'Phase 1 — Discovery', startTime: '2024-01-01', endTime: '2024-01-31', progress: 100 },
+          { id: 'task-3', name: 'Sign-off', startTime: '2024-01-28', endTime: '2024-01-31', parentId: 'phase-1', progress: 100 },
+          { id: 'task-1', name: 'Stakeholder interviews', startTime: '2024-01-01', endTime: '2024-01-10', parentId: 'phase-1', progress: 100 },
+          { id: 'task-2', name: 'Requirements doc', startTime: '2024-01-11', endTime: '2024-01-25', parentId: 'phase-1', progress: 100 },
+          { id: 'phase-3', name: 'Phase 3 — Development', startTime: '2024-03-01', endTime: '2024-04-30', progress: 20 },
+          { id: 'task-7', name: 'Frontend implementation', startTime: '2024-04-01', endTime: '2024-04-25', parentId: 'phase-3', progress: 5 },
+          { id: 'task-6', name: 'Backend API', startTime: '2024-03-01', endTime: '2024-03-31', parentId: 'phase-3', progress: 35 },
+        ],
+      });
+
+      gantt.render();
+
+      // ── Status line reflecting sortChange / filterChange events ──
+      const status = document.getElementById('status');
+      function renderStatus() {
+        const sort = gantt.getSort();
+        const sortText = sort.length ? sort.map((s) => `${s.key} ${s.direction}`).join(', ') : 'natural (input) order';
+        status.innerHTML = `Sort: <b>${sortText}</b> &nbsp;·&nbsp; Filter: <b>${gantt.isFiltered() ? 'active' : 'none'}</b>`;
+      }
+      container.addEventListener('sortChange', renderStatus);
+      container.addEventListener('filterChange', renderStatus);
+      renderStatus();
+    </script>
+  </body>
+</html>

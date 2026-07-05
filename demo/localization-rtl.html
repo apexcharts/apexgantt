@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Localization &amp; RTL</title>
+    <!-- Load dayjs + locales from CDN purely to obtain dayjs locale OBJECTS.
+         ApexGantt registers the object you pass onto its own bundled dayjs, so the
+         host page needs no further dayjs setup. (English is built into dayjs.) -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/fr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/de.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/he.js"></script>
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      :root {
+        --ink: #1a1a2e;
+        --muted: #64748b;
+        --line: #e2e8f0;
+        --accent: #6366f1;
+        --accent-bg: #eef2ff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: 'Segoe UI', Tahoma, system-ui, sans-serif;
+        margin: 0 auto;
+        padding: 24px;
+        max-width: 1140px;
+        color: var(--ink);
+        background: #fff;
+      }
+      h2 {
+        font-size: 22px;
+        margin: 0 0 4px;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 0;
+        line-height: 1.5;
+      }
+      .switcher {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 18px 0;
+      }
+      .lang-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 14px;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          background 0.15s,
+          color 0.15s;
+      }
+      .lang-btn:hover {
+        border-color: var(--accent);
+      }
+      .lang-btn.active {
+        background: var(--accent-bg);
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .lang-btn .dir {
+        font-size: 10px;
+        letter-spacing: 0.5px;
+        opacity: 0.75;
+        border: 1px solid currentColor;
+        border-radius: 4px;
+        padding: 0 4px;
+      }
+      .legend {
+        margin-top: 14px;
+        font-size: 12.5px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+      .legend code {
+        background: #f1f5f9;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+      .legend b {
+        color: var(--ink);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>Localization &amp; RTL</h2>
+      <p class="subtitle">
+        Pick a language to re-render the Gantt. <code>locale.dateLocale</code> localizes the timeline month / weekday
+        names, <code>locale.messages</code> translates the toolbar, context menu, task form, and validation, and
+        <code>locale.direction: 'rtl'</code> flows the whole chart right-to-left, including a mirrored time axis (the
+        earliest date sits on the right). Try the toolbar's add / edit and right-click a row.
+      </p>
+    </header>
+
+    <div class="switcher" id="switcher"></div>
+
+    <div id="host"></div>
+
+    <p class="legend">
+      Localized here: <b>timeline month / weekday labels</b> (via the dayjs locale object),
+      <b>toolbar + context-menu + task-form strings</b>, <b>validation messages</b>, and <b>bar aria-labels</b>. For
+      Arabic / Hebrew the time axis, task-list panel, and chrome <b>mirror right-to-left</b>. Defaults (no
+      <code>locale</code>) stay English, left-to-right.
+    </p>
+
+    <script>
+      // names: task labels, translated so the re-render is visually obvious.
+      // dayjsName: the locale loaded above; dateLocale reads it from dayjs.Ls.
+      // messages: the user-facing strings ApexGantt exposes via locale.messages.
+      const LOCALES = {
+        en: {
+          label: 'English',
+          dir: 'ltr',
+          dayjsName: 'en',
+          names: {
+            phase: 'Design phase',
+            research: 'Research',
+            mockups: 'Mockups',
+            dev: 'Development',
+            launch: 'Launch',
+          },
+          messages: {},
+        },
+        fr: {
+          label: 'Français',
+          dir: 'ltr',
+          dayjsName: 'fr',
+          names: {
+            phase: 'Phase de conception',
+            research: 'Recherche',
+            mockups: 'Maquettes',
+            dev: 'Développement',
+            launch: 'Lancement',
+          },
+          messages: {
+            addTask: 'Ajouter une tâche',
+            deleteSelected: 'Supprimer la sélection',
+            undo: 'Annuler (Ctrl+Z)',
+            redo: 'Rétablir (Ctrl+Y)',
+            exportAsSvg: 'Exporter en SVG',
+            editTask: 'Modifier la tâche',
+            addChildTask: 'Ajouter une sous-tâche',
+            addSiblingTask: 'Ajouter une tâche sœur',
+            indent: 'Indenter',
+            outdent: 'Désindenter',
+            deleteTask: 'Supprimer la tâche',
+            deleteTaskWithChildren: 'Supprimer (avec les sous-tâches)',
+            formTaskName: 'Nom de la tâche',
+            formStartDate: 'Date de début',
+            formEndDate: 'Date de fin',
+            formProgress: 'Progression (%)',
+            formSubmit: 'Mettre à jour',
+            editTaskTitle: (name) => `Modifier la tâche : ${name}`,
+            addTaskRowLabel: '+ Ajouter une tâche',
+            validationNameRequired: 'Le nom de la tâche est requis',
+            validationStartRequired: 'La date de début est requise',
+            validationEndRequired: 'La date de fin est requise',
+            validationEndAfterStart: 'La date de fin doit être postérieure à la date de début',
+          },
+        },
+        de: {
+          label: 'Deutsch',
+          dir: 'ltr',
+          dayjsName: 'de',
+          names: {
+            phase: 'Entwurfsphase',
+            research: 'Recherche',
+            mockups: 'Mockups',
+            dev: 'Entwicklung',
+            launch: 'Start',
+          },
+          messages: {
+            addTask: 'Aufgabe hinzufügen',
+            deleteSelected: 'Auswahl löschen',
+            undo: 'Rückgängig (Strg+Z)',
+            redo: 'Wiederholen (Strg+Y)',
+            exportAsSvg: 'Als SVG exportieren',
+            editTask: 'Aufgabe bearbeiten',
+            addChildTask: 'Unteraufgabe hinzufügen',
+            addSiblingTask: 'Aufgabe auf gleicher Ebene hinzufügen',
+            indent: 'Einrücken',
+            outdent: 'Ausrücken',
+            deleteTask: 'Aufgabe löschen',
+            deleteTaskWithChildren: 'Löschen (mit Unteraufgaben)',
+            formTaskName: 'Aufgabenname',
+            formStartDate: 'Startdatum',
+            formEndDate: 'Enddatum',
+            formProgress: 'Fortschritt (%)',
+            formSubmit: 'Aktualisieren',
+            editTaskTitle: (name) => `Aufgabe bearbeiten: ${name}`,
+            addTaskRowLabel: '+ Aufgabe hinzufügen',
+            validationNameRequired: 'Aufgabenname ist erforderlich',
+            validationStartRequired: 'Startdatum ist erforderlich',
+            validationEndRequired: 'Enddatum ist erforderlich',
+            validationEndAfterStart: 'Das Enddatum muss nach dem Startdatum liegen',
+          },
+        },
+        ar: {
+          label: 'العربية',
+          dir: 'rtl',
+          dayjsName: 'ar',
+          names: {phase: 'مرحلة التصميم', research: 'بحث', mockups: 'نماذج أولية', dev: 'التطوير', launch: 'الإطلاق'},
+          messages: {
+            addTask: 'إضافة مهمة',
+            deleteSelected: 'حذف المحدد',
+            undo: 'تراجع (Ctrl+Z)',
+            redo: 'إعادة (Ctrl+Y)',
+            exportAsSvg: 'تصدير كـ SVG',
+            editTask: 'تعديل المهمة',
+            addChildTask: 'إضافة مهمة فرعية',
+            addSiblingTask: 'إضافة مهمة مماثلة',
+            indent: 'إزاحة للداخل',
+            outdent: 'إزاحة للخارج',
+            deleteTask: 'حذف المهمة',
+            deleteTaskWithChildren: 'حذف (مع المهام الفرعية)',
+            formTaskName: 'اسم المهمة',
+            formStartDate: 'تاريخ البدء',
+            formEndDate: 'تاريخ الانتهاء',
+            formProgress: 'النسبة (%)',
+            formSubmit: 'تحديث',
+            editTaskTitle: (name) => `تعديل المهمة: ${name}`,
+            addTaskRowLabel: '+ إضافة مهمة',
+            validationNameRequired: 'اسم المهمة مطلوب',
+            validationStartRequired: 'تاريخ البدء مطلوب',
+            validationEndRequired: 'تاريخ الانتهاء مطلوب',
+            validationEndAfterStart: 'يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء',
+          },
+        },
+        he: {
+          label: 'עברית',
+          dir: 'rtl',
+          dayjsName: 'he',
+          names: {phase: 'שלב העיצוב', research: 'מחקר', mockups: 'אבטיפוס', dev: 'פיתוח', launch: 'השקה'},
+          messages: {
+            addTask: 'הוספת משימה',
+            deleteSelected: 'מחיקת הנבחרים',
+            undo: 'בטל (Ctrl+Z)',
+            redo: 'בצע שוב (Ctrl+Y)',
+            exportAsSvg: 'ייצוא כ-SVG',
+            editTask: 'עריכת משימה',
+            addChildTask: 'הוספת תת-משימה',
+            addSiblingTask: 'הוספת משימה באותה רמה',
+            indent: 'הזחה פנימה',
+            outdent: 'הזחה החוצה',
+            deleteTask: 'מחיקת משימה',
+            deleteTaskWithChildren: 'מחיקה (כולל תת-משימות)',
+            formTaskName: 'שם המשימה',
+            formStartDate: 'תאריך התחלה',
+            formEndDate: 'תאריך סיום',
+            formProgress: 'התקדמות (%)',
+            formSubmit: 'עדכון',
+            editTaskTitle: (name) => `עריכת משימה: ${name}`,
+            addTaskRowLabel: '+ הוספת משימה',
+            validationNameRequired: 'שם המשימה נדרש',
+            validationStartRequired: 'תאריך התחלה נדרש',
+            validationEndRequired: 'תאריך סיום נדרש',
+            validationEndAfterStart: 'תאריך הסיום חייב להיות אחרי תאריך ההתחלה',
+          },
+        },
+      };
+
+      const ORDER = ['en', 'fr', 'de', 'ar', 'he'];
+
+      function buildSeries(n) {
+        return [
+          {id: 'p1', name: n.phase, progress: 60},
+          {id: 't1', name: n.research, startTime: '2025-01-06', endTime: '2025-01-20', parentId: 'p1', progress: 100},
+          {id: 't2', name: n.mockups, startTime: '2025-01-21', endTime: '2025-02-10', parentId: 'p1', progress: 70},
+          {id: 't3', name: n.dev, startTime: '2025-02-11', endTime: '2025-04-15', progress: 25},
+          {id: 'm1', name: n.launch, startTime: '2025-04-16', type: 'milestone'},
+        ];
+      }
+
+      const host = document.getElementById('host');
+      const switcher = document.getElementById('switcher');
+      let current = null;
+
+      function mount(key) {
+        const cfg = LOCALES[key];
+
+        document.documentElement.setAttribute('lang', key);
+        document.documentElement.setAttribute('dir', cfg.dir);
+        [...switcher.children].forEach((b) => b.classList.toggle('active', b.dataset.key === key));
+
+        // ApexGantt owns observers / listeners: tear the old instance down, then
+        // re-mount into a fresh node.
+        if (current) current.destroy();
+        host.innerHTML = '';
+        const el = document.createElement('div');
+        host.appendChild(el);
+
+        current = new ApexGantt(el, {
+          series: buildSeries(cfg.names),
+          width: '100%',
+          height: 440,
+          inputDateFormat: 'YYYY-MM-DD',
+          enableTaskCRUDToolbar: true,
+          enableContextMenu: true,
+          enableTaskEdit: true,
+          canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;',
+          locale: {
+            direction: cfg.dir,
+            // dayjs.Ls holds the locale objects loaded from the CDN above.
+            dateLocale: dayjs.Ls[cfg.dayjsName],
+            messages: cfg.messages,
+          },
+        });
+        current.render();
+      }
+
+      ORDER.forEach((key) => {
+        const cfg = LOCALES[key];
+        const btn = document.createElement('button');
+        btn.className = 'lang-btn';
+        btn.dataset.key = key;
+        btn.innerHTML = `<span>${cfg.label}</span><span class="dir">${cfg.dir.toUpperCase()}</span>`;
+        btn.addEventListener('click', () => mount(key));
+        switcher.appendChild(btn);
+      });
+
+      mount('en');
+    </script>
+  </body>
+</html>

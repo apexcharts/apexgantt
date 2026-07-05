@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Extended Column Catalog Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .demo-container {
+        max-width: 1500px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .demo-header {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+      .demo-header h1 {
+        margin: 0 0 6px;
+        color: #222;
+        font-size: 22px;
+      }
+      .demo-header p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+      }
+      .instructions {
+        background: #e8f0fe;
+        border: 1px solid #a8c7fa;
+        border-radius: 6px;
+        padding: 14px 18px;
+        color: #1a56a0;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .instructions strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+      .instructions ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      #svg-gantt {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        height: 480px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div class="demo-header">
+        <h1>ApexGantt — Extended Column Catalog</h1>
+        <p>
+          Built-in columns beyond the basics: Predecessors and Successors (derived from the dependency graph),
+          Assignees, and baseline Start / End / Variance. Each is sortable (click a header) and filterable.
+        </p>
+      </div>
+
+      <div class="instructions">
+        <strong>What to look at</strong>
+        <ul>
+          <li><strong>Predecessors / Successors</strong> show related tasks by WBS, with a non-FS type and lag suffix (e.g. <code>2SS+1d</code>).</li>
+          <li><strong>Variance</strong> compares each task's finish to its baseline end (<code>+</code> = late, <code>-</code> = early).</li>
+          <li><strong>Click a column header</strong> to sort by it; the baseline enabled below draws the striped baseline bars too.</li>
+        </ul>
+      </div>
+
+      <div id="svg-gantt"></div>
+    </div>
+
+    <script>
+      const container = document.getElementById('svg-gantt');
+      const ColumnKey = ApexGantt.ColumnKey;
+
+      const gantt = new ApexGantt(container, {
+        height: 460,
+        baseline: {enabled: true},
+        columnConfig: [
+          {key: ColumnKey.Wbs, title: 'WBS', flexGrow: 0.6},
+          {key: ColumnKey.Name, title: 'Task Name', flexGrow: 2.4},
+          {key: ColumnKey.Assignees, title: 'Assignees', flexGrow: 1.4},
+          {key: ColumnKey.Predecessors, title: 'Pred.', flexGrow: 0.9},
+          {key: ColumnKey.Successors, title: 'Succ.', flexGrow: 0.9},
+          {key: ColumnKey.BaselineEnd, title: 'Baseline End', flexGrow: 1.2},
+          {key: ColumnKey.BaselineVariance, title: 'Variance', flexGrow: 0.9},
+        ],
+        series: [
+          {
+            id: 't1',
+            name: 'Requirements',
+            startTime: '2024-01-01',
+            endTime: '2024-01-10',
+            progress: 100,
+            assignees: [{name: 'Ada Lovelace'}],
+            baseline: {start: '2024-01-01', end: '2024-01-08'},
+          },
+          {
+            id: 't2',
+            name: 'Design',
+            startTime: '2024-01-11',
+            endTime: '2024-01-22',
+            progress: 70,
+            assignees: [{name: 'Bo Chen'}, {name: 'Kai Ito'}],
+            baseline: {start: '2024-01-09', end: '2024-01-20'},
+            dependency: {taskId: 't1', type: 'FS', lag: 0},
+          },
+          {
+            id: 't3',
+            name: 'Implementation',
+            startTime: '2024-01-18',
+            endTime: '2024-02-09',
+            progress: 30,
+            assignees: [{name: 'Bo Chen'}],
+            baseline: {start: '2024-01-20', end: '2024-02-05'},
+            dependency: {taskId: 't2', type: 'SS', lag: 5},
+          },
+          {
+            id: 't4',
+            name: 'QA & Launch',
+            startTime: '2024-02-10',
+            endTime: '2024-02-20',
+            progress: 0,
+            assignees: [{name: 'Mia Park'}],
+            baseline: {start: '2024-02-06', end: '2024-02-16'},
+            dependency: {taskId: 't3', type: 'FS', lag: 0},
+          },
+        ],
+      });
+
+      gantt.render();
+    </script>
+  </body>
+</html>

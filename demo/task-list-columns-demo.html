@@ -243,8 +243,13 @@
       <div class="demo-header">
         <h1>ApexGantt — Task List Columns</h1>
         <p>
-          Use <code>columnConfig</code> to control which columns appear in the task list, their order, and width. Toggle
-          columns on/off, drag to reorder, or set a minimum pixel width per column — the chart updates instantly.
+          Use <code>columnConfig</code> to control which columns appear in the task list, their order, and width. By
+          default (<code>autoSizeColumns</code>) each column fits its header + content and the panel grows so nothing
+          clips; toggle it off to compare with the legacy fixed-width behavior. Toggle columns on/off, drag to reorder,
+          or set a minimum pixel width per column — the chart updates instantly.
+          <strong>Tip:</strong> drag the handle at the right edge of any column header to make that column wider or
+          thinner (double-click the handle to reset it). Disable per-column resizing with
+          <code>resizableColumns: false</code>.
         </p>
       </div>
 
@@ -257,6 +262,10 @@
           <div class="control-group">
             <label>Show / hide columns</label>
             <div class="col-toggles" id="col-toggles"></div>
+            <label style="margin-top: 12px; display: flex; align-items: center; gap: 6px; font-weight: 400">
+              <input type="checkbox" id="auto-size" checked onchange="autoSize = this.checked; applyColumns();" />
+              Auto-size columns to content
+            </label>
           </div>
 
           <!-- Drag-to-reorder -->
@@ -299,8 +308,10 @@
       let columnOrder = ['name', 'startTime', 'duration', 'progress'];
       // Visibility map
       const visible = {name: true, startTime: true, duration: true, progress: true};
-      // Min-width overrides in px (null = use default)
+      // Min-width overrides in px (used as floors; content can grow past them)
       const minWidths = {name: 120, startTime: 70, duration: 50, progress: 50};
+      // Whether columns auto-size to fit their content (default on).
+      let autoSize = true;
 
       // ── Task data ────────────────────────────────────────────────────────────
 
@@ -473,6 +484,7 @@
         viewMode: 'month',
         series: tasks,
         columnConfig: buildColumnConfig(),
+        autoSizeColumns: autoSize,
         tasksContainerWidth: computeTasksContainerWidth(),
       });
 
@@ -482,7 +494,12 @@
 
       function applyColumns() {
         const config = buildColumnConfig();
-        gantt.update({series: tasks, columnConfig: config, tasksContainerWidth: computeTasksContainerWidth()});
+        gantt.update({
+          series: tasks,
+          columnConfig: config,
+          autoSizeColumns: autoSize,
+          tasksContainerWidth: computeTasksContainerWidth(),
+        });
         updateConfigDisplay(config);
         syncControls();
       }

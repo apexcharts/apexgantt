@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Split Tasks Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .demo-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .demo-header {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+      .demo-header h1 {
+        margin: 0 0 6px;
+        color: #222;
+        font-size: 22px;
+      }
+      .demo-header p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+      }
+      .instructions {
+        background: #e8f0fe;
+        border: 1px solid #a8c7fa;
+        border-radius: 6px;
+        padding: 14px 18px;
+        color: #1a56a0;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .instructions strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+      .instructions ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .toolbar {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        padding: 6px 14px;
+        border-radius: 4px;
+        border: 1px solid #c0c0c0;
+        background: #fff;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn:hover {
+        background: #f0f0f0;
+      }
+      .btn-primary {
+        background: #005fcc;
+        color: white;
+        border-color: #004fa8;
+      }
+      #svg-gantt {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        height: 460px;
+      }
+      .status {
+        font-size: 13px;
+        color: #444;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div class="demo-header">
+        <h1>ApexGantt — Split Tasks</h1>
+        <p>
+          A task can be split into worked segments separated by gaps on a single row. The overall span, dependencies,
+          and drag/resize all keep working — the segments ride along.
+        </p>
+      </div>
+
+      <div class="instructions">
+        <strong>How to interact</strong>
+        <ul>
+          <li>"Implementation" starts pre-split into two worked spans with a gap.</li>
+          <li><strong>Split "Testing"</strong> cuts it at Jun 18 and resumes Jun 22 (a 3-day gap).</li>
+          <li><strong>Drag</strong> a split bar — all its segments move together. <strong>Resize</strong> a handle — the outer segment adjusts.</li>
+          <li><strong>Clear split</strong> restores a single contiguous bar.</li>
+        </ul>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn btn-primary" onclick="gantt.splitTask('t3', '2026-06-18', { resumeAt: '2026-06-22' }); refresh();">Split "Testing" (gap Jun 18–22)</button>
+        <button class="btn" onclick="gantt.updateTask('t3', { segments: [] }); refresh();">Clear "Testing" split</button>
+      </div>
+
+      <div id="svg-gantt"></div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <script>
+      const container = document.getElementById('svg-gantt');
+
+      const gantt = new ApexGantt(container, {
+        height: 440,
+        series: [
+          {id: 't1', name: 'Design', startTime: '2026-06-01', endTime: '2026-06-08', progress: 100},
+          {
+            id: 't2',
+            name: 'Implementation',
+            startTime: '2026-06-09',
+            endTime: '2026-06-24',
+            progress: 55,
+            // Pre-split: work Jun 9–13, pause, resume Jun 19–24.
+            segments: [
+              {start: '2026-06-09', end: '2026-06-13'},
+              {start: '2026-06-19', end: '2026-06-24'},
+            ],
+            dependency: {taskId: 't1', type: 'FS', lag: 0},
+          },
+          {
+            id: 't3',
+            name: 'Testing',
+            startTime: '2026-06-16',
+            endTime: '2026-06-26',
+            progress: 20,
+            dependency: {taskId: 't2', type: 'SS', lag: 5},
+          },
+        ],
+      });
+
+      gantt.render();
+
+      const status = document.getElementById('status');
+      function refresh() {
+        const split = ['t1', 't2', 't3'].filter((id) => gantt.isSplit(id));
+        status.textContent = split.length ? `Split tasks: ${split.join(', ')}` : 'No split tasks';
+      }
+      refresh();
+    </script>
+  </body>
+</html>

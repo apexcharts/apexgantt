@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - Grouping Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .demo-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .demo-header {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+      .demo-header h1 {
+        margin: 0 0 6px;
+        color: #222;
+        font-size: 22px;
+      }
+      .demo-header p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+      }
+      .instructions {
+        background: #e8f0fe;
+        border: 1px solid #a8c7fa;
+        border-radius: 6px;
+        padding: 14px 18px;
+        color: #1a56a0;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .instructions strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+      .instructions ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .toolbar {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .toolbar label {
+        font-size: 13px;
+        color: #555;
+        font-weight: 600;
+      }
+      .btn {
+        padding: 6px 14px;
+        border-radius: 4px;
+        border: 1px solid #c0c0c0;
+        background: #fff;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn:hover {
+        background: #f0f0f0;
+      }
+      .btn-primary {
+        background: #005fcc;
+        color: white;
+        border-color: #004fa8;
+      }
+      .sep {
+        width: 1px;
+        align-self: stretch;
+        background: #e0e0e0;
+        margin: 0 4px;
+      }
+      #svg-gantt {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        height: 520px;
+      }
+      .status {
+        font-size: 13px;
+        color: #444;
+      }
+      .status b {
+        color: #005fcc;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div class="demo-header">
+        <h1>ApexGantt — Grouping</h1>
+        <p>
+          Group the task grid by any field. While grouping is active the parent/child tree is suspended and tasks are
+          bucketed under collapsible group headers, each showing a member count.
+        </p>
+      </div>
+
+      <div class="instructions">
+        <strong>How to interact</strong>
+        <ul>
+          <li>Use the <strong>Group by</strong> buttons to group by Team, Priority, or Progress.</li>
+          <li>Click a <strong>group header chevron</strong> to collapse/expand that group.</li>
+          <li><strong>Clear grouping</strong> restores the original task hierarchy.</li>
+          <li>Grouping composes with the <strong>search box</strong> in the chart toolbar (filtering drops non-matching members).</li>
+        </ul>
+      </div>
+
+      <div class="toolbar">
+        <label>Group by:</label>
+        <button class="btn" onclick="gantt.groupBy({ field: 'team', accessor: (t) => t.team, direction: 'asc' })">Team</button>
+        <button class="btn" onclick="gantt.groupBy({ field: 'priority', accessor: (t) => t.priority })">Priority</button>
+        <button class="btn" onclick="gantt.groupBy(ApexGantt.ColumnKey.Progress)">Progress</button>
+        <button class="btn btn-primary" onclick="gantt.clearGrouping()">Clear grouping</button>
+      </div>
+
+      <div id="svg-gantt"></div>
+
+      <div class="status" id="status"></div>
+    </div>
+
+    <script>
+      const container = document.getElementById('svg-gantt');
+
+      const gantt = new ApexGantt(container, {
+        height: 500,
+        enableQuickFilter: true,
+        quickFilter: { placeholder: 'Search tasks…', fields: ['name'] },
+        columnConfig: [
+          { key: ApexGantt.ColumnKey.Name, title: 'Task Name', flexGrow: 3 },
+          { key: 'team', title: 'Team', flexGrow: 1.2, accessor: (t) => t.team },
+          { key: 'priority', title: 'Priority', flexGrow: 1, accessor: (t) => t.priority },
+          { key: ApexGantt.ColumnKey.Progress, title: 'Progress', flexGrow: 1 },
+        ],
+        series: [
+          { id: 't1', name: 'Stakeholder interviews', startTime: '2024-01-01', endTime: '2024-01-10', progress: 100, team: 'Research', priority: 'High' },
+          { id: 't2', name: 'Requirements doc', startTime: '2024-01-11', endTime: '2024-01-25', progress: 100, team: 'Research', priority: 'Medium' },
+          { id: 't3', name: 'UX wireframes', startTime: '2024-02-01', endTime: '2024-02-14', progress: 80, team: 'Design', priority: 'High' },
+          { id: 't4', name: 'Visual design', startTime: '2024-02-15', endTime: '2024-02-29', progress: 40, team: 'Design', priority: 'Medium' },
+          { id: 't5', name: 'Backend API', startTime: '2024-03-01', endTime: '2024-03-31', progress: 35, team: 'Engineering', priority: 'High' },
+          { id: 't6', name: 'Frontend implementation', startTime: '2024-04-01', endTime: '2024-04-25', progress: 10, team: 'Engineering', priority: 'High' },
+          { id: 't7', name: 'QA test plan', startTime: '2024-04-10', endTime: '2024-04-20', progress: 0, team: 'Engineering', priority: 'Low' },
+          { id: 't8', name: 'Launch checklist', startTime: '2024-04-26', endTime: '2024-04-30', progress: 0, team: 'Research', priority: 'Low' },
+        ],
+      });
+
+      gantt.render();
+
+      // ── Status line reflecting groupChange events ──
+      const status = document.getElementById('status');
+      function renderStatus(e) {
+        const g = gantt.getGroupBy();
+        if (!g) {
+          status.innerHTML = 'Grouping: <b>none</b> (tree view)';
+          return;
+        }
+        const count = e && e.detail ? e.detail.groupCount : '';
+        status.innerHTML = `Grouping by: <b>${g.field}</b> &nbsp;·&nbsp; Groups: <b>${count}</b>`;
+      }
+      container.addEventListener('groupChange', renderStatus);
+      renderStatus();
+    </script>
+  </body>
+</html>

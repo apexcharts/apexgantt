@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ApexGantt - UI State Persistence Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="../apexgantt.min.js"></script>
+    <style>
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .demo-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .demo-header {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+      .demo-header h1 {
+        margin: 0 0 6px;
+        color: #222;
+        font-size: 22px;
+      }
+      .demo-header p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+      }
+      .instructions {
+        background: #e8f0fe;
+        border: 1px solid #a8c7fa;
+        border-radius: 6px;
+        padding: 14px 18px;
+        color: #1a56a0;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .instructions strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+      .instructions ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .toolbar {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .toolbar label {
+        font-size: 13px;
+        color: #555;
+        font-weight: 600;
+      }
+      .btn {
+        padding: 6px 14px;
+        border-radius: 4px;
+        border: 1px solid #c0c0c0;
+        background: #fff;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn:hover {
+        background: #f0f0f0;
+      }
+      .btn-primary {
+        background: #005fcc;
+        color: white;
+        border-color: #004fa8;
+      }
+      .btn-danger {
+        color: #b3261e;
+        border-color: #e0aca9;
+      }
+      .sep {
+        width: 1px;
+        align-self: stretch;
+        background: #e0e0e0;
+        margin: 0 4px;
+      }
+      #svg-gantt {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        height: 460px;
+      }
+      .status {
+        font-size: 13px;
+        color: #444;
+      }
+      .status b {
+        color: #005fcc;
+      }
+      pre.snapshot {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        border-radius: 8px;
+        padding: 14px 16px;
+        font-size: 12px;
+        line-height: 1.5;
+        overflow: auto;
+        max-height: 180px;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <div class="demo-header">
+        <h1>ApexGantt — UI State Persistence</h1>
+        <p>
+          Zoom, scroll, expand/collapse, selection, sort, and filter are captured as a serializable snapshot via
+          <code>getState()</code> / <code>setState()</code>. This demo also enables <code>persistState</code>, so the
+          view is remembered across reloads via localStorage.
+        </p>
+      </div>
+
+      <div class="instructions">
+        <strong>How to interact</strong>
+        <ul>
+          <li>Change the view: <strong>sort</strong> a column, <strong>collapse</strong> a phase, <strong>select</strong> a row, or <strong>zoom</strong> (Ctrl + scroll).</li>
+          <li>This chart has <code>persistState: true</code> — <strong>reload the page</strong> and the view comes back exactly as you left it.</li>
+          <li><strong>Save snapshot</strong> captures the current state; <strong>mess it up</strong> then <strong>Restore snapshot</strong> to see <code>setState()</code> put it back.</li>
+          <li><strong>Reset</strong> clears the persisted state from localStorage.</li>
+        </ul>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn" onclick="gantt.sort({ key: ApexGantt.ColumnKey.Name, direction: 'asc' })">Sort by name ↑</button>
+        <button class="btn" onclick="gantt.setState({ collapsed: ['phase-1', 'phase-3'] })">Collapse phases 1 &amp; 3</button>
+        <button class="btn" onclick="gantt.setState({ collapsed: [] })">Expand all</button>
+        <div class="sep"></div>
+        <button class="btn btn-primary" onclick="saveSnapshot()">Save snapshot</button>
+        <button class="btn" onclick="messItUp()">Mess it up</button>
+        <button class="btn" onclick="restoreSnapshot()">Restore snapshot</button>
+        <div class="sep"></div>
+        <button class="btn btn-danger" onclick="resetPersisted()">Reset (clear storage)</button>
+      </div>
+
+      <div id="svg-gantt"></div>
+
+      <div class="status" id="status"></div>
+
+      <div>
+        <label style="font-size: 13px; color: #555; font-weight: 600">Last saved snapshot</label>
+        <pre class="snapshot" id="snapshot">— none yet —</pre>
+      </div>
+    </div>
+
+    <script>
+      const STORAGE_KEY = 'apexgantt-demo-state';
+      const container = document.getElementById('svg-gantt');
+
+      const gantt = new ApexGantt(container, {
+        height: 440,
+        enableSelection: true,
+        enableQuickFilter: true,
+        quickFilter: { placeholder: 'Search tasks…', fields: ['name'] },
+        // Auto-save/restore the view under a custom localStorage key.
+        persistState: { key: STORAGE_KEY },
+        columnConfig: [
+          { key: ApexGantt.ColumnKey.Name, title: 'Task Name', flexGrow: 3 },
+          { key: ApexGantt.ColumnKey.StartTime, title: 'Start', flexGrow: 1.5 },
+          { key: ApexGantt.ColumnKey.Progress, title: 'Progress', flexGrow: 1 },
+        ],
+        series: [
+          { id: 'phase-1', name: 'Phase 1 — Discovery', startTime: '2024-01-01', endTime: '2024-01-31', progress: 100 },
+          { id: 'task-1', name: 'Stakeholder interviews', startTime: '2024-01-01', endTime: '2024-01-10', parentId: 'phase-1', progress: 100 },
+          { id: 'task-2', name: 'Requirements doc', startTime: '2024-01-11', endTime: '2024-01-25', parentId: 'phase-1', progress: 100 },
+          { id: 'phase-2', name: 'Phase 2 — Design', startTime: '2024-02-01', endTime: '2024-02-29', progress: 60 },
+          { id: 'task-3', name: 'UX wireframes', startTime: '2024-02-01', endTime: '2024-02-14', parentId: 'phase-2', progress: 100 },
+          { id: 'task-4', name: 'Visual design', startTime: '2024-02-15', endTime: '2024-02-29', parentId: 'phase-2', progress: 40 },
+          { id: 'phase-3', name: 'Phase 3 — Development', startTime: '2024-03-01', endTime: '2024-04-30', progress: 20 },
+          { id: 'task-5', name: 'Backend API', startTime: '2024-03-01', endTime: '2024-03-31', parentId: 'phase-3', progress: 35 },
+          { id: 'task-6', name: 'Frontend implementation', startTime: '2024-04-01', endTime: '2024-04-25', parentId: 'phase-3', progress: 5 },
+        ],
+      });
+
+      gantt.render();
+
+      // ── Manual snapshot via getState() / setState() ──
+      let snapshot = null;
+      const snapshotEl = document.getElementById('snapshot');
+
+      function saveSnapshot() {
+        snapshot = gantt.getState();
+        snapshotEl.textContent = JSON.stringify(snapshot, null, 2);
+      }
+
+      function restoreSnapshot() {
+        if (snapshot) gantt.setState(snapshot);
+      }
+
+      function messItUp() {
+        gantt.clearSort();
+        gantt.clearFilter();
+        gantt.setState({ collapsed: [] });
+        gantt.clearSelection();
+      }
+
+      function resetPersisted() {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+      }
+
+      // ── Status line ──
+      const status = document.getElementById('status');
+      function renderStatus() {
+        const s = gantt.getState();
+        const sortText = s.sort && s.sort.length ? s.sort.map((c) => `${c.key} ${c.direction}`).join(', ') : 'natural order';
+        status.innerHTML =
+          `Sort: <b>${sortText}</b> &nbsp;·&nbsp; Collapsed: <b>${(s.collapsed || []).length}</b>` +
+          ` &nbsp;·&nbsp; Selected: <b>${(s.selected || []).length}</b> &nbsp;·&nbsp; Filter: <b>${gantt.isFiltered() ? 'active' : 'none'}</b>`;
+      }
+      container.addEventListener('sortChange', renderStatus);
+      container.addEventListener('filterChange', renderStatus);
+      container.addEventListener('selectionChange', renderStatus);
+      renderStatus();
+    </script>
+  </body>
+</html>
