@@ -259,14 +259,20 @@
         logEl.scrollTop = logEl.scrollHeight;
       }
 
+      // Look up task names by id for friendlier log messages. The drag/resize
+      // event payloads carry `taskId` (not the whole task), so we resolve names
+      // from the input series.
+      const nameById = Object.fromEntries(ganttOptions.series.map((t) => [t.id, t.name]));
+      const nameOf = (id) => nameById[id] ?? id;
+
       el.addEventListener('taskDragged', (e) => {
-        const t = e.detail.updatedTask;
-        addLog('DRAG', 'tag-drag', `"${t.name}" moved to ${t.startTime} \u2013 ${t.endTime}`);
+        const {taskId, newStartTime, newEndTime} = e.detail;
+        addLog('DRAG', 'tag-drag', `"${nameOf(taskId)}" moved to ${newStartTime} \u2192 ${newEndTime}`);
       });
 
       el.addEventListener('taskResized', (e) => {
-        const t = e.detail.updatedTask;
-        addLog('RESIZE', 'tag-resize', `"${t.name}" now ends ${t.endTime}`);
+        const {taskId, newStartTime, newEndTime} = e.detail;
+        addLog('RESIZE', 'tag-resize', `"${nameOf(taskId)}" now ${newStartTime} \u2192 ${newEndTime}`);
       });
 
       el.addEventListener('taskUpdateSuccess', (e) => {

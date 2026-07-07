@@ -2514,9 +2514,16 @@ export declare interface GanttUserOptions {
      * Show a small chevron at the edge of a task's row when that task's bar is
      * scrolled out of the visible timeline window; clicking it scrolls the bar
      * into view. Also available programmatically via `gantt.scrollToTask()`.
-     * @default true
+     * @default false
      */
     readonly enableScrollButtons?: boolean;
+    /**
+     * Clicking a task-list row scrolls that task's bar into view (nearest-edge,
+     * horizontal + vertical), the same as calling `gantt.scrollToTask()`. Off by
+     * default; composes with `enableSelection` (a click both selects and reveals).
+     * @default false
+     */
+    readonly scrollToTaskOnRowClick?: boolean;
     /**
      * Configures the undo/redo history stack. Every mutating call (drag, resize,
      * inline / dialog edit, add, delete, move, dependency change) is recorded
@@ -2795,6 +2802,7 @@ declare interface InteractiveOptions {
     readonly enableAddTaskRow: boolean;
     readonly enableDrawTask: boolean;
     readonly enableScrollButtons: boolean;
+    readonly scrollToTaskOnRowClick: boolean;
     readonly history: HistoryOptions;
     readonly snapUnit: SnapUnit;
     readonly snapValue: number;

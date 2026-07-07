@@ -85,7 +85,12 @@
           </li>
           <li><strong>Release</strong> to create a task; a quick click (no drag) creates nothing.</li>
           <li>Press <strong>Escape</strong> mid-drag to cancel.</li>
-          <li>Existing bars stay draggable/resizable — the draw gesture only starts on empty space.</li>
+          <li>Existing bars stay draggable/resizable, the draw gesture only starts on empty space.</li>
+          <li>
+            Full editing is on too: double-click a cell or bar to edit, right-click for the context menu, drag the
+            bottom handle to set progress, use the toolbar to add/delete, and the bottom row to append a task.
+          </li>
+          <li>Tasks keep their input order (sorting is off), so a task you draw stays where you put it.</li>
         </ul>
       </div>
 
@@ -100,6 +105,19 @@
         height: 500,
         enableDrawTask: true,
         snapUnit: 'day',
+        // Natural (input) order: a drawn task stays where it lands instead of
+        // being re-sorted by start date into the middle of the list.
+        sortBy: [],
+        // Full editing experience alongside draw-to-create.
+        enableSelection: true,
+        enableInlineEdit: true,
+        enableTaskEdit: true,
+        enableTaskEditingShortcuts: true,
+        enableTaskCRUDToolbar: true,
+        enableContextMenu: true,
+        enableAddTaskRow: true,
+        enableProgressDrag: true,
+        dependencies: {editable: true},
         series: [
           {id: 't1', name: 'Design', startTime: '2026-06-01', endTime: '2026-06-08', progress: 100},
           {id: 't2', name: 'Implementation', startTime: '2026-06-09', endTime: '2026-06-20', progress: 40},

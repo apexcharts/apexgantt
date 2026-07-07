@@ -31,10 +31,10 @@
     </style>
   </head>
   <body>
-    <h2>Annotations — lines and rectangles to mark dates and periods</h2>
+    <h2>Annotations: vertical lines to mark key dates</h2>
     <p class="subtitle">
-      Annotation lines mark key dates and annotation rects highlight important periods — use
-      <code>annotations</code> with <code>x1</code> for lines or <code>x1</code>/<code>x2</code> for rectangles
+      Use <code>annotations</code> with an <code>x1</code> date to draw a labelled vertical line. Add
+      <code>x2</code> for a shaded date-range band (see the API docs).
     </p>
     <div id="svg-gantt"></div>
     <script>
@@ -64,22 +64,6 @@
             label: {
               text: 'Beta Release',
               fontColor: '#7c3aed',
-            },
-          },
-          {
-            x1: '04-14-2025',
-            x2: '04-18-2025',
-            bgColor: 'rgba(59, 130, 246, 0.08)',
-            label: {
-              text: 'Sprint Review',
-            },
-          },
-          {
-            x1: '05-12-2025',
-            x2: '05-16-2025',
-            bgColor: 'rgba(234, 179, 8, 0.1)',
-            label: {
-              text: 'UAT Window',
             },
           },
           {

@@ -71,9 +71,10 @@
       <div class="demo-header">
         <h1>ApexGantt — Scroll to Task</h1>
         <p>
-          The chart is zoomed in, so many bars sit outside the visible window. A chevron appears at the edge of any row
-          whose bar is off-screen — click it to jump to the bar. Or use the buttons below, which call
-          <code>gantt.scrollToTask(id)</code>.
+          The chart is zoomed in, so many bars sit outside the visible window. With
+          <code>scrollToTaskOnRowClick: true</code>, clicking any task name in the left grid scrolls its bar into view.
+          A chevron also appears at the edge of any row whose bar is off-screen (<code>enableScrollButtons</code>), and
+          the buttons below call <code>gantt.scrollToTask(id)</code> directly.
         </p>
       </div>
 
@@ -93,14 +94,15 @@
       const gantt = new ApexGantt(container, {
         height: 440,
         // Zoom in so the full year doesn't fit — bars go off-screen.
-        pixelsPerDay: 26,
+        pixelsPerDay: 10,
         enableScrollButtons: true,
+        scrollToTaskOnRowClick: true,
         series: [
           {id: 'kickoff', name: 'Kickoff', startTime: '2026-01-06', endTime: '2026-01-20', progress: 100},
           {id: 'design', name: 'Design', startTime: '2026-02-02', endTime: '2026-03-06', progress: 80},
-          {id: 'build', name: 'Build', startTime: '2026-04-01', endTime: '2026-07-10', progress: 45},
-          {id: 'qa', name: 'QA & Hardening', startTime: '2026-08-03', endTime: '2026-09-25', progress: 10},
-          {id: 'launch', name: 'Launch', startTime: '2026-11-02', endTime: '2026-11-20', progress: 0},
+          {id: 'build', name: 'Build', startTime: '2026-04-01', endTime: '2026-06-10', progress: 45},
+          {id: 'qa', name: 'QA & Hardening', startTime: '2026-07-03', endTime: '2026-08-25', progress: 10},
+          {id: 'launch', name: 'Launch', startTime: '2026-10-02', endTime: '2026-10-20', progress: 0},
         ],
       });
 
