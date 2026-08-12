@@ -1419,3 +1419,56 @@ function GanttChart({tasks}) {
   return <div ref={containerRef} />;
 }
 ```
+
+## Family theme tokens (`--apx-*`)
+
+Every chart in the ApexCharts family reads the same five root tokens, so a page can state its brand once and have trees, flow diagrams, Gantt charts and plots all follow:
+
+| Token                               | Role                                                             |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| `--apx-accent`                      | The colour that means interactive or selected                    |
+| `--apx-fore`                        | Text and anything that must stay legible on the surface          |
+| `--apx-grid`                        | Hairlines: borders, gridlines, connectors                        |
+| `--apx-surface`                     | The plane content sits on                                        |
+| `--apx-series-1` … `--apx-series-N` | An ordered categorical palette (1-based, stops at the first gap) |
+
+```css
+:root {
+  --apx-accent: #5b21b6;
+  --apx-fore: #101828;
+  --apx-grid: #e4e7ec;
+  --apx-surface: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --apx-fore: #f8fafc;
+    --apx-grid: #334155;
+    --apx-surface: #0f172a;
+  }
+}
+```
+
+Custom properties inherit, so declaring them on `:root` reaches every chart on the page. They resolve **below anything you configured explicitly**, so adopting them cannot change a chart that was already themed:
+
+```
+product CSS variable  >  explicit option  >  --apx-* token  >  built-in default
+```
+
+An option set to a value equal to its built-in default is indistinguishable from one left alone, and the token wins there. Set a product variable if you need a value pinned regardless.
+
+### Named themes
+
+`registerTheme` from `@apex/commons` records a named set of tokens on a registry shared by the whole family, so a brand theme registered once from any product is resolvable by name from all of them:
+
+```js
+import {registerTheme} from '@apex/commons';
+
+registerTheme('acme', {
+  tokens: {accent: '#5b21b6', fore: '#101828', grid: '#e4e7ec', surface: '#ffffff'},
+});
+```
+
+A named theme's tokens sit one layer below the CSS `--apx-*` tokens, so the cascade still wins over the registry.
+
+Gantt reads the CSS `--apx-*` tokens directly. It has no theme-name option, so the named-theme layer does not apply to it; use the CSS tokens (or a `prefers-color-scheme` block over them) to theme it alongside the rest of the family.
