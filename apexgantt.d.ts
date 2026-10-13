@@ -282,6 +282,12 @@ declare class ApexGantt extends BaseChart {
     private fadeArrowsAfterAnimation;
     private renderDependencyArrows;
     private setupDependencyArrowEvents;
+    /**
+     * Recompute the critical path from current data and re-sync the DOM. Stale
+     * classes are cleared first because an edit can take a task or edge off the
+     * path as well as put one on it.
+     */
+    private refreshCriticalPath;
     private computeCriticalPath;
     private applyCriticalPathHighlighting;
     private rerenderTimeline;
