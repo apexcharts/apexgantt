@@ -230,21 +230,21 @@
   <body>
     <div class="demo-container">
       <div class="demo-header">
-        <h1>ApexGantt — Multi-Selection Demo</h1>
+        <h1>ApexGantt: Multi-Selection Demo</h1>
         <p>Demonstrates <code>enableSelection</code>: checkboxes, keyboard shortcuts, and the public selection API.</p>
       </div>
 
       <div class="instructions">
         <strong>How to interact</strong>
         <ul>
-          <li><strong>Click</strong> a row — select it (replaces current selection)</li>
-          <li><strong>Ctrl / Cmd + Click</strong> — toggle a task in the selection</li>
-          <li><strong>Shift + Click</strong> — range-select from the last clicked task</li>
-          <li><strong>Checkbox</strong> — toggle individual task selection</li>
-          <li><strong>Select-all checkbox</strong> (header) — select / deselect all visible tasks</li>
-          <li><strong>Space</strong> on a focused row — toggle selection</li>
-          <li><strong>Ctrl / Cmd + A</strong> — select all tasks</li>
-          <li><strong>Escape</strong> — clear selection</li>
+          <li><strong>Click</strong> a row: select it (replaces current selection)</li>
+          <li><strong>Ctrl / Cmd + Click</strong>: toggle a task in the selection</li>
+          <li><strong>Shift + Click</strong>: range-select from the last clicked task</li>
+          <li><strong>Checkbox</strong>: toggle individual task selection</li>
+          <li><strong>Select-all checkbox</strong> (header): select / deselect all visible tasks</li>
+          <li><strong>Space</strong> on a focused row: toggle selection</li>
+          <li><strong>Ctrl / Cmd + A</strong>: select all tasks</li>
+          <li><strong>Escape</strong>: clear selection</li>
         </ul>
       </div>
 
@@ -306,11 +306,11 @@
         enableSelection: true,
         enableTaskDrag: true,
         enableTaskResize: true,
-        viewMode: 'month',
+        pixelsPerDay: 4.9, // month-level zoom
         series: [
           {
             id: 'phase-1',
-            name: 'Phase 1 — Discovery',
+            name: 'Phase 1: Discovery',
             startTime: '2024-01-01',
             endTime: '2024-01-31',
             progress: 100,
@@ -343,7 +343,7 @@
           },
           {
             id: 'phase-2',
-            name: 'Phase 2 — Design',
+            name: 'Phase 2: Design',
             startTime: '2024-02-01',
             endTime: '2024-02-29',
             progress: 60,
@@ -367,7 +367,7 @@
           },
           {
             id: 'group-1',
-            name: 'Phase 3 — Development',
+            name: 'Phase 3: Development',
             startTime: '2024-03-01',
             endTime: '2024-04-30',
             progress: 20,

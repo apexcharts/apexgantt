@@ -69,7 +69,7 @@
   <body>
     <div class="demo-container">
       <div class="demo-header">
-        <h1>ApexGantt — Scroll to Task</h1>
+        <h1>ApexGantt: Scroll to Task</h1>
         <p>
           The chart is zoomed in, so many bars sit outside the visible window. With
           <code>scrollToTaskOnRowClick: true</code>, clicking any task name in the left grid scrolls its bar into view.
@@ -82,7 +82,7 @@
         <span style="font-weight: 600; font-size: 13px">Locate:</span>
         <button class="btn" onclick="gantt.scrollToTask('kickoff')">Kickoff (Jan)</button>
         <button class="btn" onclick="gantt.scrollToTask('build')">Build (Apr)</button>
-        <button class="btn" onclick="gantt.scrollToTask('launch')">Launch (Nov)</button>
+        <button class="btn" onclick="gantt.scrollToTask('launch')">Launch (Oct)</button>
       </div>
 
       <div id="svg-gantt"></div>
@@ -93,7 +93,7 @@
 
       const gantt = new ApexGantt(container, {
         height: 440,
-        // Zoom in so the full year doesn't fit — bars go off-screen.
+        // Zoom in so the full year doesn't fit and some bars sit off-screen.
         pixelsPerDay: 10,
         enableScrollButtons: true,
         scrollToTaskOnRowClick: true,

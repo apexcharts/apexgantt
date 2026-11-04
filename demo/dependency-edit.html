@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Interactive Dependency Editing — ApexGantt</title>
+    <title>Interactive Dependency Editing - ApexGantt</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -64,8 +64,10 @@
   <body>
     <h2>Interactive Dependency Editing</h2>
     <p class="subtitle">
-      <strong>Draw:</strong> hover any bar — two blue circles appear at its start/finish edges. Drag from a circle onto
-      another bar to create a dependency; the (source-anchor, target-anchor) pair picks the type (FS / SS / FF / SF).
+      <strong>Draw:</strong> hover any bar and two blue circles appear at its start and finish edges. Drag from a circle
+      onto another bar to create a dependency. Dropping on the left half of the bar (or on its start circle) links to
+      its start, the right half (or its finish circle) to its finish, and the pair of anchors picks the type (FS / SS /
+      FF / SF).
       <br />
       <strong>Delete:</strong> hover an arrow → it darkens; click → it turns red with a ✕ at the head; click the ✕,
       press <kbd>Delete</kbd>, or hit <kbd>Backspace</kbd> to remove. <kbd>Esc</kbd> cancels a drag or clears selection.
@@ -77,10 +79,13 @@
       <strong>Try it:</strong>
       <ul>
         <li>
-          Hover <em>Design</em> — drag from its right-edge circle onto another bar's left edge → creates an FS edge
+          Hover <em>Design</em>, then drag from its right-edge circle onto the left half of another bar to create an FS
+          edge
         </li>
-        <li>Drag from left-edge to left-edge → SS; right-edge to right-edge → FF; left-edge to right-edge → SF</li>
-        <li>Try dragging from <em>Launch</em> back to <em>Design</em> — the preview turns red (cycle)</li>
+        <li>Start to start makes SS, finish to finish makes FF, and start to finish makes SF</li>
+        <li>
+          Try dragging from <em>Launch</em> back to <em>Design</em>: the preview turns red because it would make a cycle
+        </li>
         <li>Click any existing arrow then the red ✕ to remove it</li>
         <li>Press <kbd>Ctrl/Cmd + Z</kbd> to undo</li>
       </ul>
@@ -92,7 +97,6 @@
 
     <script>
       const gantt = new ApexGantt(document.getElementById('gantt'), {
-        viewMode: 'week',
         enableTaskDrag: true,
         enableTaskResize: true,
         height: 360,
@@ -149,7 +153,7 @@
         append(`dependency removed: ${e.detail.fromId} → ${e.detail.toId} (${e.detail.type}, lag ${e.detail.lag})`);
       });
       document.getElementById('gantt').addEventListener('dependencyAdded', (e) => {
-        append(`dependency restored: ${e.detail.fromId} → ${e.detail.toId} (${e.detail.type})`);
+        append(`dependency added: ${e.detail.fromId} → ${e.detail.toId} (${e.detail.type}, lag ${e.detail.lag})`);
       });
     </script>
   </body>

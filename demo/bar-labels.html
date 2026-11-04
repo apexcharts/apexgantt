@@ -73,7 +73,7 @@
     </style>
   </head>
   <body>
-    <h2>Bar Labels — outside positioning + custom render</h2>
+    <h2>Bar Labels: outside positioning + custom render</h2>
     <p class="subtitle">
       Names rendered to the right of each bar so narrow tasks aren't truncated. The custom
       <code>barLabel.render</code> appends a coloured priority chip (P0 / P1 / P2) to the right of the task name.
@@ -82,8 +82,8 @@
     <div class="controls">
       <button data-pos="inside">inside</button>
       <button data-pos="auto">auto</button>
-      <button data-pos="right">right</button>
-      <button data-pos="left" class="active">left</button>
+      <button data-pos="right" class="active">right</button>
+      <button data-pos="left">left</button>
     </div>
 
     <div id="svg-gantt"></div>
@@ -186,8 +186,8 @@
           barBorderRadius: '6px',
           barMargin: 6,
           rowHeight: 36,
-          // Crosshair lets you verify the date label follows the cursor
-          // accurately even when leading-pad shifts bars/cells right.
+          // The crosshair shows the date under the cursor, which helps when
+          // reading a label against the timeline.
           enableCrosshair: true,
           barLabel: {
             position,
@@ -198,7 +198,7 @@
       }
 
       const host = document.getElementById('svg-gantt');
-      let gantt = new ApexGantt(host, buildOptions('left'));
+      const gantt = new ApexGantt(host, buildOptions('right'));
       gantt.render();
 
       document.querySelectorAll('.controls button').forEach((btn) => {

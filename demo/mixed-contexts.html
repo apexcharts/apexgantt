@@ -135,7 +135,6 @@
           const container = document.getElementById('regular-gantt');
           regularGanttInstance = new ApexGantt(container, {
             series: sampleData,
-            viewMode: 'week',
           });
           regularGanttInstance.render();
           updateStatus('regular-status', 'Created successfully');
@@ -184,7 +183,6 @@
 
           shadowGanttInstance = new ApexGantt(shadowContainer, {
             series: sampleData,
-            viewMode: 'week',
           });
           shadowGanttInstance.render();
           updateStatus('shadow-status', 'Created successfully in Shadow DOM');

@@ -187,48 +187,30 @@
         transform: translateX(-50%) translateY(0);
       }
 
-      /* Tag badge colors on task rows */
-      .tag-urgent {
-        outline: 2px solid #ef4444 !important;
-        outline-offset: -2px;
-      }
-      .tag-review {
-        outline: 2px solid #f59e0b !important;
-        outline-offset: -2px;
-      }
-      .tag-done {
-        outline: 2px solid #22c55e !important;
-        outline-offset: -2px;
-      }
-      .tag-blocked {
-        outline: 2px solid #6b7280 !important;
-        outline-offset: -2px;
-      }
-
+      /* Tag badges rendered by the Tag column */
       .tag-badge {
         display: inline-block;
         font-size: 10px;
         font-weight: 700;
-        padding: 1px 5px;
+        padding: 1px 6px;
         border-radius: 10px;
-        margin-left: 6px;
-        vertical-align: middle;
         text-transform: uppercase;
         letter-spacing: 0.04em;
+        white-space: nowrap;
       }
-      .tag-urgent .tag-badge {
+      .tag-badge.tag-urgent {
         background: #fef2f2;
         color: #ef4444;
       }
-      .tag-review .tag-badge {
+      .tag-badge.tag-review {
         background: #fffbeb;
         color: #d97706;
       }
-      .tag-done .tag-badge {
+      .tag-badge.tag-done {
         background: #f0fdf4;
         color: #16a34a;
       }
-      .tag-blocked .tag-badge {
+      .tag-badge.tag-blocked {
         background: #f9fafb;
         color: #6b7280;
       }
@@ -237,11 +219,12 @@
   <body>
     <div class="demo-container">
       <div class="demo-header">
-        <h1>ApexGantt — Toolbar Extensibility Demo</h1>
+        <h1>ApexGantt: Toolbar Extensibility Demo</h1>
         <p>
           Click a task row to select it, then press <kbd>Space</kbd> to toggle selection. Use the
-          <strong>Phase</strong> filter to show only tasks for a phase. Select tasks, then use
-          <strong>Publish</strong> or the <strong>Tag</strong> dropdown to act on them.
+          <strong>Phase</strong> dropdown to show only the tasks of one phase. Select tasks, then use
+          <strong>Publish</strong> to act on them, or pick a tag in the <strong>Tag</strong> dropdown and click
+          <strong>Apply tag</strong>: the tag is stored on each task and shown in the Tag column.
         </p>
       </div>
 
@@ -264,18 +247,22 @@
           <h2>What's demonstrated</h2>
           <ul class="feature-list">
             <li>
-              <strong>Phase filter</strong> — calls <code>gantt.update({ series })</code> to re-render only matching
-              tasks
+              <strong>Phase filter:</strong> calls <code>gantt.filter(predicate)</code> and
+              <code>gantt.clearFilter()</code>, which hide and show rows without changing the data
             </li>
             <li>
-              <strong>Publish</strong> — <code>requiresSelection</code>, <code>showCount</code>, shows a toast on click
+              <strong>Publish:</strong> <code>requiresSelection</code>, <code>showCount</code>, shows a toast on click
             </li>
-            <li><strong>Copy IDs</strong> — <code>disabled: fn</code> evaluated live, writes to clipboard</li>
-            <li><strong>Tag select</strong> — applies colored outline + badge to selected task rows in the DOM</li>
-            <li><kbd>Space</kbd> — toggles selection after clicking a row (keyboard focus follows click)</li>
-            <li><kbd>Ctrl/Cmd+A</kbd> — selects all tasks</li>
-            <li><kbd>Escape</kbd> — clears selection</li>
-            <li><kbd>↑ ↓</kbd> — navigate rows, <kbd>→ ←</kbd> expand/collapse groups</li>
+            <li><strong>Copy IDs:</strong> <code>disabled: fn</code> evaluated live, writes to clipboard</li>
+            <li>
+              <strong>Tag select + Apply tag:</strong> the select keeps the tag you picked, and the button stores it on
+              each selected task with <code>gantt.updateTask()</code>, so the same tag can go on one task after another;
+              a custom Tag column renders it, and its <code>accessor</code> makes the column sortable
+            </li>
+            <li><kbd>Space</kbd>: toggles selection after clicking a row (keyboard focus follows click)</li>
+            <li><kbd>Ctrl/Cmd+A</kbd>: selects all tasks</li>
+            <li><kbd>Escape</kbd>: clears selection</li>
+            <li><kbd>↑ ↓</kbd>: navigate rows</li>
           </ul>
         </div>
       </div>
@@ -324,6 +311,7 @@
       const icons = {
         send: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
         copy: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+        tag: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
       };
 
       // ── Task data ─────────────────────────────────────────────────────────
@@ -447,107 +435,72 @@
         },
       ];
 
-      // Task tags: id → { value, label }
-      const taskTags = {};
-
       const tagMeta = {
-        urgent: {label: 'Urgent', cls: 'tag-urgent', badge: '🔴 Urgent'},
-        review: {label: 'Needs Review', cls: 'tag-review', badge: '🟡 Review'},
-        done: {label: 'Done', cls: 'tag-done', badge: '🟢 Done'},
-        blocked: {label: 'Blocked', cls: 'tag-blocked', badge: '⛔ Blocked'},
+        urgent: {label: 'Urgent', badge: '🔴 Urgent'},
+        review: {label: 'Needs Review', badge: '🟡 Review'},
+        done: {label: 'Done', badge: '🟢 Done'},
+        blocked: {label: 'Blocked', badge: '⛔ Blocked'},
       };
 
-      // ── Apply tag visually to task rows ───────────────────────────────────
+      const phaseNames = {discovery: 'Discovery', design: 'Design', dev: 'Development', qa: 'QA & Launch'};
 
-      function applyTagsToRows(container) {
-        // Remove all existing tag classes + badges from every row
-        const allRows = container.querySelectorAll('.tasks-data-row');
-        allRows.forEach((row) => {
-          Object.values(tagMeta).forEach(({cls}) => row.classList.remove(cls));
-          row.querySelectorAll('.tag-badge').forEach((b) => b.remove());
-        });
-
-        // Re-apply from taskTags map
-        Object.entries(taskTags).forEach(([taskId, tagValue]) => {
-          const row = container.querySelector(`.tasks-data-row[data-taskid="${taskId}"]`);
-          if (!row) return;
-          const meta = tagMeta[tagValue];
-          if (!meta) return;
-          row.classList.add(meta.cls);
-
-          // Insert badge into the name cell (first .tasks-data-cell)
-          const nameCell = row.querySelector('.tasks-data-cell');
-          if (nameCell) {
-            const badge = document.createElement('span');
-            badge.className = 'tag-badge';
-            badge.textContent = meta.badge;
-            nameCell.appendChild(badge);
-          }
-        });
-      }
-
-      // ── Current phase filter ──────────────────────────────────────────────
-
-      let activePhase = null; // null = all
-
-      function getFilteredTasks() {
-        if (!activePhase) return allTasks;
-        return allTasks.filter((t) => t.phase === activePhase);
-      }
+      // The tag picked in the Tag dropdown, applied by the Apply tag button.
+      let chosenTag = null;
 
       // ── Gantt init ────────────────────────────────────────────────────────
 
       const container = document.getElementById('svg-gantt');
+      const ColumnKey = ApexGantt.ColumnKey;
 
       const gantt = new ApexGantt(container, {
         enableSelection: true,
-        viewMode: 'month',
+        pixelsPerDay: 4.9, // month-level zoom
+
+        columnConfig: [
+          {key: ColumnKey.Name, title: 'Task Name'},
+          {key: ColumnKey.StartTime, title: 'Start'},
+          {key: ColumnKey.Progress, title: 'Progress'},
+          {
+            // Custom column fed by the task's own `tag` field. The accessor gives
+            // sorting, filtering and export a plain value to work with.
+            key: 'tag',
+            title: 'Tag',
+            minWidth: '96px',
+            accessor: (task) => (task.tag ? tagMeta[task.tag].label : ''),
+            render: ({task}) => {
+              const meta = tagMeta[task.tag];
+              return meta ? `<span class="tag-badge tag-${task.tag}">${meta.badge}</span>` : '';
+            },
+          },
+        ],
 
         toolbarItems: [
-          // LEFT: phase filter — re-renders only matching tasks
+          // Left: phase filter. gantt.filter() hides the other rows; the data
+          // and every task's edits stay as they are.
           {
             type: 'select',
             label: 'Phase',
-            placeholder: 'All phases…',
             position: 'left',
             options: [
-              {value: 'discovery', text: 'Discovery'},
-              {value: 'design', text: 'Design'},
-              {value: 'dev', text: 'Development'},
-              {value: 'qa', text: 'QA & Launch'},
+              {value: 'all', text: 'All phases'},
+              ...Object.entries(phaseNames).map(([value, text]) => ({value, text})),
             ],
-            onChange(value, {selectedTasks}) {
-              activePhase = value;
-              // Re-render the chart with only the matching tasks
-              gantt.update({series: getFilteredTasks()});
-              // Re-apply any existing tags after re-render
-              setTimeout(() => applyTagsToRows(container), 0);
-              log(
-                `Phase filter → ${value}`,
-                `Showing ${getFilteredTasks().length} task(s). ${selectedTasks.length} were selected (selection cleared on re-render).`,
-                'default'
-              );
+            onChange(value) {
+              if (value === 'all') {
+                gantt.clearFilter();
+                log('Phase filter cleared', `gantt.clearFilter(): showing all ${allTasks.length} tasks`, 'default');
+                return;
+              }
+              gantt.filter((task) => task.phase === value);
+              const count = allTasks.filter((t) => t.phase === value).length;
+              log(`Phase filter → ${phaseNames[value]}`, `gantt.filter(): showing ${count} task(s)`, 'default');
             },
           },
 
-          // "Show all" reset button — also position: left
-          {
-            type: 'button',
-            label: 'All',
-            position: 'left',
-            tooltip: 'Show all phases',
-            onClick() {
-              activePhase = null;
-              gantt.update({series: allTasks});
-              setTimeout(() => applyTagsToRows(container), 0);
-              log('Phase filter cleared', 'Showing all 11 tasks', 'default');
-            },
-          },
-
-          // RIGHT items ──────────────────────────────────────────────────
+          // Right items ──────────────────────────────────────────────────
           {type: 'separator'},
 
-          // Publish — requires selection, shows live count badge, shows toast on click
+          // Publish: requires a selection, shows a live count badge and a toast on click
           {
             type: 'button',
             label: 'Publish',
@@ -562,7 +515,7 @@
             },
           },
 
-          // Copy IDs — disabled fn re-evaluated live
+          // Copy IDs: the disabled function is re-evaluated as the selection changes
           {
             type: 'button',
             label: 'Copy IDs',
@@ -579,36 +532,52 @@
 
           {type: 'separator'},
 
-          // Tag select — applies visual outline + badge to selected task rows
+          // Tag select: picks the tag to apply. A toolbar select keeps its value
+          // across re-renders, so it works as a setting here, and the button
+          // next to it does the tagging: picking the same option twice would
+          // fire no change event, while a button can apply it again and again.
           {
             type: 'select',
             label: 'Tag',
-            placeholder: 'Add tag…',
+            placeholder: 'Choose tag…',
             options: [
               {value: 'urgent', text: '🔴 Urgent'},
               {value: 'review', text: '🟡 Needs Review'},
               {value: 'done', text: '🟢 Done'},
               {value: 'blocked', text: '⛔ Blocked'},
+              {value: 'none', text: 'Clear tag'},
             ],
-            onChange(value, {selectedTasks}) {
-              if (selectedTasks.length === 0) {
-                log(`Tag "${value}" selected`, 'No tasks selected — select tasks first', 'warn');
-                showToast('⚠️ Select tasks before tagging');
+            onChange(value) {
+              chosenTag = value;
+            },
+          },
+
+          // Apply tag: stores the chosen tag on each selected task with
+          // updateTask(), which re-renders the row so the Tag column shows it
+          {
+            type: 'button',
+            label: 'Apply tag',
+            icon: icons.tag,
+            tooltip: 'Apply the chosen tag to the selected tasks',
+            requiresSelection: true,
+            onClick({selectedTasks}) {
+              if (!chosenTag) {
+                log('Apply tag', 'No tag chosen. Pick one in the Tag dropdown first.', 'warn');
+                showToast('⚠️ Choose a tag first');
                 return;
               }
 
-              // Record tags and apply visually
-              selectedTasks.forEach((t) => {
-                taskTags[t.id] = value;
-              });
-              applyTagsToRows(container);
+              const tag = chosenTag === 'none' ? null : chosenTag;
+              selectedTasks.forEach((t) => gantt.updateTask(t.id, {tag}));
 
-              const meta = tagMeta[value];
-              log(
-                `Tagged ${selectedTasks.length} task(s) as "${meta.label}"`,
-                selectedTasks.map((t) => t.name).join(', '),
-                'success'
-              );
+              const names = selectedTasks.map((t) => t.name).join(', ');
+              if (!tag) {
+                log(`Cleared the tag on ${selectedTasks.length} task(s)`, names, 'success');
+                showToast(`Tag cleared on ${selectedTasks.length} task(s)`);
+                return;
+              }
+              const meta = tagMeta[tag];
+              log(`Tagged ${selectedTasks.length} task(s) as "${meta.label}"`, names, 'success');
               showToast(`${meta.badge} applied to ${selectedTasks.length} task(s)`);
             },
           },

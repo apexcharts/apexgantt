@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Working Calendar — ApexGantt</title>
+    <title>Working Calendar - ApexGantt</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -155,9 +155,11 @@
   <body>
     <h2>Working Calendar</h2>
     <p class="subtitle">
-      Configure non-working days as stripes, count durations in working days, drag and resize bars with weekend-aware
-      snapping, and keep the critical path calendar-correct. Every move is undoable —
-      <kbd>Ctrl</kbd>+<kbd>Z</kbd> rolls back any drag, resize, or snap.
+      A four-week project in May 2026 (May 11 to June 5) on a Monday-to-Friday calendar with two holidays. Non-working
+      days show as stripes, durations count working days, bars snap off weekends when dragged or resized, and the
+      critical path follows the calendar. Every move is undoable: <kbd>Ctrl</kbd>+<kbd>Z</kbd> rolls back any drag,
+      resize or snap, and the history survives the toggles below, which change the chart with
+      <code>gantt.update()</code>.
     </p>
 
     <div class="gantt-wrap">
@@ -168,7 +170,7 @@
       <div class="panel">
         <h3>Calendar</h3>
         <div>
-          Workdays: <code>Mon–Fri</code><br />
+          Workdays: <code>Mon to Fri</code><br />
           Holidays: <code>May 27</code> (Company offsite), <code>May 29</code> (Team retreat)
         </div>
         <div class="legend">
@@ -199,9 +201,13 @@
       <div class="panel">
         <h3>What to look for</h3>
         <ul>
-          <li>Pale gray bands behind Sat/Sun — the weekend stripes from <code>workingWeekdays</code>.</li>
-          <li>Pinker bands for the two configured holidays — hover for a tooltip.</li>
-          <li><strong>Duration column</strong> shows <code>5 wd</code> not <code>7 d</code> — calendar-aware.</li>
+          <li>Pale gray bands behind Sat/Sun are the weekend stripes from <code>workingWeekdays</code>.</li>
+          <li>Pinker bands mark the two configured holidays; hover one for its tooltip.</li>
+          <li>
+            The <strong>Duration column</strong> counts working days (<code>wd</code>): Design phase reads
+            <code>10 wd</code> for its 12 calendar days, and Design review reads <code>3 wd</code> because of the two
+            holidays.
+          </li>
           <li><strong>Drag</strong> a bar onto a weekend. Its working-day duration is preserved across the snap.</li>
           <li>
             <strong>Resize</strong> a bar across a weekend. Only the moving endpoint snaps; the other side stays put.
@@ -215,8 +221,8 @@
             path.
           </li>
           <li>
-            Toggle <em>Calendar: on/off</em> to compare. With calendar off, every day is a working day, no stripes, raw
-            drag.
+            Toggle <em>Calendar: on/off</em> to compare. With the calendar off, every day is a working day: no stripes,
+            no snapping, and durations in calendar days (<code>d</code>).
           </li>
         </ul>
       </div>
@@ -228,17 +234,15 @@
     </div>
 
     <script>
-      const SummaryType = ApexGantt.TaskType ? ApexGantt.TaskType.Summary : 'summary';
-
-      // A four-week project straddling today, so every weekend / holiday interaction
-      // and the today-line are reachable from one viewport:
+      // A four-week project in May 2026, so every weekend and holiday interaction
+      // fits in one viewport:
       //   May 11 Mon ─── May 22 Fri (design phase, two child tasks)
       //   May 25 Mon ─── May 29 Fri (review week with two holidays mid-week)
+      //   Jun 1 Mon ─── Jun 5 Fri (handoff)
       const tasks = [
         {
           id: 'design',
           name: 'Design phase',
-          type: SummaryType,
           startTime: '05-11-2026',
           endTime: '05-22-2026',
           progress: 60,
@@ -278,34 +282,37 @@
         },
       ];
 
-      let state = {snapMode: 'next', calendarOn: true, criticalOn: false};
+      const state = {snapMode: 'next', calendarOn: true, criticalOn: false};
 
-      function buildOptions() {
-        const opts = {
-          viewMode: 'week',
-          height: 420,
-          enableTaskDrag: true,
-          enableTaskResize: true,
-          enableCriticalPath: state.criticalOn,
-          canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; box-sizing: border-box;',
-          series: tasks,
+      // The calendar for the current state. "Off" is a calendar in which every
+      // day is a working day: no stripes, no snapping, calendar-day durations.
+      function calendarOptions() {
+        if (!state.calendarOn) return {workingWeekdays: [0, 1, 2, 3, 4, 5, 6], holidays: []};
+        return {
+          workingWeekdays: [1, 2, 3, 4, 5],
+          dragSnapMode: state.snapMode,
+          holidays: [
+            {date: '2026-05-27', label: 'Company offsite'},
+            {date: '2026-05-29', label: 'Team retreat'},
+          ],
+          holidayTooltip: (ctx) => {
+            const day = ctx.date.toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'});
+            return `<strong>${ctx.label ?? 'Non-working day'}</strong><br/><span style="opacity:0.7">${day}</span>`;
+          },
         };
-        if (state.calendarOn) {
-          opts.calendar = {
-            workingWeekdays: [1, 2, 3, 4, 5],
-            dragSnapMode: state.snapMode,
-            holidays: [
-              {date: '05-27-2026', label: 'Company offsite'},
-              {date: '05-29-2026', label: 'Team retreat'},
-            ],
-            holidayTooltip: (ctx) => {
-              const day = ctx.date.toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'});
-              return `<strong>${ctx.label ?? 'Non-working day'}</strong><br/><span style="opacity:0.7">${day}</span>`;
-            },
-          };
-        }
-        return opts;
       }
+
+      const container = document.getElementById('gantt');
+      const gantt = new ApexGantt(container, {
+        height: 420,
+        enableTaskDrag: true,
+        enableTaskResize: true,
+        enableCriticalPath: state.criticalOn,
+        canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; box-sizing: border-box;',
+        calendar: calendarOptions(),
+        series: tasks,
+      });
+      gantt.render();
 
       const logEl = document.getElementById('event-log');
       function log(kind, text) {
@@ -316,42 +323,31 @@
         logEl.prepend(div);
       }
 
-      let gantt;
-      function rebuild() {
-        const container = document.getElementById('gantt');
-        container.innerHTML = '';
-        gantt = new ApexGantt(container, buildOptions());
-        gantt.render();
-        wireEvents(container);
-        document.getElementById('current-mode').textContent = state.snapMode;
-      }
+      // The container stays the same across update() calls, so these listeners
+      // are added once.
+      container.addEventListener('taskDragged', (e) => {
+        const d = e.detail;
+        log(
+          'snap',
+          `taskDragged: ${d.taskId} → ${d.newStartTime} / ${d.newEndTime} (mode=${state.snapMode}, calendar=${state.calendarOn})`
+        );
+      });
+      container.addEventListener('taskResized', (e) => {
+        const d = e.detail;
+        log('snap', `taskResized (${d.resizeHandle}): ${d.taskId} → start=${d.newStartTime}, end=${d.newEndTime}`);
+      });
+      container.addEventListener('historyChange', (e) => {
+        log('', `historyChange: ${e.detail.kind} (undo=${e.detail.undoSize}, redo=${e.detail.redoSize})`);
+      });
 
-      function wireEvents(container) {
-        container.addEventListener('taskDragged', (e) => {
-          const d = e.detail;
-          log(
-            'snap',
-            `taskDragged: ${d.taskId} → ${d.newStartTime} / ${d.newEndTime} (mode=${state.snapMode}, calendar=${state.calendarOn})`
-          );
-        });
-        container.addEventListener('taskResized', (e) => {
-          const d = e.detail;
-          log('snap', `taskResized (${d.resizeHandle}): ${d.taskId} → start=${d.newStartTime}, end=${d.newEndTime}`);
-        });
-        container.addEventListener('historyChange', (e) => {
-          log('', `historyChange: ${e.detail.kind} (undo=${e.detail.undoSize}, redo=${e.detail.redoSize})`);
-        });
-      }
-
-      // Initial render
-      rebuild();
-
-      // Snap-mode controls
+      // Snap-mode controls. update() keeps the current task dates and the undo
+      // history; it only swaps the calendar.
       document.querySelectorAll('[data-snap-mode]').forEach((btn) => {
         btn.addEventListener('click', () => {
           state.snapMode = btn.getAttribute('data-snap-mode');
           document.querySelectorAll('[data-snap-mode]').forEach((b) => b.classList.toggle('active', b === btn));
-          rebuild();
+          document.getElementById('current-mode').textContent = state.snapMode;
+          gantt.update({calendar: calendarOptions()});
         });
       });
 
@@ -360,7 +356,7 @@
         state.calendarOn = !state.calendarOn;
         e.currentTarget.textContent = `Calendar: ${state.calendarOn ? 'on' : 'off'}`;
         e.currentTarget.classList.toggle('active', state.calendarOn);
-        rebuild();
+        gantt.update({calendar: calendarOptions()});
       });
 
       // Critical-path on/off
@@ -368,7 +364,7 @@
         state.criticalOn = !state.criticalOn;
         e.currentTarget.textContent = `Critical path: ${state.criticalOn ? 'on' : 'off'}`;
         e.currentTarget.classList.toggle('active', state.criticalOn);
-        rebuild();
+        gantt.update({enableCriticalPath: state.criticalOn});
       });
     </script>
   </body>

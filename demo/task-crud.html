@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Task CRUD — ApexGantt</title>
+    <title>Task CRUD - ApexGantt</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -133,9 +133,10 @@
   <body>
     <h2>Task CRUD</h2>
     <p class="subtitle">
-      Exercises every interactive surface added so far: drag/resize/progress, inline + dialog edit, add / delete / move
-      via toolbar / context menu / keyboard / bottom "+ Add task" row. Every mutation routes through the command bus, so
-      <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> undo & redo from anywhere in the chart.
+      Every editing surface in one chart: drag, resize and progress handles, inline and dialog editing, and adding,
+      deleting or moving tasks from the toolbar, the context menu, the keyboard or the bottom "+ Add task" row. Every
+      change is recorded in the undo history, so <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> undo and
+      redo from anywhere in the chart.
     </p>
 
     <div class="layout">
@@ -155,22 +156,22 @@
             </li>
             <li><strong>Keyboard</strong> (focus a row first):</li>
             <ul>
-              <li><kbd>Delete</kbd> / <kbd>Backspace</kbd> — remove (cascades children)</li>
-              <li><kbd>Tab</kbd> — indent under previous sibling</li>
-              <li><kbd>Shift</kbd>+<kbd>Tab</kbd> — outdent to grandparent</li>
-              <li><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Space</kbd> <kbd>Enter</kbd> — nav / select / open editor</li>
+              <li><kbd>Delete</kbd> / <kbd>Backspace</kbd>: remove (children go too)</li>
+              <li><kbd>Tab</kbd>: indent under the previous sibling</li>
+              <li><kbd>Shift</kbd>+<kbd>Tab</kbd>: outdent to the grandparent</li>
+              <li><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Space</kbd> <kbd>Enter</kbd>: move, select, open the editor</li>
             </ul>
             <li><strong>Inline edit:</strong> double-click any cell in the task list.</li>
             <li><strong>Dialog edit:</strong> double-click a bar in the timeline.</li>
             <li>Bottom <kbd>+ Add task</kbd> row inserts a new placeholder at the root.</li>
             <li>
               <strong>Draw a dependency:</strong> hover a bar to reveal the two anchor circles at its start/finish
-              edges, then drag from one anchor onto another bar's anchor. Anchor pairs derive the type (right→left = FS,
-              right→right = FF, left→left = SS, left→right = SF). <kbd>Esc</kbd> cancels mid-drag.
+              edges, then drag from one anchor onto another bar or one of its anchors. The pair of anchors sets the type
+              (right→left = FS, right→right = FF, left→left = SS, left→right = SF). <kbd>Esc</kbd> cancels mid-drag.
             </li>
             <li>
               <strong>Delete a dependency:</strong> click the arrow (it turns red and shows a <kbd>✕</kbd> at the head),
-              then click the <kbd>✕</kbd> — or press <kbd>Delete</kbd> while it's selected.
+              then click the <kbd>✕</kbd>, or press <kbd>Delete</kbd> while it's selected.
             </li>
             <li>
               <strong>Undo / Redo:</strong> toolbar Undo/Redo buttons, <kbd>Ctrl</kbd>+<kbd>Z</kbd> /
@@ -180,14 +181,14 @@
             <li>
               <strong>Cascade modes:</strong>
               <em>children</em> deletes the subtree; <em>orphan</em> keeps children and reparents them to the deleted
-              task's parent. Dependencies touching the deleted task auto-clean — watch the event log.
+              task's parent. Dependencies touching the deleted task are removed with it; watch the event log.
             </li>
           </ul>
           <div class="actions">
             <button id="programmatic-add">addTask()</button>
             <button id="programmatic-move">moveTask first leaf → root</button>
-            <button id="programmatic-link">addDependency a → b</button>
-            <button id="programmatic-unlink">removeDependency a → b</button>
+            <button id="programmatic-link">addDependency b → c</button>
+            <button id="programmatic-unlink">removeDependency b → c</button>
           </div>
           <div class="actions">
             <button id="delete-children">deleteTask('design', children)</button>
@@ -224,7 +225,6 @@
           name: 'Design phase',
           startTime: '03-03-2026',
           endTime: '03-18-2026',
-          type: ApexGantt.TaskType ? ApexGantt.TaskType.Summary : 'summary',
           progress: 45,
         },
         {
@@ -284,27 +284,28 @@
         canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; box-sizing: border-box;',
         series: sampleTasks,
 
-        // Existing editable-tier features
+        // Editing: inline cells, the edit dialog, and drag/resize/progress handles
         enableInlineEdit: true,
         enableTaskEdit: true,
         enableTaskDrag: true,
         enableTaskResize: true,
         enableProgressDrag: true,
 
-        // Phase 2 new affordances
+        // Adding, deleting and moving tasks: selection, keyboard shortcuts,
+        // toolbar buttons, the right-click menu and the "+ Add task" row
         enableSelection: true,
         enableTaskEditingShortcuts: true,
         enableTaskCRUDToolbar: true,
         enableContextMenu: true,
         enableAddTaskRow: true,
 
-        // Phase 6 — interactive dependency drawing + click-to-delete
+        // Draw dependencies from a bar's anchors; click an arrow to delete it
         dependencies: {
           editable: true,
           cornerRadius: 6,
         },
 
-        // Phase 1 validation hook (wired to the checkbox in the side panel)
+        // Veto hook: returning false cancels the delete (wired to the checkbox in the side panel)
         beforeTaskDelete: ({task, descendantIds}) => {
           if (vetoDelete) {
             log('blocked', `beforeTaskDelete vetoed delete of "${task.name}" (+${descendantIds.length} children)`);
@@ -409,7 +410,8 @@
 
       document.getElementById('programmatic-link').addEventListener('click', () => {
         try {
-          gantt.addDependency('a', 'b', {type: 'SS', lag: 1});
+          // Hi-fi mockups (b) must finish before API endpoints (c) can start.
+          gantt.addDependency('b', 'c', {type: 'FS'});
         } catch (err) {
           log('blocked', err.message);
         }
@@ -417,7 +419,7 @@
 
       document.getElementById('programmatic-unlink').addEventListener('click', () => {
         try {
-          gantt.removeDependency('a', 'b');
+          gantt.removeDependency('b', 'c');
         } catch (err) {
           log('blocked', err.message);
         }

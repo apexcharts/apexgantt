@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ApexGantt — Custom Column Renderers</title>
+    <title>ApexGantt - Custom Column Renderers</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <script src="../apexgantt.min.js"></script>
     <style>
@@ -61,10 +61,12 @@
         color: #1a1a2e;
       }
 
-      /* Status pill styling — applied by the void/cleanup-mode renderer */
+      /* Status pill styling, applied by the void/cleanup-mode renderer */
       .status-pill {
         display: inline-block;
         padding: 3px 10px;
+        border: 0;
+        font: inherit;
         border-radius: 11px;
         font-size: 11px;
         font-weight: 600;
@@ -94,17 +96,19 @@
       <header>
         <h1>Custom column renderers</h1>
         <p class="lede">
-          Three custom columns wired through the same API: avatars, progress rings, and a clickable status pill. The
-          <code>render</code> function on each column controls its cell content.
+          Three custom columns wired through the same API: avatars, progress rings, and a status pill. The
+          <code>render</code> function on each column controls its cell content. Click a status pill to move the task to
+          its next status with <code>gantt.updateTask()</code>; the cell re-renders from the updated task. Assignees
+          without an <code>avatarUrl</code> show their initials.
         </p>
       </header>
 
       <div id="gantt"></div>
 
       <div class="legend">
-        <span><strong>Assigned</strong> &mdash; <code>renderers.avatars</code> (string-return mode)</span>
-        <span><strong>Done</strong> &mdash; <code>renderers.progressRing</code> (string-return mode)</span>
-        <span><strong>Status</strong> &mdash; custom renderer with click handler (void + cleanup mode)</span>
+        <span><strong>Assigned:</strong> <code>renderers.avatars</code> (string-return mode)</span>
+        <span><strong>Done:</strong> <code>renderers.progressRing</code> (string-return mode)</span>
+        <span><strong>Status:</strong> custom renderer with a click handler (void + cleanup mode)</span>
       </div>
     </div>
 
@@ -118,7 +122,7 @@
           endTime: '2024-01-08',
           progress: 100,
           status: 'done',
-          assignees: [{name: 'Alice Chen', avatarUrl: 'https://api.dicebear.com/9.x/initials/svg?seed=Alice%20Chen'}],
+          assignees: [{name: 'Alice Chen'}],
         },
         {
           id: 't2',
@@ -127,7 +131,7 @@
           endTime: '2024-01-12',
           progress: 71,
           status: 'inprogress',
-          assignees: [{name: 'Brian Lopez', avatarUrl: 'https://api.dicebear.com/9.x/initials/svg?seed=Brian%20Lopez'}],
+          assignees: [{name: 'Brian Lopez'}],
         },
         {
           id: 't3',
@@ -137,11 +141,11 @@
           progress: 31,
           status: 'inprogress',
           assignees: [
-            {name: 'Carla Singh', avatarUrl: 'https://api.dicebear.com/9.x/initials/svg?seed=Carla%20Singh'},
-            {name: 'Dan Mehta', avatarUrl: 'https://api.dicebear.com/9.x/initials/svg?seed=Dan%20Mehta'},
-            {name: 'Eve Tanaka', avatarUrl: 'https://api.dicebear.com/9.x/initials/svg?seed=Eve%20Tanaka'},
+            {name: 'Carla Singh'},
+            {name: 'Dan Mehta'},
+            {name: 'Eve Tanaka'},
             {name: 'Frank Owen'},
-            {name: 'Grace Patel', avatarUrl: 'https://api.dicebear.com/9.x/initials/svg?seed=Grace%20Patel'},
+            {name: 'Grace Patel'},
             {name: 'Hank Reilly'},
           ],
         },
@@ -161,31 +165,37 @@
           endTime: '2024-02-12',
           progress: 23,
           status: 'review',
-          assignees: [{name: 'Kira Bose', avatarUrl: 'https://api.dicebear.com/9.x/initials/svg?seed=Kira%20Bose'}],
+          assignees: [{name: 'Kira Bose'}],
         },
       ];
 
       // ── A custom renderer using void + cleanup mode ─────────────────────────
-      // Demonstrates the framework-friendly path: mount your own DOM (or a
-      // framework component), attach event listeners, return a cleanup
-      // function so the library can run it before discarding the cell.
+      // The framework-friendly path: mount your own DOM (or a framework
+      // component), attach event listeners, and return a cleanup function so
+      // the library can run it before discarding the cell.
       const STATUS_LABELS = {
-        blocked: 'Blocked',
         inprogress: 'In progress',
         review: 'In review',
         done: 'Done',
+        blocked: 'Blocked',
       };
+      const STATUS_ORDER = Object.keys(STATUS_LABELS);
 
       function statusPillRenderer() {
         return (ctx, el) => {
           const status = ctx.task.status || 'inprogress';
-          const pill = document.createElement('span');
+          const next = STATUS_ORDER[(STATUS_ORDER.indexOf(status) + 1) % STATUS_ORDER.length];
+          const pill = document.createElement('button');
+          pill.type = 'button';
           pill.className = 'status-pill';
           pill.dataset.status = status;
           pill.textContent = STATUS_LABELS[status] || status;
+          pill.title = `Set to ${STATUS_LABELS[next]}`;
 
+          // Store the new status on the task. The chart re-runs this renderer
+          // for the row, so the pill shows the new value.
           const onClick = () => {
-            console.log(`Task "${ctx.task.name}" — status: ${STATUS_LABELS[status]}`);
+            gantt.updateTask(ctx.task.id, {status: next});
           };
           pill.addEventListener('click', onClick);
           el.appendChild(pill);
@@ -206,7 +216,7 @@
         columnConfig: [
           {key: ApexGantt.ColumnKey.Name, title: 'Task', minWidth: '180px', flexGrow: 3},
           {
-            key: 'assignees',
+            key: 'assigned',
             title: 'Assigned',
             minWidth: '160px',
             flexGrow: 2,

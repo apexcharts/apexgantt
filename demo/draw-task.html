@@ -70,7 +70,7 @@
   <body>
     <div class="demo-container">
       <div class="demo-header">
-        <h1>ApexGantt — Draw Tasks on the Timeline</h1>
+        <h1>ApexGantt: Draw Tasks on the Timeline</h1>
         <p>
           With <code>enableDrawTask: true</code>, drag across an empty part of the timeline to create a task. A preview
           bar follows the cursor; on release a task is added with the swept date range snapped to the day.
@@ -126,11 +126,19 @@
 
       gantt.render();
 
+      // The count comes from the chart itself, so it stays right whichever way
+      // a task arrives or leaves: drawn, added from the toolbar or the bottom
+      // row, deleted, or brought back and taken away again by undo / redo.
       const status = document.getElementById('status');
-      let count = 2;
+      function renderStatus(note = '') {
+        status.textContent = `Tasks: ${gantt.getTasks().length}${note}`;
+      }
       container.addEventListener('taskAdded', (e) => {
-        count++;
-        status.textContent = `Tasks: ${count} (last added ${e.detail.task.startTime} → ${e.detail.task.endTime})`;
+        renderStatus(` (last added ${e.detail.task.startTime} → ${e.detail.task.endTime})`);
+      });
+      container.addEventListener('taskDeleted', () => renderStatus());
+      container.addEventListener('historyChange', (e) => {
+        if (e.detail.kind !== 'record') renderStatus();
       });
     </script>
   </body>

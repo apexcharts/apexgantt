@@ -16,6 +16,8 @@ npm install apexgantt
 import ApexGantt from 'apexgantt';
 ```
 
+Loaded with a `<script>` tag instead, the library sets `window.ApexGantt`, which also carries every named export as a static property: `ApexGantt.TaskType`, `ApexGantt.GanttEvents`, `ApexGantt.DEFAULT_GANTT_MESSAGES`, `ApexGantt.ColumnKey`, `ApexGantt.renderers` and the rest.
+
 To create a basic gantt with minimal configuration, write as follows:
 
 ```html
@@ -48,17 +50,23 @@ gantt.render();
 
 ## Setting the License
 
-To use ApexGantt with a commercial license, set your license key before creating any chart instances:
+ApexGantt is included in the Premium plan and above. There is no free tier: without a key, or with a key for a lower plan such as Pro, the chart works fully and carries a trial watermark. See <https://apexcharts.com/pricing>.
+
+Set your license key once, typically at app startup:
 
 ```js
 import ApexGantt from 'apexgantt';
 
-// set license key before creating any charts
+// set the license key, ideally before the first render
 ApexGantt.setLicense('your-license-key');
 
 const gantt = new ApexGantt(document.getElementById('gantt-container'), ganttOptions);
 gantt.render();
 ```
+
+`setLicense` may also be called after charts have rendered (since 3.17.0): charts already on the page drop their watermark when a Premium key arrives. Calling it before the first `render()` avoids showing the watermark for a frame.
+
+The key is shared with every other Apex product on the page. A valid key for a lower plan never replaces a Premium key already in force, so another product's `setLicense` with a Pro key cannot bring the Gantt watermark back; it is ignored with a console warning. A valid key whose plan does not include ApexGantt logs a warning saying so.
 
 ## ApexGantt Options
 
@@ -66,11 +74,11 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `series` | `TaskInput[]` | **required** | Task data array. See data format below. |
-| `theme` | `'light' \| 'dark'` | `'light'` | Built-in color theme preset. |
+| `series` | `TaskInput[]` | **required** | Task data array. See data format below. Passing `series` to `update()` replaces the data and clears the undo history; any other `update()` keeps the current tasks, edits included (read them back with `getTasks()`). |
+| `theme` | `'light' \| 'dark'` | `'light'` | Built-in color theme preset. An `update()` that switches the theme returns the color options the theme sets (`barBackgroundColor`, `fontColor`, `rowBackgroundColors`, `arrowColor` and the others listed there) to the new theme's values, user-set ones included, unless the same call passes them; every other option carries over. See [`update(options)`](#1-updateoptions). |
 | `width` | `number \| string` | `'100%'` | Width of the chart container. |
-| `height` | `number \| string` | `500` | Height of the chart container. |
-| `pixelsPerDay` | `number` | _auto-fit_ | Continuous zoom level. The header tier (year/quarter/month/week/day/hour/minute) is auto-picked from this value. Reference points: `0.5` ≈ year, `1.6` ≈ quarter, `4.9` ≈ month, `25.7` ≈ week, `80` = day. Bounds clamp to roughly `[0.25, 1280]`. **When omitted**, the chart auto-fits the data span into the visible timeline area on first render; supply an explicit value (or zoom via the toolbar) to take control. |
+| `height` | `number \| string` | `500` | Height of the chart container. When omitted and the container already has a height of its own (a CSS rule, an inline style, a flex or grid track), the chart fills the container and follows its size; a container sized only by its content gets `500`. |
+| `pixelsPerDay` | `number` | _auto-fit_ | Continuous zoom level. The header tier (year/quarter/month/week/day/hour/minute) is auto-picked from this value. Reference points: `0.5` ≈ year, `1.6` ≈ quarter, `4.9` ≈ month, `25.7` ≈ week, `80` = day. Bounds clamp to roughly `[0.25, 7680]`. **When omitted**, the chart auto-fits the data span into the visible timeline area on first render; supply an explicit value (or zoom via the toolbar) to take control. |
 | `snapUnit` | `'day' \| 'hour' \| 'minute'` | `'day'` | Granularity at which task drag, resize, and inline edits snap. Independent of timeline header tier. |
 | `snapValue` | `number` | `1` | Multiplier applied to `snapUnit`, e.g. `snapUnit: 'minute', snapValue: 15` → 15-min steps. |
 | `inputDateFormat` | `string` | `'MM-DD-YYYY'` | dayjs-compatible format used to parse `startTime` / `endTime` values. Include time tokens (e.g. `'YYYY-MM-DD HH:mm'`) to enable sub-day editing — inline-edit inputs switch to `datetime-local` automatically. |
@@ -89,16 +97,16 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `filterRules` | `FilterRuleSet` | `undefined` | Initial structured filter (advanced filter builder): `{ match: 'all' \| 'any', rules: FilterRule[] }`. Each `FilterRule` is `{ field, operator, value? }`; combined with `'all'` (AND) or `'any'` (OR). Compiles to the same view-only filter as `filterBy` and takes precedence over it. See [Sorting & Filtering](#sorting--filtering). |
 | `enableFilterBuilder` | `boolean` | `false` | Show a built-in advanced filter builder in the toolbar: a "Filter" button (with an active-rule count badge) that opens a popover for composing field/operator/value conditions combined with All / Any. Drives the same view-only filter as `gantt.setFilterRules()`. See [Sorting & Filtering](#sorting--filtering). |
 | `groupBy` | `GroupCriterion \| ColumnKey \| string` | `undefined` | Initial grouping. When set, the parent/child tree is suspended and tasks are bucketed under collapsible group headers (label + member count). Pass a bare column key, or a `GroupCriterion` (`{ field, accessor?, label?, direction? }`) for custom value extraction, labelling, and header order. Also available at runtime via `gantt.groupBy()` / `gantt.clearGrouping()`. See [Grouping](#grouping). |
-| `barBackgroundColor` | `string` | `'#318CE7'` (light) / `'#818CF8'` (dark) | Default background fill color for task bars. |
+| `barBackgroundColor` | `string` | `'#87B7FE'` (light) / `'#818CF8'` (dark) | Default background fill color for task bars. `--apex-gantt-bar-fill` on the container overrides it, and `--apx-accent` applies while it is left at its default; a task's own `barBackgroundColor` wins over all of them. See [Family theme tokens](#family-theme-tokens---apx-). |
 | `barBorderRadius` | `string` | `'5px'` | CSS border-radius applied to task bars. |
-| `barMargin` | `number` | `4` | Top and bottom margin inside each row for the task bar. |
-| `barTextColor` | `string` | `'#FFFFFF'` | Text color rendered inside task bars. |
+| `barMargin` | `number` | `8` | Top and bottom margin inside each row for the task bar. |
+| `barTextColor` | `string` | `'#FFFFFF'` | Text color rendered inside task bars. A task's own `barTextColor` wins. |
 | `barLabel` | `BarLabelOptions` | `{ position: 'right', field: 'name' }` | Per-task bar label. Defaults to `position: 'right'` so labels stay visible regardless of bar width. Set `position: 'inside'` to render centered inside the bar, `'left'` to render before it, or `'auto'` to pick between `'inside'` and `'right'` based on bar width; supply `render: (task) => string \| HTMLElement` to compose the name with chips, icons, or owner info. When `position: 'left'`, the timeline auto-reserves `120px` of leading space so labels don't disappear under the task-list panel — tune via `barLabel.leadingPadding`. Outside labels are not currently rendered for milestones. |
 | `summaryBarColor` | `string` | `'#94A3B8'` (light) / `'#8FBCBC'` (dark) | Fill color for summary (group) bars. |
 | `milestoneColor` | `string` | `'#7C3AED'` (light) / `'#A78BFA'` (dark) | Fill color for milestone diamonds. |
-| `arrowColor` | `string` | `'#94A3B8'` (light) / `'#94A3B8'` (dark) | Color of dependency arrows between tasks. Subtle slate-gray by default so links don't compete with bars. |
-| `dependencies` | `DependencyOptions` | `{}` | Polish + editing for dependency arrows: `cornerRadius` (rounded joints), `hitWidth` (invisible thicker stroke for hover/click targeting), `tooltipTemplate: (ctx) => string` (HTML on hover — requires non-zero `hitWidth`), `classBuilder: (ctx) => string \| string[]` (per-arrow CSS class for cross-team / blocked / etc), `editable: boolean` (hover darkens the arrow, click selects it and reveals a "✕" affordance — click the ✕ or press <kbd>Delete</kbd> to remove via the undoable command path; on bar hover two anchor circles appear at the bar's start/finish edges, and dragging from one to another bar draws a dashed preview that commits the new dependency on release — the (source-anchor, target-anchor) pair determines the type: right→left FS, left→left SS, right→right FF, left→right SF), `allowSummaryDescendantLinks: boolean` (allow drawing edges between a summary task and its descendants; off by default since such edges confuse downstream date math). When `editable: true`, `hitWidth` is auto-bumped to at least `12` if unset. The `ctx` carries `fromTask`, `toTask`, `type`, and `lag`. |
-| `calendar` | `CalendarOptions` | `undefined` | Working-calendar config. When set, weekends + holidays drive duration math, summary aggregation, and timeline stripes — durations stop counting calendar days and start counting working days. Fields: `workingWeekdays: number[]` (0 = Sunday … 6 = Saturday; default `[1, 2, 3, 4, 5]`), `holidays: Array<string \| Date \| { date, label? }>` (non-working dates regardless of weekday; mixed forms allowed), `showNonWorkingStripes: boolean` (render hatched bands over weekend/holiday columns; default `true`), `holidayTooltip: (ctx) => string` (optional HTML rendered when the user hovers a holiday stripe — `ctx.date` is the Date, `ctx.label` is whichever string was supplied in the matching entry), `dragSnapMode: 'next' \| 'previous' \| 'allow'` (what happens when a drag/resize commits onto a non-working day — `'next'` (default) snaps forward, `'previous'` snaps backward, `'allow'` permits non-working start/end. Drag preserves the source task's working-day duration across the snap; resize snaps the moving endpoint only. No effect when `snapUnit !== 'day'` or the input format carries time tokens). Absent calendar = today's behavior (every day is a working day, no stripes, no snap). |
+| `arrowColor` | `string` | `'#94A3B8'` (light) / `'#94A3B8'` (dark) | Color of dependency arrows between tasks. Subtle slate-gray by default so links don't compete with bars. `--apex-gantt-dependency-line` on the container overrides it, and `--apx-grid` applies while it is left at its default. |
+| `dependencies` | `DependencyOptions` | `{}` | Polish + editing for dependency arrows: `cornerRadius` (rounded joints), `hitWidth` (invisible thicker stroke for hover/click targeting), `tooltipTemplate: (ctx) => string` (HTML on hover; requires non-zero `hitWidth`), `classBuilder: (ctx) => string \| string[]` (per-arrow CSS class for cross-team / blocked / etc), `editable: boolean` (hover darkens the arrow, click selects it and reveals a "✕" affordance: click the ✕ or press <kbd>Delete</kbd> to remove via the undoable command path; on bar hover two anchor circles appear at the bar's start/finish edges, and dragging from one to another bar draws a dashed preview that commits the new dependency on release; the (source-anchor, target-anchor) pair determines the type: right→left FS, left→left SS, right→right FF, left→right SF), `allowSummaryDescendantLinks: boolean` (allow edges between a summary task and its descendants, drawn or added with `gantt.addDependency()`; off by default since such edges confuse downstream date math). When `editable: true`, `hitWidth` is auto-bumped to at least `12` if unset. The `ctx` carries `fromTask`, `toTask`, `type`, and `lag`. |
+| `calendar` | `CalendarOptions` | `undefined` | Working-calendar config. When set, weekends and holidays drive duration math, summary aggregation, and timeline stripes: durations stop counting calendar days and start counting working days. Any `calendar` object turns it on, even `{}`, which gives a Monday to Friday week. Leave the option out and every day is a working day (no stripes, no snap). Fields: `workingWeekdays: number[]` (0 = Sunday to 6 = Saturday; default `[1, 2, 3, 4, 5]`; numeric strings are read as numbers, and a list naming no weekday from 0 to 6 logs a warning and uses Monday to Friday), `holidays: Array<string \| Date \| { date, label? }>` (non-working dates regardless of weekday; mixed forms allowed; strings are read with `inputDateFormat` like task dates, and ISO `YYYY-MM-DD` always works), `showNonWorkingStripes: boolean` (tint weekend and holiday columns, over the row backgrounds and under the bars, arrows and annotations; default `true`), `holidayTooltip: (ctx) => string` (optional HTML shown while the pointer is over a holiday column of the timeline, bars excepted; `ctx.date` is the Date, `ctx.label` is whichever string was supplied in the matching entry), `dragSnapMode: 'next' \| 'previous' \| 'allow'` (what happens when a drag/resize commits onto a non-working day: `'next'` (default) snaps forward, `'previous'` snaps backward, `'allow'` permits non-working start/end. Drag preserves the source task's working-day duration across the snap; resize snaps the moving endpoint only. No effect when `snapUnit !== 'day'` or the input format carries time tokens). `update({calendar})` rebuilds the calendar and `update({calendar: undefined})` turns it off; a theme change keeps it. |
 | `borderColor` | `string` | `'#E5E7EB'` (light) / `'#3A3A3A'` (dark) | Color of cell and row divider lines. |
 | `cellBorderColor` | `string` | `'#EDEFF2'` (light) / `'#3A3A3A'` (dark) | Border color for all cells in the task table and timeline grid. |
 | `cellBorderWidth` | `string` | `'1px'` | CSS border-width for all cell lines. |
@@ -114,8 +122,8 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `reorderableColumns` | `boolean` | `true` | Allow columns to be reordered by dragging a column header left or right onto another column (a drop indicator shows the insertion point). The new order is reflected in the grid, included in `getState()` / `setState()`, and emitted as a `columnReorder` event. Also available programmatically via `gantt.setColumnOrder()`. See [Column Configuration](#column-configuration). |
 | `persistState` <a id="uistate"></a> | `boolean \| { key?: string }` | `false` | Persist and restore the UI view state (zoom, scroll, sort, filter, collapse, selection) via `localStorage`. `true` uses the default key (`'apexgantt-state'`); an object sets a custom `key`. Restored on the first `render()`; saved (debounced) whenever the view changes. Also available programmatically via `gantt.getState()` / `gantt.setState()`. See [UI state persistence](#ui-state-persistence). |
 | `enableInlineEdit` | `boolean` | `false` | Allow editing task fields directly in the task-list cells (double-click to edit `name`, `startTime`, `endTime`, `duration`, `progress`). Auto-enabled when `enableTaskEdit` is `true`; set explicitly to `false` to opt out. See [Inline Editing](#inline-editing). |
-| `enableTaskDrag` | `boolean` | `true` | Allow tasks to be reordered by dragging rows in the task list. |
-| `enableTaskEdit` | `boolean` | `false` | Show the inline task-edit form when a task row is clicked. |
+| `enableTaskDrag` | `boolean` | `true` | Allow task bars to be dragged horizontally on the timeline to reschedule them (start and end move together, snapped to `snapUnit`); dragging a parent moves its children too. It does not reorder rows, and drawing dependency links is `dependencies.editable`. Each move runs `beforeTaskUpdate`, is undoable, and fires `taskDragged`. |
+| `enableTaskEdit` | `boolean` | `false` | Open the task-edit dialog (name, start, end, progress) when a task bar is double-clicked, or when Enter is pressed on a focused bar or task-list row. Saving runs `beforeTaskUpdate` with only the changed fields. Also turns on `enableInlineEdit` unless that is set explicitly. |
 | `enableTaskResize` | `boolean` | `true` | Allow task bars to be resized by dragging their handles. |
 | `enableDrawTask` | `boolean` | `false` | Allow creating a task by dragging across an empty stretch of the timeline: press on an empty row, drag horizontally to sweep out the date range, and release to add a task with those (snapped) start/end dates. Press `Escape` mid-drag to cancel. Off by default so existing empty-area drags stay inert. Respects `beforeTaskAdd` and is recorded in undo history. See [Drawing tasks on the timeline](#drawing-tasks-on-the-timeline). |
 | `enableScrollButtons` | `boolean` | `false` | Show a small chevron at the edge of a task's row when that task's bar is scrolled out of the visible timeline window; clicking it scrolls the bar back into view (nearest-edge). Also available programmatically via `gantt.scrollToTask()`. |
@@ -124,13 +132,13 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `enableTaskEditingShortcuts` | `boolean` | `false` | Enable keyboard shortcuts on the task-list panel: `Delete` / `Backspace` removes the focused task (cascade: children), `Tab` indents under the previous sibling, `Shift+Tab` outdents to the grandparent. Off by default; opt in once you've decided the shortcuts fit your app. All operations are recorded in the undo history and respect `beforeTaskDelete` / `beforeTaskMove` hooks. |
 | `enableTaskCRUDToolbar` | `boolean` | `false` | Show built-in `+ Add task` and trash-icon `Delete` buttons in the toolbar. Delete is auto-disabled when nothing is selected and deletes every selected task (cascade: children) on click; Add inserts a root-level "New task" using placeholder dates derived from the current project span. Combine with `enableSelection: true` for the delete button to be useful. |
 | `enableContextMenu` | `boolean` | `false` | Show a built-in right-click menu on task bars and task-list rows with entries for Edit, Add child / sibling task, Indent, Outdent, and Delete (cascade). Entries are gated by capability — Edit only when `enableTaskEdit` is on; Indent/Outdent only when the move is legal. Off by default so consumers can ship their own menu without competing. |
-| `enableAddTaskRow` | `boolean` | `false` | Render a single-line `+ Add task` row at the bottom of the task list that inserts a new root-level placeholder task on click (or Enter / Space). Disabled while row virtualisation is active (dataset ≥ 50 rows). |
+| `enableAddTaskRow` | `boolean` | `false` | Render a single-line `+ Add task` row at the bottom of the task list that inserts a new root-level placeholder task on click (or Enter / Space). Hidden while row virtualisation is active, which is whenever more than 50 rows are visible (collapsed and filtered-out rows do not count). |
 | `history` | `{ enabled?: boolean; maxSize?: number }` | `{ enabled: true, maxSize: 100 }` | Configures the undo/redo history. Every mutating call (drag, resize, inline / dialog edit, add, delete, move, dependency change) is recorded unless `enabled: false`. Use `gantt.undo()` / `gantt.redo()` to traverse, `gantt.canUndo()` / `gantt.canRedo()` to gate UI affordances, and the `historyChange` event to react to changes. The toolbar shows Undo/Redo buttons when `enableTaskCRUDToolbar` is on and history is enabled; Ctrl/Cmd+Z and Ctrl+Y / Ctrl+Shift+Z trigger undo/redo from anywhere inside the chart (except text inputs). |
 | `enableTooltip` | `boolean` | `true` | Show a tooltip on task-bar hover. |
 | `enableSelection` | `boolean` | `false` | Enable row selection (click, Ctrl+Click, Shift+Click, keyboard). |
-| `beforeTaskAdd` | `(ctx) => boolean \| void` | `undefined` | Veto hook called immediately before `gantt.addTask()` inserts a task. Return `false` to cancel the insertion. `ctx` is `{ input, parentId? }`. |
-| `beforeTaskUpdate` | `(ctx) => boolean \| void` | `undefined` | Veto hook called before every update path (drag, resize, progress drag, inline / dialog edit, `gantt.updateTask()`). Return `false` to reject. `ctx` is `{ task, updates }`. |
-| `beforeTaskMove` | `(ctx) => boolean \| void` | `undefined` | Veto hook called immediately before `gantt.moveTask()` re-parents a task. Return `false` to cancel. `ctx` is `{ task, oldParentId?, newParentId? }`. |
+| `beforeTaskAdd` | `(ctx) => boolean \| void` | `undefined` | Veto hook called immediately before `gantt.addTask()` inserts a task (also the toolbar Add button, the add-task row and drawing a task). Return `false` to cancel the insertion. `ctx` is one object, `{ input, parentId? }`, where `parentId` is the parent the task will land under: the `addTask()` option, else `input.parentId`, and `undefined` for a root task (including an id that matches no task). Synchronous, like every hook: a returned Promise is not a veto. |
+| `beforeTaskUpdate` | `(ctx) => boolean \| void` | `undefined` | Veto hook called before every task edit is applied: drag, resize, progress drag, keyboard move / resize, dialog save, inline edit, `gantt.updateTask()` (and `splitTask()`). `ctx` is one object, `{ task, updates }`: the task as it is now and the fields about to change (only the changed fields for a dialog save). Return `false` to reject; the bar is repainted from the model and no `taskUpdate`, `taskDragged`, `taskResized` or `taskProgressChanged` fires. Rejecting a parent drag (or a parent's keyboard move) also skips the children moved with it; rejecting one of those children keeps only that child in place, and the hook is still asked about the others. Not called for undo / redo. Synchronous: a returned Promise is not a veto. |
+| `beforeTaskMove` | `(ctx) => boolean \| void` | `undefined` | Veto hook called immediately before `gantt.moveTask()` re-parents a task (also keyboard indent / outdent and the context menu). Return `false` to cancel. `ctx` is one object, `{ task, oldParentId?, newParentId? }`. Synchronous: a returned Promise is not a veto. |
 | `beforeTaskDelete` | `(ctx) => boolean \| void` | `undefined` | Veto hook called immediately before `gantt.deleteTask()` removes a task. Return `false` to cancel. `ctx` is `{ task, descendantIds, cascade: 'forbid' \| 'children' \| 'orphan' }`. `descendantIds` is empty for `'orphan'` since children survive. |
 | `beforeDependencyChange` | `(ctx) => boolean \| void` | `undefined` | Veto hook called immediately before `gantt.addDependency()` / `gantt.removeDependency()` mutate an edge. Return `false` to cancel. `ctx` is `{ change: 'add'\|'remove', fromId, toId, type, lag }`. |
 | `showCheckboxColumn` | `boolean` | `true` | Show a checkbox column for multi-select. Only applies when `enableSelection` is true. |
@@ -142,20 +150,20 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `crosshairLabelFormat` | `(date, tier) => string` | _auto_ | Custom formatter for the crosshair label. Receives the date under the cursor and the active sub-tier (`'minute' \| 'hour' \| 'halfday' \| 'day' \| 'week' \| 'month' \| 'quarter' \| 'year'`). When omitted, the label auto-adapts to the active tier — `'ddd MM/DD/YYYY'` for day-and-coarser tiers, `'MM/DD HH:mm'` for halfday/hour/minute tiers. |
 | `baseline` | `Partial<BaselineOptions>` | `undefined` | When `enabled: true`, renders a thin baseline bar below each task bar. Hovering the baseline shows a tooltip with its planned start/end dates. When `rowHeight` isn't explicitly set, the default rowHeight is bumped to make room for the baseline without squeezing the actual bar. Fields: `color: string` (fill / stripe color; when omitted it defaults to the task bar's progress shade, i.e. the darker tone of the bar drawn above, so the baseline matches its bar; set an explicit color to override), `striped: boolean` (fill the bar with thick diagonal stripes instead of a flat color; default `true`), `stripeColor: string` (color of the gaps between stripes; default `'#FFFFFF'`), `stripeWidth: number` (px width of each stripe band, larger values = thicker; default `3`), `stripeAngle: number` (stripe angle in degrees; default `45`). By default baselines render as thick diagonal stripes tinted with the bar's progress color over a white background; set `striped: false` for a solid fill. |
 | `tooltipId` | `string` | `'apexgantt-tooltip-container'` | HTML `id` for the tooltip container element. |
-| `tooltipTemplate` | `(task, dateFormat) => string` | built-in | Custom function returning an HTML string for the task tooltip. |
+| `tooltipTemplate` | `(task, dateFormat, context) => string` | built-in | Custom function returning an HTML string for the task tooltip. `context` is a `TooltipTemplateContext`: `context.durationText` is the task's duration exactly as the Duration column shows it (`'45 m'`, `'5 wd'`), so a template need not repeat the snap and calendar rules. Two-argument functions still work. |
 | `tooltipBorderColor` | `string` | `'#E5E7EB'` (light) / `'#444444'` (dark) | Border color of the tooltip. |
 | `tooltipBGColor` | `string` | `'#FFFFFF'` | Background color of the tooltip. |
 | `fontColor` | `string` | `'#1F2933'` (light) / `'#E0E0E0'` (dark) | Color for all text in the chart. |
 | `fontFamily` | `string` | `'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'` | CSS font-family for the chart. |
 | `fontSize` | `string` | `'14px'` | CSS font-size for the chart. |
 | `fontWeight` | `string` | `'400'` | CSS font-weight for the chart. |
-| `annotationBgColor` | `string` | `'#F9D1FC'` | Background color of annotation markers. |
-| `annotationBorderColor` | `string` | `'#E273EA'` | Border color of annotation markers. |
-| `annotationBorderDashArray` | `number[]` | `[]` | SVG stroke-dasharray for annotation borders, e.g. `[6, 3]`. |
+| `annotationBgColor` | `string` | `'#DBEAFE'` (light) / `'#4A2D4D'` (dark) | Background color of annotation markers. |
+| `annotationBorderColor` | `string` | `'#60A5FA'` (light) / `'#8B4D8F'` (dark) | Border color of annotation markers. |
+| `annotationBorderDashArray` | `number[]` | `[]` | Dash pattern for annotation borders, as an SVG stroke-dasharray (dash and gap lengths in px), e.g. `[6, 3]`. `[]` draws a solid border. An annotation's own `borderDashArray` wins. |
 | `annotationBorderWidth` | `number` | `2` | Border width of annotation markers in pixels. |
-| `annotationOrientation` | `Orientation` | `Orientation.Horizontal` | Whether annotation lines are drawn horizontally or vertically. |
+| `annotationOrientation` | `Orientation` | `Orientation.Horizontal` | Orientation of annotation labels: `Orientation.Vertical` runs the text up the annotation's edge. It turns only the label: the line or region itself still runs down the task rows. An annotation's own `label.orientation` wins. |
 | `annotations` | `Annotation[]` | `[]` | Array of annotation objects to overlay on the timeline. |
-| `parsing` | `ParsingConfig` | `undefined` | Field-mapping config to parse non-standard task shapes. See Data Parsing below. |
+| `parsing` | `ParsingConfig` | `undefined` | Field-mapping config to parse non-standard task shapes. See Data Parsing below. Passing `parsing` to `update()` re-parses the raw rows (the last `series`, or the one passed with it) and replaces the data. |
 | `toolbarItems` | `ToolbarItem[]` | `[]` | Custom controls rendered in the toolbar alongside the built-in zoom and export buttons. Each item can be a `ToolbarButton`, `ToolbarSelect`, or `ToolbarSeparator`. |
 | `taskListAriaLabel` | `string` | `'Task list'` | `aria-label` for the task-list table, used by screen readers. |
 
@@ -183,14 +191,16 @@ const gantt = new ApexGantt('#chart', {
 | --- | --- | --- | --- |
 | `direction` | `'ltr' \| 'rtl' \| 'auto'` | `'ltr'` | Text/layout direction. `'rtl'` sets `dir="rtl"` on the container (flowing the toolbar, task list, task form, context menu, and tooltips right-to-left and moving the task-list panel to the right) **and mirrors the timeline time axis** so time flows right-to-left: the earliest date sits on the right, bars/header cells/grid lines/non-working stripes/dependency arrows/annotations are all mirrored, progress fills from the start (right) edge, and drag/resize/progress interactions are direction-aware. `'auto'` defers to the document/element. |
 | `dateLocale` | `GanttDateLocale` (a `dayjs/locale/*` object) | `undefined` | Localizes every date, month, weekday, and quarter label the timeline renders. Import the dayjs locale object and pass it; ApexGantt registers it on its own bundled dayjs, so you do not need to configure dayjs yourself. |
-| `messages` | `Partial<GanttMessages>` | `{}` | Overrides any subset of the generated strings (toolbar, context menu, task form + validation, baseline tooltip, add-task row, and bar aria-labels). Unset keys keep their English defaults, exported as `DEFAULT_GANTT_MESSAGES`. |
+| `messages` | `Partial<GanttMessages>` | `{}` | Overrides any subset of the generated strings (toolbar, including the Zoom In / Zoom Out buttons, context menu, task form + validation, baseline tooltip, add-task row, and bar aria-labels). Unset keys keep their English defaults, exported as `DEFAULT_GANTT_MESSAGES`. |
 
-`GanttMessages` keys include: `addTask`, `deleteSelected`, `undo`, `redo`, `exportAsSvg`, `exportAsPng`, `exportAsPdf`, `quickFilterPlaceholder`, `filterButton`, `filterHeading`, `filterMatchLabel`, `filterMatchAll`, `filterMatchAny`, `filterAddCondition`, `filterApply`, `filterClear`, `filterRemoveCondition`, `filterNoConditions`, `filterOperatorLabel(operator)`, `groupNone`, `groupCountLabel(count)`, `exportFailedNoChart`, `exportFailedGeneric`, `editTask`, `addChildTask`, `addSiblingTask`, `indent`, `outdent`, `deleteTask`, `deleteTaskWithChildren`, `formTaskName`, `formStartDate`, `formEndDate`, `formProgress`, `formSubmit`, `editTaskTitle(name)`, `validationStartRequired`, `validationEndRequired`, `validationEndAfterStart`, `validationNameRequired`, `validationProgressRequired`, `validationProgressRange`, `addTaskRowLabel`, `baselineLabel`, `startLabel`, `endLabel`, `summaryAriaLabel(ctx)`, `barAriaLabel(ctx)`, `barAriaValueText(ctx)`, and `progressAriaLabel(name)`. Column headers (set via the columns API) and the default tooltip template (`tooltipTemplate`) are localized through their own options.
+With `direction: 'rtl'` the timeline opens scrolled to its start, which sits at the right edge, and keeps the view across re-renders, zooms, `scrollToTask()` and `setState({scroll})`. Horizontal scroll offsets in `GanttUiState` (`getState().scroll.horizontal`) are measured from where the time axis starts: the left edge in LTR and the **right** edge in RTL, so `0` is the start of the timeline in both and a saved state restores the same dates even when the timeline has grown. Arrow keys on a focused bar follow the screen, so under RTL `ArrowRight` moves a bar earlier (see [Keyboard and screen readers](#keyboard-and-screen-readers)).
+
+`GanttMessages` keys include: `zoomIn`, `zoomOut`, `addTask`, `deleteSelected`, `undo`, `redo`, `exportAsSvg`, `exportAsPng`, `exportAsPdf`, `quickFilterPlaceholder`, `filterButton`, `filterHeading`, `filterMatchLabel`, `filterMatchAll`, `filterMatchAny`, `filterAddCondition`, `filterApply`, `filterClear`, `filterRemoveCondition`, `filterNoConditions`, `filterOperatorLabel(operator)`, `groupNone`, `groupCountLabel(count)`, `exportFailedNoChart`, `exportFailedGeneric`, `editTask`, `addChildTask`, `addSiblingTask`, `indent`, `outdent`, `deleteTask`, `deleteTaskWithChildren`, `formTaskName`, `formStartDate`, `formEndDate`, `formProgress`, `formSubmit`, `editTaskTitle(name)`, `validationStartRequired`, `validationEndRequired`, `validationEndAfterStart`, `validationNameRequired`, `validationProgressRequired`, `validationProgressRange`, `addTaskRowLabel`, `baselineLabel`, `startLabel`, `endLabel`, `summaryAriaLabel(ctx)`, `barAriaLabel(ctx)`, `barAriaValueText(ctx)`, and `progressAriaLabel(name)`. The bar builders (`summaryAriaLabel`, `barAriaLabel`, `barAriaValueText`) also receive `ctx.task`, the bar's task with its current values, for labels that need more than its name and dates. Column headers (set via the columns API) and the default tooltip template (`tooltipTemplate`) are localized through their own options.
 
 Default tooltip template
 
 ```js
-tooltipTemplate(task, dateFormat) {
+tooltipTemplate(task, dateFormat, context) {
     const items = [
       `<div>
         <strong>Name:</strong>
@@ -211,7 +221,7 @@ tooltipTemplate(task, dateFormat) {
         </div>
         <div>
           <strong>Duration:</strong>
-          <span>${getTaskTextByColumn(task, ColumnKey.Duration, dateFormat)}</span>
+          <span>${context.durationText}</span>
         </div>
         <div>
           <strong>Progress:</strong>
@@ -267,17 +277,22 @@ Each tasks should be in below format
 | --- | --- | --- | --- |
 | `id` | `string` | **required** | Unique task identifier. Must be stable across renders. |
 | `name` | `string` | **required** | Display name shown in the task list and inside the bar. |
-| `startTime` | `string` | **required** | Task start date, parsed with `inputDateFormat`. Not required when `showSummaryBar` is `true`. |
-| `endTime` | `string` | `startTime` | Task end date. When omitted the task renders as a milestone. Not required when `showSummaryBar` is `true`. |
+| `startTime` | `string` | **required** | Task start date, parsed with `inputDateFormat`. A parent row may omit it (and `endTime`): its summary bar spans its children. A task with no `startTime` and no children throws. When such a parent loses its last child (`deleteTask()`, `moveTask()` or `updateTask()` with a new `parentId`), it takes the span its summary bar showed as its own `startTime` and `endTime`, written in `inputDateFormat`. |
+| `endTime` | `string` | `startTime` | Task end date. When omitted and `type` is not set, a task without children renders as a milestone on `startTime`, and a parent drawn as a summary bar stays a `'task'` that spans its children. A task with `type: 'task'` needs an `endTime`. Not required when `showSummaryBar` is `true`. |
 | `progress` | `number` | `0` | Completion percentage (0–100). |
-| `type` | `'task' \| 'milestone'` | `'task'` | Visual type of the task. |
-| `parentId` | `string` | `undefined` | ID of the parent task; creates a hierarchical (indented) relationship. |
-| `dependency` | `string \| TaskDependency` | `undefined` | Declares a dependency on another task. A plain string is treated as a Finish-to-Start dependency. `TaskDependency.lagUnit: 'working' \| 'calendar'` controls whether `lag` is interpreted as working days (the default when a calendar is configured) or raw calendar days. |
+| `type` | `'task' \| 'milestone'` | `'task'` (`'milestone'` when `endTime` is omitted) | Visual type of the task. Accepts the `TaskType` enum or its string value; any other value logs a warning. |
+| `parentId` | `string` | `undefined` | ID of the parent task; creates a hierarchical (indented) relationship. Compared by value, so `'1'` finds a task whose `id` is the number `1`. A `parentId` that matches no task, or that makes a cycle (a task naming itself, or a under b under a), logs a warning and the task is shown at the root. |
+| `dependency` | `string \| TaskDependency` | `undefined` | Declares a dependency on one predecessor task (add more with `gantt.addDependency()`). A plain string is treated as a Finish-to-Start dependency; `TaskDependency` is `{ taskId, type?, lag? }`. `lag` counts working days when a `calendar` is set and calendar days otherwise, and feeds the critical path and the arrow tooltip only. `lagUnit` is deprecated and has no effect. Links never move tasks (see below). |
 | `barBackgroundColor` | `string` | `undefined` | Overrides the chart-level `barBackgroundColor` for this task only. |
+| `barTextColor` | `string` | `undefined` | Overrides the chart-level `barTextColor` for the label drawn inside this task's bar. Labels drawn outside the bar use the chart's font colour. |
 | `rowBackgroundColor` | `string` | `undefined` | Overrides the row background color for this task only. |
 | `collapsed` | `boolean` | `false` | Whether this task's children are initially collapsed. |
-| `showSummaryBar` | `boolean` | `true` | Renders this task as a summary (group) bar when it has children. Its date range is computed automatically from its descendants — `startTime`/`endTime` are ignored (a warning is logged if provided). The bar is read-only: drag, resize, and progress are disabled. Set to `false` to opt out and render the parent as a normal task bar. |
+| `showSummaryBar` | `boolean` | `true` | Renders this task as a summary (group) bar when it has children. Its date range is computed automatically from its descendants: a `startTime`/`endTime` given on the parent is kept in its data but does not move the bar, and no warning is logged. The bar is read-only: drag, resize, and progress are disabled. Set to `false` to opt out and render the parent as a normal task bar. A `true` value is dropped when the task loses its last child, so it draws as an ordinary bar (or as a milestone when its type came from a missing `endTime`); an explicit `false` is kept. |
 | `baseline` | `BaselineInput` | `undefined` | Planned (baseline) dates rendered as a thin bar beneath the actual bar when `baseline.enabled` is `true`. |
+| `segments` | `TaskSegment[]` | `undefined` | Worked spans `{ start, end }` of a split task (see [Split tasks](#split-tasks)). An entry missing `start` or `end` is dropped with a warning. A single segment is a contiguous task: it sets `startTime` and `endTime`, and the field is not kept. |
+| `assignees` | `Assignee[]` | `undefined` | People assigned to the task, shown by an avatar column renderer (see [`Assignee` type](#assignee-type)). |
+
+> **Links never move tasks.** Dependencies are drawn and analysed (critical path, the Predecessors and Successors columns), but dragging or resizing a bar does not shift its successors, and a successor that starts too early is not rescheduled.
 
 ### Expected annotation format to set as Options.annotations
 
@@ -294,10 +309,24 @@ Each tasks should be in below format
       fontFamily: 'Arial', // optional
       fontSize: '12px', // optional
       fontWeight: 'bold', // optional
+      orientation: Orientation.Vertical, // optional, falls back to annotationOrientation
     },
+    borderDashArray: [6, 3], // optional, falls back to annotationBorderDashArray
   },
 ];
 ```
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `x1` | `string` | **required** | Date of the line, or the start of the range, in `inputDateFormat`. |
+| `x2` | `string \| null` | `undefined` | End of the range. When set, a filled region from `x1` to `x2` is drawn; otherwise a line at `x1`. |
+| `bgColor` | `string` | `annotationBgColor` | Fill of a range annotation, and the label background. |
+| `borderColor` | `string` | `annotationBorderColor` | Border colour. |
+| `borderWidth` | `number` | `annotationBorderWidth` | Border width in px. |
+| `borderDashArray` | `number \| number[]` | `annotationBorderDashArray` | Dash pattern for the border: one length (equal dash and gap) or a list of dash and gap lengths in px. `0` or `[]` draws it solid. The gaps of a dashed line are left empty, so the timeline shows through them. |
+| `label.text` | `string` | `undefined` | Label text. |
+| `label.orientation` | `Orientation` | `annotationOrientation` | `Orientation.Horizontal` reads left to right; `Orientation.Vertical` runs the text up the annotation's edge. |
+| `label.fontColor`, `label.fontFamily`, `label.fontSize`, `label.fontWeight` | `string` | the chart's font options | Label typography. |
 
 ## Column Configuration
 
@@ -316,7 +345,7 @@ Available built-in column keys:
 | `Name` | Task Name | Task name with the collapse chevron + indentation |
 | `StartTime` | Start | Start date (rolled-up start for summary rows) |
 | `EndTime` | End | End date (rolled-up end for summary rows) |
-| `Duration` | Duration | Duration in the active snap unit (working days when a calendar is set) |
+| `Duration` | Duration | Duration in the snap unit's base unit, whatever the `snapValue`: days (`d`), working days (`wd`) when a calendar is set, hours (`h`) or minutes (`m`). A 45-minute task reads `45 m` with `snapValue: 15`. Sorting, filtering, grouping and the default tooltip use the same count |
 | `Progress` | Progress | Progress percent as text |
 | `ProgressRing` | Progress | Progress as an SVG ring |
 | `Wbs` | WBS | Work Breakdown Structure code (`1`, `1.2`, …) |
@@ -325,7 +354,7 @@ Available built-in column keys:
 | `Successors` | Successors | Successor tasks by WBS (same notation) |
 | `BaselineStart` | Baseline Start | Baseline start date (from `task.baseline.start`) |
 | `BaselineEnd` | Baseline End | Baseline end date (from `task.baseline.end`) |
-| `BaselineVariance` | Variance | Finish variance vs baseline in days (`+` = late, `-` = early) |
+| `BaselineVariance` | Variance | Finish variance vs baseline (`+` = late, `-` = early): working days (`wd`) when a calendar is set, so weekends and holidays in between do not count, calendar days (`d`) otherwise. Sorting and filtering use the same number |
 
 `Predecessors` / `Successors` are derived from the dependency graph and refresh automatically as dependencies or WBS change. Every built-in column except `Wbs` is sortable and filterable; `Assignees`, `Predecessors`, and `Successors` filter as text, the baseline dates as dates, and `BaselineVariance` as a number. All are groupable via [`gantt.groupBy()`](#grouping).
 
@@ -452,7 +481,7 @@ The code is also available on each `Task` as `task.wbs` if you need to read it f
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `key` | `ColumnKey \| string` | — | Built-in column identifier or any custom string id when `render` is supplied (required). |
-| `title` | `string` | from defaults | Header text displayed for the column. |
+| `title` | `string` | from defaults | Header text displayed for the column, also used for its `aria-label` and auto-sizing. For a built-in key the default title from the table above is used when it is missing; a custom column needs its own. |
 | `minWidth` | `string` | `'30px'` | Minimum CSS width (used in `minmax()`). With `autoSizeColumns` on this is the column's preferred (default) width. |
 | `maxWidth` | `string` | `'320px'` | Ceiling for the auto-sized width, so one long value can't dominate the panel. Ignored when `autoSizeColumns` is off. |
 | `flexGrow` | `number` | `1` | Flex proportion (used as `fr` units in CSS Grid). |
@@ -469,7 +498,7 @@ The code is also available on each `Task` as `task.wbs` if you need to read it f
 
 Sorting a Gantt is **hierarchy-preserving**: siblings are reordered within each parent, never flattened, so summary bars, WBS codes, and rollups stay coherent. Summary (parent) rows sort by their rolled-up span (for date/duration columns) or aggregate value.
 
-Set an initial sort with the `sortBy` option, or drive it imperatively. By default the chart sorts by start time ascending; pass `sortBy: []` for natural (input) order.
+Set an initial sort with the `sortBy` option, or drive it imperatively. By default the chart sorts by start time ascending; pass `sortBy: []` for natural (input) order. Rows with an empty value in the sort column (no baseline, a blank custom value) stay at the bottom in both directions.
 
 ```js
 import {ColumnKey} from 'apexgantt';
@@ -518,7 +547,7 @@ const gantt = new ApexGantt(element, {
 **Advanced filter builder.** Set `enableFilterBuilder: true` for a "Filter" toolbar button that opens a popover for composing multiple conditions (field + operator + value) combined with **All** (AND) or **Any** (OR). The valid operators adapt to the column's type:
 
 - **Text** (Name, custom): `contains`, `notContains`, `equals`, `notEquals`, `startsWith`, `endsWith`, `isEmpty`, `notEmpty`
-- **Number** (Progress, Duration): `equals`, `notEquals`, `gt`, `gte`, `lt`, `lte`, `isEmpty`, `notEmpty`
+- **Number** (Progress, Duration): `equals`, `notEquals`, `gt`, `gte`, `lt`, `lte`, `isEmpty`, `notEmpty`. A Duration rule compares the number the Duration column shows (base units of `snapUnit`, working days with a calendar), so `equals 5` matches a task that reads `5 d` or `5 wd`; sorting and grouping by Duration use the same count
 - **Date** (Start, End): `on`, `before`, `after`, `isEmpty`, `notEmpty`
 
 The same structured filter is available programmatically, with or without the UI:
@@ -555,6 +584,8 @@ const saved = gantt.getState();
 // later, or in a new session:
 gantt.setState(saved);
 ```
+
+`scroll.horizontal` is read from and written to the timeline body, measured from where the time axis starts (the right edge under RTL, see [Localization & RTL](#localization--rtl)); `scroll.vertical` is the row list's `scrollTop`. A `setState({scroll})` or `scrollToTask()` called straight after `render()` is not undone by the chart's first frame.
 
 `setState()` accepts a partial state, so you can restore just one slice:
 
@@ -596,7 +627,7 @@ gantt.isGrouping(); // boolean
 gantt.clearGrouping(); // restore the tree view
 ```
 
-Grouping composes with sorting and filtering: members are ordered within each group by the active sort, and a filter drops non-matching members (empty groups disappear). Tasks whose group value is empty collect under a localized "(None)" group, which always sorts last. Each group header is collapsible; clicking its chevron hides that group's members. Group headers themselves have no task bar.
+Group headers are ordered by their underlying value in `direction`: numbers numerically (Progress `5%` before `40%`), dates chronologically, text alphabetically. Grouping composes with sorting and filtering: members are ordered within each group by the active sort, and a filter drops non-matching members (empty groups disappear). Tasks whose group value is empty collect under a localized "(None)" group, which always sorts last. Each group header is collapsible; clicking its chevron hides that group's members. Group headers themselves have no task bar.
 
 > Grouping is view-only — it never mutates the task tree, WBS, or task data; clearing it returns the exact prior hierarchy. A `GroupCriterion`'s `accessor`/`label` functions are not serialized by [`persistState`](#ui-state-persistence) / `getState()` (only the `field` and `direction` are), so a restored grouping falls back to the column's own accessor.
 
@@ -624,13 +655,16 @@ const gantt = new ApexGantt(element, {
 
 The task's `startTime` / `endTime` are the **envelope** (first segment start → last segment end) and are derived automatically from the segments, so summary rollups, dependencies, the timeline header, and the duration column all keep working. The bar renders one filled piece per segment joined by a thin connector line across the gaps; progress fills the worked segments left-to-right (gaps carry no progress).
 
-Split at runtime, then clear the split by setting `segments` back to an empty array:
+Split at runtime, then clear the split by setting `segments` back to an empty array. `splitTask` cuts the worked span that contains the date, so the date must fall inside a segment, not in a gap:
 
 ```js
-gantt.splitTask('t1', '2026-06-08', {resumeAt: '2026-06-12'}); // open a gap
-gantt.isSplit('t1'); // true
+// Cut the second segment (Jun 12 to Jun 20): work Jun 12 to 16, pause, resume Jun 18.
+gantt.splitTask('t1', '2026-06-16', {resumeAt: '2026-06-18'});
+gantt.isSplit('t1'); // true whenever the task has two or more segments
 gantt.updateTask('t1', {segments: []}); // back to one contiguous bar
 ```
+
+A split keeps the task's finish date: the gap is taken out of the existing span, so the work after it gets shorter rather than later. To show a slip (work resuming later and finishing later), pass the new segments through `updateTask`, for example `gantt.updateTask('t1', {segments: [{start: '2026-06-01', end: '2026-06-06'}, {start: '2026-06-15', end: '2026-06-23'}]})`. `resumeAt` must fall after the split date and no later than the segment's last day; anything else is rejected with a console warning and the task is left unchanged. With a day-only format the end day is worked, so `resumeAt` may be that last day (a one-day remainder); with a format that carries time the end is exclusive and `resumeAt` must be before it. The default `resumeAt` is the day after `at`, which leaves no visible gap when dates are whole days, so pass a later date to open one.
 
 Interactions are preserved: dragging a split task moves all its segments together, and resizing adjusts its outer segment — both inferred automatically, so the same drag/resize handles work as for a normal bar.
 
@@ -777,6 +811,20 @@ The library invokes the cleanup function in **all three** of these cases:
 
 You do not need to listen for DOM mutations yourself. If your renderer returns a function, the library will call it.
 
+## Keyboard and screen readers
+
+Every task bar is a tab stop. Interactive bars (dragging or resizing on) have `role="slider"` and read-only ones `role="progressbar"`; the label and value text come from the `barAriaLabel` and `barAriaValueText` messages (see [Localization & RTL](#localization--rtl)), and `aria-keyshortcuts` lists only the keys that work on that bar. The label, value and value text are rebuilt after every accepted edit (drag, resize, progress drag, keyboard, dialog, inline edit or `updateTask()`), so a screen reader reads the new dates.
+
+| Key on a focused bar | Effect | Needs |
+| --- | --- | --- |
+| `ArrowLeft` / `ArrowRight` | Move the bar one snap unit (`snapUnit` x `snapValue`) earlier / later, with its children | `enableTaskDrag` |
+| `Shift+ArrowLeft` / `Shift+ArrowRight` | Move the bar's end one snap unit earlier / later; it never passes the start | `enableTaskResize` (not milestones) |
+| `Enter` / `Space` | Open the edit dialog | `enableTaskEdit` |
+
+Arrow keys follow the screen: under RTL the time axis is mirrored, so `ArrowRight` moves a bar earlier. Summary bars (where `Enter` / `Space` expand or collapse the group) and bars whose option is off ignore the arrow keys, and on a task bar `Enter` / `Space` are left alone (not prevented) when editing is off. With a working `calendar`, a move keeps the task's working-day length and skips non-working days in the direction of travel, and a resize lands its end on a working day.
+
+A keyboard edit is committed exactly as a drag or resize is: it goes through `beforeTaskUpdate`, is recorded in the undo history (one step per key press) and fires the update events with `source: 'keyboard'`. Focus stays on the bar, and its value text is refreshed with the new dates.
+
 ## Touch & pointer support
 
 All interactive gestures are built on **Pointer Events**, so they work with mouse, touch, and pen alike — no separate touch mode to enable. This covers dragging a task bar to reschedule it, resizing via the edge handles, dragging the in-bar progress handle, drawing dependencies from a bar's anchors, and dragging the task-list / timeline split bar.
@@ -807,7 +855,7 @@ Behavior changes when `inputDateFormat` includes time:
 
 - The end-time of a task is treated as the **exclusive end timestamp** (a task from `10:00` to `10:30` is 30 minutes wide). Day-only formats keep the existing inclusive-end behavior (a task from `Jan 10` to `Jan 15` spans 6 cells).
 - Inline-edit `startTime` / `endTime` cells switch to `datetime-local` inputs.
-- The Duration column reports in the configured `snapUnit` suffix: `d` / `h` / `m`.
+- The Duration column counts in the base unit of the configured `snapUnit` (`d` / `h` / `m`), not in multiples of `snapValue`: a 45-minute task reads `45 m` with `snapValue: 15`.
 
 > **Working calendars** (weekends + holidays) are supported via the [`calendar`](#apexgantt-options) option — duration math, drag/resize snapping, and timeline stripes all honour the configured working days. Per-day working **hours** (e.g. skipping after-hours within a working day) are not yet supported and are planned for a future release.
 
@@ -822,7 +870,7 @@ const gantt = new ApexGantt(element, {
 });
 ```
 
-Inline editing is also auto-enabled by `enableTaskEdit: true` (which opens a dialog when a task bar is clicked), so the two surfaces ship together by default. Pass `enableInlineEdit: false` explicitly to keep the dialog without inline cell editing:
+Inline editing is also auto-enabled by `enableTaskEdit: true` (which opens a dialog when a task bar is double-clicked), so the two surfaces ship together by default. Pass `enableInlineEdit: false` explicitly to keep the dialog without inline cell editing:
 
 ```js
 new ApexGantt(element, {
@@ -835,8 +883,10 @@ new ApexGantt(element, {
 ### How it works
 
 - **Activate**: double-click any editable cell.
-- **Commit**: press `Enter` or click outside the input (`blur`).
+- **Commit**: press `Enter` or click outside the input (`blur`). The edit runs `beforeTaskUpdate`; if the hook returns `false`, the cell goes back to what it showed before.
 - **Cancel**: press `Escape` to revert without saving.
+
+While the editor is open, the keys typed into it stay with it: Space, Home, End, the arrows and Ctrl/Cmd+A edit the text instead of moving between rows or selecting them, and Escape cancels the edit without clearing the row selection.
 
 ### Editable columns
 
@@ -845,7 +895,7 @@ new ApexGantt(element, {
 | `name` | text input | Empty values are rejected (cancelled silently). |
 | `startTime` | native `<input type="date">` | For tasks (not milestones), the duration is preserved — `endTime` shifts by the same delta. |
 | `endTime` | native `<input type="date">` | Rejected if before `startTime`. |
-| `duration` | number input (min `1`) | Edits update `endTime = startTime + duration - 1` day. `startTime` stays fixed. |
+| `duration` | number input (steps by `snapValue`) | In base units of `snapUnit` (days, hours or minutes), the same numbers the Duration column shows: with `snapUnit: 'minute', snapValue: 15` a 45-minute task reads `45` and the spinner moves in 15s. Edits set `endTime` from `startTime` (inclusive for date-only formats, so `7` days ends 6 days later); `startTime` stays fixed. With a working `calendar` and day snapping, the value counts working days, for any date format (a format with time keeps the end's time of day). |
 | `progress` | number input (`0`–`100`) | Values clamp to the `0–100` range. |
 
 When `inputDateFormat` includes time tokens (e.g. `'YYYY-MM-DD HH:mm'`), the `startTime` / `endTime` editors switch from `<input type="date">` to `<input type="datetime-local">` automatically so hour/minute edits round-trip correctly.
@@ -858,16 +908,78 @@ When `inputDateFormat` includes time tokens (e.g. `'YYYY-MM-DD HH:mm'`), the `st
 
 ### Events
 
-Inline edits emit the same events as the inline `TaskForm` and the public `updateTask()` method, so consumers can listen on a single event regardless of which surface produced the change:
+Every edit path (inline cells, the edit dialog, dragging, resizing, the progress handle, keyboard moves and `updateTask()`) commits through the same code, so one listener sees all of them. Each committed edit fires, once:
 
-- `taskUpdate` — fires before the change is applied.
-- `taskUpdateSuccess` — fires after a successful update; `detail.updatedTask` contains the resolved task.
-- `taskUpdateError` — fires if the update throws.
+- `taskUpdate`: before the change is applied (after `beforeTaskUpdate` accepted it).
+- `taskUpdateSuccess`: after it is applied; `detail.updatedTask` contains the resolved task.
+- `taskUpdateError`: instead of `taskUpdateSuccess` if applying it throws; the task keeps its previous values.
+
+Both `taskUpdate` and `taskUpdateSuccess` carry `detail.source`, which says where the edit came from: `'api'`, `'dialog'`, `'drag'`, `'inline'`, `'keyboard'`, `'progress'` or `'resize'` (the `TaskUpdateSource` type). Undo and redo fire neither event, and `updateTask(id, updates, {silent: true})` skips both.
+
+Moving a bar that has children (a drag, or ArrowLeft / ArrowRight on the focused bar) edits the bar and every dated descendant in one gesture: each gets its own `taskUpdate` and `taskUpdateSuccess`, but all the `taskUpdate` events come first and the `taskUpdateSuccess` events follow once the whole gesture is applied, so each `updatedTask` already carries the recomputed summary dates. A descendant with no `startTime` (a summary row whose dates come from its children) is not edited.
 
 ```js
 container.addEventListener('taskUpdateSuccess', (e) => {
-  const {taskId, updatedTask} = e.detail;
+  const {taskId, updatedTask, source} = e.detail;
   // persist to backend
+});
+```
+
+> Since 3.20.0 these events fire for drags, resizes and progress drags as well. An app that saves on both `taskDragged` and `taskUpdateSuccess` now saves a drag twice; save on `taskUpdateSuccess` alone.
+
+## Row selection
+
+Set `enableSelection: true` to let users select task rows (click, Ctrl/Cmd+Click, Shift+Click, Space, Ctrl/Cmd+A). Selection changes fire `selectionChange` with `{ selectedTasks, selectedIds, timestamp }`.
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `getSelectedTasks()` | `Task[]` | The selected tasks as task objects, in the order they were selected. |
+| `setSelectedTasks(ids)` | `void` | Replace the selection with the given task ids (unknown ids are ignored). Fires `selectionChange` when the selection changed. |
+| `clearSelection()` | `void` | Clear the selection. Fires `selectionChange` when something was selected. |
+
+```js
+const gantt = new ApexGantt(element, {series: tasks, enableSelection: true});
+gantt.render();
+
+gantt.setSelectedTasks(['t1', 't3']);
+gantt.getSelectedTasks().map((task) => task.name);
+gantt.clearSelection();
+```
+
+The selection is also part of `getState()` / `setState({selected})`. Without `enableSelection: true` these methods do nothing (`getSelectedTasks()` returns `[]`) and the chart logs one console warning saying so; `setState()` only warns when `selected` lists ids, so restoring a saved state never does.
+
+## Custom toolbar items
+
+`toolbarItems` adds buttons, selects and separators to the toolbar. A `ToolbarSelect` takes these fields:
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `type` | `'select'` |  | Marks the item as a select. |
+| `options` | `{ value, text }[]` |  | The choices. |
+| `onChange` | `(value, ctx) => void` |  | Called with the chosen value and `{ selectedTasks }`. |
+| `label` | `string` | `undefined` | Text shown before the select. |
+| `placeholder` | `string` | `undefined` | Disabled first option shown while nothing is chosen. |
+| `value` | `string` | `undefined` | Initially selected option value (ignored if it matches no option). |
+| `position` | `'left' \| 'right'` | `'right'` | Side of the built-in controls to render on. |
+
+The toolbar is rebuilt on every render; a select keeps the option the user chose last. To set the value from code, pass a new item with `value` through `update({toolbarItems})`.
+
+```js
+new ApexGantt(element, {
+  series: tasks,
+  toolbarItems: [
+    {
+      type: 'select',
+      label: 'Team',
+      placeholder: 'All teams',
+      value: 'design',
+      options: [
+        {value: 'design', text: 'Design'},
+        {value: 'build', text: 'Build'},
+      ],
+      onChange: (value) => filterByTeam(value),
+    },
+  ],
 });
 ```
 
@@ -928,58 +1040,81 @@ const gantt = new ApexGantt(document.getElementById('gantt'), {
 });
 ```
 
-**Supported fields:** `id`, `name`, `startTime`, `endTime`, `progress`, `type`, `parentId`, `dependency`, `barBackgroundColor`, `rowBackgroundColor`, `collapsed`, `showSummaryBar`
+**Supported fields:** `id`, `name`, `startTime`, `endTime`, `progress`, `type`, `parentId`, `dependency`, `barBackgroundColor`, `barTextColor`, `rowBackgroundColor`, `collapsed`, `showSummaryBar`, `baseline`, `segments`, `assignees`
+
+A row needs an `id` and a `name`; a row without either is skipped with a warning. A row with no start date is kept when it is the parent of a dated row (directly or further down), so a parent row can leave its dates to its children. Any other row with no start date, such as an unscheduled backlog item or a row with only an end date, is skipped with a warning. A row whose `parentId` matches no row is shown at the root, with a warning.
+
+Passing `parsing` to `update()` re-parses the raw rows the chart was last given (or the `series` passed with it) and replaces the data.
 
 ## 📘 Public API
 
 ### 1. `update(options)`
 
-Updates the entire Gantt chart with new configuration and task data.
+Changes chart options and re-renders. Only the keys you pass change; a key passed as `undefined` returns to its default.
+
+One exception: a call that switches `theme` (light to dark or back) returns the color options the theme sets to the new theme's values, even ones you set yourself: `annotationBgColor`, `annotationBorderColor`, `arrowColor`, `backgroundColor`, `barBackgroundColor`, `barTextColor`, `borderColor`, `cellBorderColor`, `criticalArrowColor`, `criticalBarColor`, `crosshairColor`, `fontColor`, `headerBackground`, `milestoneColor`, `rowBackgroundColors`, `summaryBarColor`, `tooltipBGColor` and `tooltipBorderColor`. Pass a color in the same call to keep it; every other option (columns, toolbar items, hooks, locale, sorting, bar labels, dependencies, calendar, ...) carries over.
+
+```js
+// Keep the brand bar color through a light/dark switch.
+gantt.update({theme: 'dark', barBackgroundColor: brandColor});
+```
+
+The current tasks are kept, with every edit made by dragging, `updateTask()`, `addTask()`, `deleteTask()`, `moveTask()` or a dependency change. Passing `series` (or `parsing`) replaces the data and clears the undo history. Passing `calendar` or `inputDateFormat` rebuilds the working calendar; a theme change keeps it. Scroll position and zoom are kept unless you pass `pixelsPerDay`.
 
 #### Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `options` | `Object` | Contains updated config and data. Must include a `tasks` array and other Gantt configuration options. |
+| Name      | Type                 | Description                                                                    |
+| --------- | -------------------- | ------------------------------------------------------------------------------ |
+| `options` | `GanttUpdateOptions` | Any subset of the [options](#apexgantt-options) (`Partial<GanttUserOptions>`). |
 
 #### Example
 
 ```js
+// Switch theme: the tasks, and the user's edits to them, stay.
+ganttInstance.update({theme: 'dark'});
+
+// Replace the data (clears undo history) and zoom to week density.
 ganttInstance.update({
   series: [
     {
       id: 'task-1',
       name: 'Design Phase',
-      start: '2025-07-01',
-      end: '2025-07-10',
+      startTime: '07-01-2025',
+      endTime: '07-10-2025',
       progress: 40,
     },
     // more tasks...
   ],
-  pixelsPerDay: 25.7, // week density
+  pixelsPerDay: 25.7,
 });
 ```
 
-### 2. `updateTask(taskId, taskData)`
+### 2. `updateTask(taskId, taskData, options?)`
 
-Updates the specific task with provided task data.
+Updates one task with the given fields and patches its row and bar in place (a change to `segments` or `collapsed` re-renders, so rows appear or disappear at once). A task whose row is not rendered (a collapsed parent's child, a filtered-out task, a row outside the virtual window) is updated all the same.
+
+The change runs `beforeTaskUpdate` (returning `false` cancels it), is recorded in the undo history, and fires `taskUpdate` then `taskUpdateSuccess` with `source: 'api'`. Throws when the task id is unknown or the result fails validation (after firing `taskUpdateError`).
 
 #### Parameters
 
-| Name       | Type     | Description                    |
-| ---------- | -------- | ------------------------------ |
-| `taskId`   | `string` | ID of the task to be updated   |
-| `taskData` | `Object` | Data of the task to be updated |
+| Name | Type | Description |
+| --- | --- | --- |
+| `taskId` | `string` | ID of the task to be updated |
+| `taskData` | `Partial<TaskInput>` | The fields to change (`name`, `startTime`, `endTime`, `progress`, `collapsed`, `segments`, ...) |
+| `options` | `UpdateTaskOptions` | `{ silent?: boolean }`. `silent: true` skips `taskUpdate` and `taskUpdateSuccess`, for applying a value your server sent back or rolling back a rejected save. Default `false`. |
 
 #### Example
 
 ```js
 ganttInstance.updateTask('task-1', {
   name: 'Design Phase',
-  start: '2025-07-01',
-  end: '2025-07-10',
+  startTime: '07-01-2025',
+  endTime: '07-10-2025',
   progress: 40,
 });
+
+// Apply the server's copy without re-triggering your taskUpdateSuccess save listener
+ganttInstance.updateTask('task-1', {progress: 45}, {silent: true});
 ```
 
 ### 3. `addTask(input, options?)`
@@ -1021,7 +1156,11 @@ Cascade modes:
 - `'children'` — deletes the task plus every descendant in a single undoable transaction.
 - `'orphan'` — reparents the immediate children to the deleted task's parent (or root if the deleted task was a root), then removes just the task. A `taskMoved` event fires for each reparented child. Dependency edges between surviving (reparented) children are preserved; only edges that reference the deleted task itself are cleaned up.
 
-If a `beforeTaskDelete` hook is configured and it returns `false`, the removal is cancelled and the method returns `false`. Throws when the task id is not found, or when `cascade: 'forbid'` and the task has children.
+The remaining summary rows are brought up to date at once: their dates and progress follow the delete, as they do after `updateTask()`.
+
+A parent the delete leaves with no children stops being a summary. It draws as an ordinary bar over its own dates, or as a milestone when its type came from a missing `endTime`. A parent with no `startTime` of its own (it took its dates from its children, or had only an `endTime`) keeps the span its summary bar showed: its `startTime` and `endTime` are set to that span, written in `inputDateFormat`. This is part of the same undo step, so undo restores the parent exactly as it was. It fires no `taskUpdate` event, so an app that keeps its own copy of the data should read `getTask(parentId)` after `taskDeleted`.
+
+If a `beforeTaskDelete` hook is configured and it returns `false`, the removal is cancelled and the method returns `false`. Throws when the task id is not found, when `cascade: 'forbid'` and the task has children, or when the delete would leave a parent with no `startTime` and no summary span to keep (an undated parent with `showSummaryBar: false`). Nothing is changed when it throws.
 
 #### Parameters
 
@@ -1049,7 +1188,9 @@ ganttInstance.deleteTask('task-1', {cascade: 'orphan'});
 
 Re-parents a task and re-renders. Recorded in the undo history. Emits a `taskMoved` event. If `beforeTaskMove` returns `false`, the move is cancelled and the method returns `false`.
 
-Throws when `taskId` doesn't exist, when `newParentId` doesn't exist, when moving onto itself, or when the move would create a cycle.
+Moving a parent's last child away leaves that parent as `deleteTask()` does: it stops being a summary and, with no `startTime` of its own, keeps the span its summary bar showed, in the same undo step.
+
+Throws when `taskId` doesn't exist, when `newParentId` doesn't exist, when moving onto itself, when the move would create a cycle, or when it would leave a parent with no `startTime` and no summary span to keep.
 
 Sibling reordering within the same parent is not modelled yet — that lands with Phase-4 cascade work.
 
@@ -1071,9 +1212,9 @@ ganttInstance.moveTask('subA', {newParentId: null}); // promote to root
 
 ### 6. `addDependency(fromId, toId, options?)`
 
-Creates a dependency edge between two tasks and re-renders the arrow. Recorded in undo history. Emits `dependencyAdded`. Runs through `beforeDependencyChange`.
+Creates a dependency edge between two tasks and re-renders the arrow. Recorded in undo history. Emits `dependencyAdded`. Runs through `beforeDependencyChange`. The link is drawn and analysed but never moves either task.
 
-Throws when either task doesn't exist, or when the edge already exists.
+Throws when the edge breaks one of the rules `canAddDependency()` (below) checks: a link from a task to itself, a task that doesn't exist, an edge that already exists, an edge that would close a cycle, or (unless `dependencies.allowSummaryDescendantLinks` is `true`) a link between a task and its own ancestor or descendant. Before 3.20 only the missing-task and duplicate cases threw. A `beforeDependencyChange` veto returns `false` instead of throwing.
 
 #### Parameters
 
@@ -1165,10 +1306,10 @@ myUndoButton.disabled = !ganttInstance.canUndo();
 
 ### 11. `clearHistory()`
 
-Drops every recorded transaction and emits `historyChange` with `kind: 'clear'`. Useful after loading a fresh dataset where rolling back to a previous tree state would be incoherent.
+Drops every recorded transaction and emits `historyChange` with `kind: 'clear'`. `update({series})` already does this when it replaces the data; call it yourself when undo should stop at a point of your choosing, for example after saving.
 
 ```js
-ganttInstance.update({series: freshTasks});
+await saveChart({tasks: ganttInstance.getTasks(), links: ganttInstance.getDependencies()});
 ganttInstance.clearHistory();
 ```
 
@@ -1178,17 +1319,17 @@ Returns the current undo/redo stack sizes as `{ undo: number, redo: number }`. H
 
 ### 13. `zoomIn()`
 
-Zooms in the gantt based on current view mode. View mode direction for zoom in year -> quarter -> month -> week -> day
+Zooms in by one step: `pixelsPerDay` is multiplied by 1.4, keeping the centre of the visible timeline in place. Zoom is continuous rather than a list of view-mode presets; the header tiers (year, quarter, month, week, day, hour, minute) follow from the resulting `pixelsPerDay`, so a tier changes after about five steps. The value is clamped to the zoom range (about `0.25` to `7680` px per day), and at the top of it `zoomIn()` does nothing.
 
 #### Example
 
 ```js
-ganttInstance.zoomOut();
+ganttInstance.zoomIn();
 ```
 
 ### 14. `zoomOut()`
 
-Zooms out the gantt based on current view mode. View mode direction for zoom in day -> week -> month -> quarter -> year
+Zooms out by one step: `pixelsPerDay` is divided by 1.4. Clamped to the same range as `zoomIn()`, and a no-op at the bottom of it.
 
 #### Example
 
@@ -1289,7 +1430,7 @@ Clear the active grouping and restore the tree view. Emits `groupChange`.
 
 ### 30. `splitTask(taskId, at, options?)`
 
-Split a task into separate worked segments at `at`, producing a gap on the timeline (see [Split tasks](#split-tasks)). The segment containing `at` is cut so its first piece ends at `at` and the rest resumes at `options.resumeAt` (default: the next day — pass a later `resumeAt` for a wider gap). Routed through `updateTask`, so it is validated, undoable, and emits `taskUpdate`. No-op on milestones, summary bars, or when `at` is not strictly inside a worked span.
+Split a task into separate worked segments at `at` (see [Split tasks](#split-tasks)). The segment containing `at` is cut so its first piece ends at `at` and the rest resumes at `options.resumeAt` (default: the day after `at`, which leaves no visible gap when dates are whole days; pass a later `resumeAt` to open one). The task keeps its finish date; to show a slip, pass `segments` through `updateTask` instead. Routed through `updateTask`, so it runs `beforeTaskUpdate`, is validated and undoable, and fires `taskUpdate` / `taskUpdateSuccess` with `source: 'api'`. No-op on milestones, summary bars, or when `at` is not strictly inside a worked span. A `resumeAt` that is not after `at`, or that falls after that segment's last day (day-only formats) or at or after its end (formats with time), is rejected with a console warning.
 
 ```js
 gantt.splitTask('t3', '2026-06-10', {resumeAt: '2026-06-14'});
@@ -1332,12 +1473,66 @@ gantt.setColumnOrder([ColumnKey.Name, ColumnKey.Progress, ColumnKey.StartTime]);
 
 Return the current column order as an array of keys (left-to-right), reflecting any reorder. Included in `getState()` and restorable via `setState({ columnOrder })`.
 
-### 37. `scrollToTask(taskId)`
+### 37. `scrollToTask(taskId, options?)`
 
-Scroll the timeline (and, if needed, the row list) so a task's bar is in view, using nearest-edge alignment. Backs the per-row scroll chevrons; call it directly to "locate" a task from search results, selection, or your own toolbar button. Returns `true` when a scroll was applied, `false` when the task is unknown or already fully visible.
+Scroll the timeline (and, if needed, the row list) so a task's bar is in view, using nearest-edge alignment. Backs the per-row scroll chevrons; call it directly to "locate" a task from search results, selection, or your own toolbar button.
+
+A task hidden under a collapsed parent (or, while grouping, in a collapsed group) is revealed first: `options.expand` (`ScrollToTaskOptions`, default `true`) opens its collapsed ancestors and group, then scrolls to the row. Pass `{expand: false}` to leave them closed.
+
+Returns `true` when the task's row is shown (scrolled to, or already in view), and `false` for an unknown id, a task the active filter hides, or a hidden task with `expand: false`.
 
 ```js
 gantt.scrollToTask('task-42');
+gantt.scrollToTask('task-42', {expand: false}); // only if its row is already visible
+```
+
+### 38. `getTask(taskId)`
+
+Return a task as it is now, edits included, or `null` for an unknown id. The result is a copy, its `baseline`, `segments`, `assignees` and `dependency` included: changing it does not change the chart (use `updateTask()` for that). Custom fields you added to a task are copied by reference.
+
+```js
+const task = gantt.getTask('task-42');
+```
+
+### 39. `getTasks()`
+
+Return every task as it is now, edits included, as copies (like `getTask()`) in tree order (each parent before its children). Collapsed and filtered-out tasks are included.
+
+The tasks do not carry every link. A task's `dependency` holds only the link it was loaded with (removing that link clears it), so a link added with `addDependency()` or drawn by the user is not in the returned tasks. To save the chart's data after the user edited it, save `getDependencies()` with the tasks (see below).
+
+```js
+const tasks = gantt.getTasks();
+```
+
+### 39a. `getDependencies()`
+
+Return every dependency link as it is now, as `DependencyLink` copies (`{ fromId, toId, type, lag }`): the links the tasks were loaded with and the ones added with `addDependency()` or drawn by the user, less any removed. Undo and redo are reflected.
+
+Save it with `getTasks()` to keep the links. After loading the saved tasks, add each link that `canAddDependency()` accepts (the links the tasks carry are already there), then clear the undo history so the restore cannot be undone:
+
+```js
+// Save
+await saveChart({tasks: gantt.getTasks(), links: gantt.getDependencies()});
+
+// Load
+const {tasks, links} = await loadChart();
+const gantt = new ApexGantt(el, {series: tasks});
+gantt.render();
+for (const {fromId, toId, type, lag} of links) {
+  if (gantt.canAddDependency(fromId, toId).ok) gantt.addDependency(fromId, toId, {type, lag});
+}
+gantt.clearHistory();
+```
+
+Each added link runs through `beforeDependencyChange` and emits `dependencyAdded`, like any other `addDependency()` call.
+
+### 40. `expandTask(taskId)` / `collapseTask(taskId)`
+
+Open or collapse a parent task. View state only: not recorded in undo history, and saved with the view state like `setState({collapsed})` (so `getState()` and `persistState` include it). Renders once, only when the state changes. Returns `false` for an unknown id or a task with no children, otherwise `true`.
+
+```js
+gantt.collapseTask('phase-1');
+gantt.expandTask('phase-1');
 ```
 
 ## Events
@@ -1348,24 +1543,26 @@ ApexGantt emits CustomEvents on the container element for various user interacti
 
 | Event | When | Detail |
 | --- | --- | --- |
-| `taskUpdate` | Task is being updated | `{ taskId, updates, updatedTask, timestamp }` |
-| `taskUpdateSuccess` | Update completed successfully | `{ taskId, updatedTask, timestamp }` |
+| `taskUpdate` | Once per edit on every edit path, after `beforeTaskUpdate` accepted it and just before it is applied. Not for undo / redo or `updateTask(..., {silent: true})` | `{ taskId, updates, updatedTask, source, timestamp }` |
+| `taskUpdateSuccess` | Once per edit on every edit path, after it is applied. Not for undo / redo or `updateTask(..., {silent: true})` | `{ taskId, updatedTask, source, timestamp }` |
 | `taskValidationError` | Form validation failed | `{ taskId, errors, timestamp }` |
-| `taskUpdateError` | Update failed | `{ taskId, error, timestamp }` |
+| `taskUpdateError` | Applying an accepted edit threw; the task keeps its previous values | `{ taskId, error, timestamp }` |
 | `taskAdded` | Task inserted via `gantt.addTask()` | `{ taskId, task, parentId?, timestamp }` |
 | `taskDeleted` | Task removed via `gantt.deleteTask()` | `{ taskId, task, removedDescendantIds, timestamp }` |
 | `taskMoved` | Task re-parented via `gantt.moveTask()` | `{ taskId, oldParentId?, newParentId?, timestamp }` |
-| `dependencyAdded` | Edge created via `gantt.addDependency()` | `{ fromId, toId, type, lag, timestamp }` |
-| `dependencyRemoved` | Edge removed via `gantt.removeDependency()` | `{ fromId, toId, type, lag, timestamp }` |
-| `taskDragged` | Task bar is dragged | `{ taskId, oldStartTime, oldEndTime, newStartTime, newEndTime, daysMoved, affectedChildTasks, timestamp }` |
-| `taskResized` | Task bar is resized | `{ taskId, resizeHandle, oldStartTime, oldEndTime, newStartTime, newEndTime, durationChange, timestamp }` |
-| `taskProgressChanged` | In-bar progress handle is dragged to a new value | `{ taskId, oldProgress, newProgress, timestamp }` |
+| `dependencyAdded` | Edge created via `gantt.addDependency()` or drawn on the chart | `{ fromId, toId, type, lag, timestamp }` |
+| `dependencyRemoved` | Edge removed via `gantt.removeDependency()` or with a deleted task | `{ fromId, toId, type, lag, timestamp }` |
+| `taskDragged` | Task bar is dragged, after `beforeTaskUpdate` accepted the move | `{ taskId, oldStartTime, oldEndTime, newStartTime, newEndTime, daysMoved, affectedChildTasks, timestamp }` |
+| `taskResized` | Task bar is resized, after `beforeTaskUpdate` accepted the change | `{ taskId, resizeHandle, oldStartTime, oldEndTime, newStartTime, newEndTime, durationChange, timestamp }` |
+| `taskProgressChanged` | In-bar progress handle is dragged to a new value, after `beforeTaskUpdate` accepted it | `{ taskId, oldProgress, newProgress, timestamp }` |
 | `historyChange` | The undo/redo stack changed — `kind` is `'record'`, `'undo'`, `'redo'`, or `'clear'` | `{ kind, canUndo, canRedo, undoSize, redoSize, topUndoLabel?, topRedoLabel?, timestamp }` |
 | `sortChange` | Active sort changed via API or header click | `{ criteria: { key, direction }[], timestamp }` |
 | `filterChange` | Active filter changed | `{ active, visibleCount, timestamp }` |
 | `groupChange` | Active grouping changed via `gantt.groupBy()` / `gantt.clearGrouping()` | `{ active, field, groupCount, timestamp }` |
 | `columnResize` | A task-list column was resized (header drag or API) | `{ key, width, widths, timestamp }` |
 | `columnReorder` | Task-list columns were reordered (header drag or API) | `{ order, movedKey, timestamp }` |
+
+`source` on `taskUpdate` / `taskUpdateSuccess` is a `TaskUpdateSource`: `'api' | 'dialog' | 'drag' | 'inline' | 'keyboard' | 'progress' | 'resize'`. A drag, resize or progress drag fires the `taskUpdate` / `taskUpdateSuccess` pair first and then its own event, so save on one or the other, not both.
 
 ### Events Usage
 
@@ -1456,6 +1653,32 @@ product CSS variable  >  explicit option  >  --apx-* token  >  built-in default
 ```
 
 An option set to a value equal to its built-in default is indistinguishable from one left alone, and the token wins there. Set a product variable if you need a value pinned regardless.
+
+### What Gantt reads
+
+Gantt reads the four root tokens `--apx-accent`, `--apx-fore`, `--apx-grid` and `--apx-surface`. It does **not** read `--apx-series-N`: bars take one fill, not a categorical palette, so colour individual tasks with their `barBackgroundColor` instead.
+
+| Root token      | Gantt option it stands in for                              |
+| --------------- | ---------------------------------------------------------- |
+| `--apx-accent`  | `barBackgroundColor`                                       |
+| `--apx-fore`    | `fontColor`                                                |
+| `--apx-grid`    | `cellBorderColor`, `arrowColor`                            |
+| `--apx-surface` | `backgroundColor`, `headerBackground`, the base row colour |
+
+The product variables, set on the container (or anything it inherits from), win over the option:
+
+| Variable | Option |
+| --- | --- |
+| `--apex-gantt-bar-fill` | `barBackgroundColor` (task bars) |
+| `--apex-gantt-dependency-line` | `arrowColor` (dependency arrows) |
+| `--apex-gantt-background-color` | `backgroundColor` |
+| `--apex-gantt-header-bg` | `headerBackground` |
+| `--apex-gantt-row-bg-even`, `--apex-gantt-row-bg-odd` | `rowBackgroundColors` |
+| `--apex-gantt-grid-line` | `cellBorderColor` |
+| `--apex-gantt-font-color` | `fontColor` |
+| `--apex-gantt-font-family`, `--apex-gantt-font-size` | `fontFamily`, `fontSize`: the chart text, bar and dependency tooltips, and annotation labels that set no font of their own |
+
+A task's own `barBackgroundColor` still wins over every layer. Values resolve when the chart renders, not live: after changing a variable or token (a theme switch, a class on `<html>`), call `gantt.update({})` or `gantt.render()` to repaint.
 
 ### Named themes
 

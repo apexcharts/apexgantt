@@ -156,7 +156,10 @@
     <div class="demo-container">
       <div class="demo-header">
         <h1>ApexGantt - Drag & Resize Events Demo</h1>
-        <p>Interactive demo showing task drag and resize events</p>
+        <p>
+          Drag or resize a task, or double-click one to edit it: each committed change is logged once, with the event
+          that reported it
+        </p>
       </div>
 
       <div id="svg-gantt"></div>
@@ -229,6 +232,7 @@
           const task = detail.updatedTask || {};
           eventHTML += `
             <strong>Task ID:</strong> ${detail.taskId}<br>
+            <strong>Source:</strong> ${detail.source}<br>
             <strong>Name:</strong> ${task.name || ''}<br>
             <strong>Start:</strong> ${task.startTime || ''}<br>
             <strong>End:</strong> ${task.endTime || ''}<br>
@@ -254,7 +258,6 @@
         enableTaskDrag: true,
         enableTaskResize: true,
         enableTaskEdit: true,
-        viewMode: 'week',
         series: [
           {
             id: 'task-1',
@@ -326,8 +329,15 @@
         logEvent('resize', e.detail);
       });
 
+      // taskUpdateSuccess fires once for every committed edit, whatever made
+      // it, and `source` names the path: 'drag', 'resize', 'progress',
+      // 'dialog', 'inline', 'keyboard' or 'api'. A drag or resize already has
+      // its own entry above (a parent drag reports its children there too),
+      // so only the other sources are logged here. An app that saves on both
+      // events should skip the same sources, or it saves every drag twice.
       container.addEventListener('taskUpdateSuccess', (e) => {
         console.log('Task Updated:', e.detail);
+        if (e.detail.source === 'drag' || e.detail.source === 'resize') return;
         logEvent('update', e.detail);
       });
     </script>

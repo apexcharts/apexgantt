@@ -66,7 +66,7 @@
   <body>
     <div class="demo-container">
       <div class="demo-header">
-        <h1>ApexGantt — Extended Column Catalog</h1>
+        <h1>ApexGantt: Extended Column Catalog</h1>
         <p>
           Built-in columns beyond the basics: Predecessors and Successors (derived from the dependency graph),
           Assignees, and baseline Start / End / Variance. Each is sortable (click a header) and filterable.
@@ -78,11 +78,12 @@
         <ul>
           <li>
             <strong>Predecessors / Successors</strong> show related tasks by WBS, with a non-FS type and lag suffix
-            (e.g. <code>2SS+1d</code>).
+            (e.g. <code>2SS+5d</code>: Implementation starts 5 days after task 2, Design, starts).
           </li>
           <li>
             <strong>Variance</strong> compares each task's finish to its baseline end (<code>+</code> = late,
-            <code>-</code> = early).
+            <code>-</code> = early). It counts calendar days (<code>d</code>) here, and working days (<code>wd</code>)
+            when a working <code>calendar</code> is set.
           </li>
           <li>
             <strong>Click a column header</strong> to sort by it; the baseline enabled below draws the striped baseline
@@ -107,6 +108,7 @@
           {key: ColumnKey.Assignees, title: 'Assignees', flexGrow: 1.4},
           {key: ColumnKey.Predecessors, title: 'Pred.', flexGrow: 0.9},
           {key: ColumnKey.Successors, title: 'Succ.', flexGrow: 0.9},
+          {key: ColumnKey.BaselineStart, title: 'Baseline Start', flexGrow: 1.2},
           {key: ColumnKey.BaselineEnd, title: 'Baseline End', flexGrow: 1.2},
           {key: ColumnKey.BaselineVariance, title: 'Variance', flexGrow: 0.9},
         ],

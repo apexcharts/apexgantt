@@ -191,7 +191,7 @@
       }
 
       /* ── CSS Custom Property Theming tokens ─────────────────────── */
-      /* Light-mode tokens — set on the live chart container */
+      /* Light-mode tokens, set on the live chart container */
       #gantt-live {
         --apex-gantt-bar-fill: #87b7fe;
         --apex-gantt-row-bg-even: #ffffff;
@@ -222,7 +222,7 @@
   <body>
     <!-- ── Header ─────────────────────────────────────────────────── -->
     <header class="page-header">
-      <h1>ApexGantt — <span>CSS Custom Property Theming</span></h1>
+      <h1>ApexGantt: <span>CSS Custom Property Theming</span></h1>
       <button class="theme-toggle" onclick="toggleTheme()">
         <span id="themeIcon">🌙</span>
         <span id="themeLabel">Switch to Dark Mode</span>
@@ -234,8 +234,10 @@
       <section class="demo-section">
         <h2>🎨 Live Theme Toggle</h2>
         <p>
-          Use the toggle in the header to switch between light and dark mode. The Gantt chart responds to CSS custom
-          properties defined on its container element — no JavaScript options are changed.
+          Use the toggle in the header to switch between light and dark mode. The toggle sets <code>data-theme</code> on
+          the page, which swaps the CSS custom properties defined on the chart's container, and then calls
+          <code>gantt.update({ theme })</code> so the chart renders again with the new values. Token values are read
+          when the chart renders: changing them alone does not repaint a chart that is already on screen.
         </p>
         <div class="chart-wrapper">
           <div id="gantt-live"></div>
@@ -247,20 +249,23 @@
         <h2>📋 How it works</h2>
         <p>
           Set CSS custom properties on the container element (or any ancestor) to override the default JS option values.
-          The chart reads these at render time.
+          The chart reads them when it renders, so after changing them (a theme switch, a class toggle, an OS dark-mode
+          change picked up with <code>matchMedia</code>) call <code>gantt.update()</code>. Colors set on individual
+          tasks still take precedence over the tokens.
         </p>
         <code
           >/* Light mode tokens on the container */ #my-gantt { --apex-gantt-bar-fill: #87B7FE;
           --apex-gantt-row-bg-even: #ffffff; --apex-gantt-row-bg-odd: #f5f9ff; --apex-gantt-header-bg: #ebf3fb;
           --apex-gantt-grid-line: #e3edf8; --apex-gantt-dependency-line: #1a6fc4; --apex-gantt-font-family: system-ui,
-          sans-serif; --apex-gantt-font-size: 13px; --apex-gantt-font-color: #2d3748; } /* Dark mode — via OS preference
-          (no JS required) */ @media (prefers-color-scheme: dark) { #my-gantt { --apex-gantt-bar-fill: #818cf8;
-          --apex-gantt-background-color: #1e1e1e; --apex-gantt-row-bg-even: #1e1e1e; --apex-gantt-row-bg-odd: #252525;
-          --apex-gantt-header-bg: #2a2a2a; --apex-gantt-grid-line: #3a3a3a; --apex-gantt-dependency-line: #a5b4fc;
-          --apex-gantt-font-color: #e0e0e0; } } /* Dark mode — via a manual [data-theme] toggle */ [data-theme="dark"]
-          #my-gantt { --apex-gantt-bar-fill: #818cf8; --apex-gantt-background-color: #1e1e1e; --apex-gantt-row-bg-even:
-          #1e1e1e; --apex-gantt-row-bg-odd: #252525; --apex-gantt-dependency-line: #a5b4fc; --apex-gantt-font-color:
-          #e0e0e0; }</code
+          sans-serif; --apex-gantt-font-size: 13px; --apex-gantt-font-color: #2d3748; } /* Dark mode from the OS
+          preference, read when the chart renders */ @media (prefers-color-scheme: dark) { #my-gantt {
+          --apex-gantt-bar-fill: #818cf8; --apex-gantt-background-color: #1e1e1e; --apex-gantt-row-bg-even: #1e1e1e;
+          --apex-gantt-row-bg-odd: #252525; --apex-gantt-header-bg: #2a2a2a; --apex-gantt-grid-line: #3a3a3a;
+          --apex-gantt-dependency-line: #a5b4fc; --apex-gantt-font-color: #e0e0e0; } } /* Dark mode from a manual
+          [data-theme] toggle, followed by gantt.update({ theme: 'dark' }) */ [data-theme="dark"] #my-gantt {
+          --apex-gantt-bar-fill: #818cf8; --apex-gantt-background-color: #1e1e1e; --apex-gantt-row-bg-even: #1e1e1e;
+          --apex-gantt-row-bg-odd: #252525; --apex-gantt-dependency-line: #a5b4fc; --apex-gantt-font-color: #e0e0e0;
+          }</code
         >
       </section>
 
@@ -415,7 +420,6 @@
       const ganttOptions = {
         width: '100%',
         height: 420,
-        viewMode: 'week',
         enableTaskDrag: false,
         enableTaskResize: false,
         series: ganttSeries,
@@ -426,6 +430,8 @@
       gantt.render();
 
       // ── Theme toggle logic ────────────────────────────────────────
+      // Switching data-theme swaps the CSS tokens; update({theme}) re-renders
+      // the chart so it reads the new values.
       function toggleTheme() {
         const isDark = document.body.getAttribute('data-theme') === 'dark';
         if (isDark) {

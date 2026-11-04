@@ -31,17 +31,16 @@
     </style>
   </head>
   <body>
-    <h2>Custom Colors — per-task palette + alternating row backgrounds</h2>
+    <h2>Custom Colors: per-task palette + alternating row backgrounds</h2>
     <p class="subtitle">
-      Per-task color customization with <code>barBackgroundColor</code>, <code>barTextColor</code>, and alternating row
-      backgrounds via <code>rowBackgroundColors</code> — plus a custom <code>tooltipTemplate</code> with progress bar
+      Per-task color customization with <code>barBackgroundColor</code>, and alternating row backgrounds via
+      <code>rowBackgroundColors</code>, plus a custom <code>tooltipTemplate</code> with progress bar
     </p>
     <div id="svg-gantt"></div>
     <script>
       const ganttOptions = {
         width: '100%',
         height: 620,
-        viewMode: 'week',
         fontFamily: 'Inter, sans-serif',
         fontSize: '12px',
         fontWeight: '500',
@@ -54,7 +53,7 @@
         enableTaskDrag: false,
         enableTaskResize: false,
         series: [
-          // Pre-production — teal
+          // Pre-production: teal
           {
             id: 'pre-prod',
             startTime: '05-05-2025',
@@ -62,7 +61,6 @@
             name: 'Pre-Production',
             progress: 100,
             barBackgroundColor: '#0d9488',
-            barTextColor: '#ffffff',
           },
           {
             id: 'script',
@@ -72,7 +70,6 @@
             parentId: 'pre-prod',
             progress: 100,
             barBackgroundColor: '#14b8a6',
-            barTextColor: '#042f2e',
           },
           {
             id: 'storyboard',
@@ -83,7 +80,6 @@
             dependency: 'script',
             progress: 100,
             barBackgroundColor: '#14b8a6',
-            barTextColor: '#042f2e',
           },
           {
             id: 'casting',
@@ -94,7 +90,6 @@
             dependency: 'script',
             progress: 100,
             barBackgroundColor: '#2dd4bf',
-            barTextColor: '#042f2e',
           },
           {
             id: 'locations',
@@ -105,7 +100,6 @@
             dependency: 'storyboard',
             progress: 100,
             barBackgroundColor: '#2dd4bf',
-            barTextColor: '#042f2e',
           },
           {
             id: 'crew-hire',
@@ -116,9 +110,8 @@
             dependency: 'casting',
             progress: 100,
             barBackgroundColor: '#14b8a6',
-            barTextColor: '#042f2e',
           },
-          // Production — amber
+          // Production: amber
           {
             id: 'production',
             startTime: '06-02-2025',
@@ -126,7 +119,6 @@
             name: 'Principal Photography',
             progress: 55,
             barBackgroundColor: '#d97706',
-            barTextColor: '#ffffff',
           },
           {
             id: 'shoot-int',
@@ -136,7 +128,6 @@
             parentId: 'production',
             progress: 80,
             barBackgroundColor: '#f59e0b',
-            barTextColor: '#451a03',
           },
           {
             id: 'shoot-ext',
@@ -147,7 +138,6 @@
             dependency: 'shoot-int',
             progress: 40,
             barBackgroundColor: '#fbbf24',
-            barTextColor: '#451a03',
           },
           {
             id: 'pickups',
@@ -158,7 +148,6 @@
             dependency: 'shoot-ext',
             progress: 0,
             barBackgroundColor: '#f59e0b',
-            barTextColor: '#451a03',
           },
           {
             id: 'wrap',
@@ -167,7 +156,7 @@
             type: 'milestone',
             dependency: 'pickups',
           },
-          // Post-production — violet
+          // Post-production: violet
           {
             id: 'post-prod',
             startTime: '06-23-2025',
@@ -176,7 +165,6 @@
             progress: 10,
             dependency: 'wrap',
             barBackgroundColor: '#7c3aed',
-            barTextColor: '#ffffff',
           },
           {
             id: 'rough-cut',
@@ -186,7 +174,6 @@
             parentId: 'post-prod',
             progress: 25,
             barBackgroundColor: '#a78bfa',
-            barTextColor: '#1e1b4b',
           },
           {
             id: 'sound-design',
@@ -197,7 +184,6 @@
             dependency: 'rough-cut',
             progress: 0,
             barBackgroundColor: '#a78bfa',
-            barTextColor: '#1e1b4b',
           },
           {
             id: 'color-grade',
@@ -208,7 +194,6 @@
             dependency: 'sound-design',
             progress: 0,
             barBackgroundColor: '#c4b5fd',
-            barTextColor: '#1e1b4b',
           },
           {
             id: 'vfx',
@@ -219,7 +204,6 @@
             dependency: 'rough-cut',
             progress: 0,
             barBackgroundColor: '#c4b5fd',
-            barTextColor: '#1e1b4b',
           },
           {
             id: 'final-cut',
@@ -230,9 +214,8 @@
             dependency: 'color-grade',
             progress: 0,
             barBackgroundColor: '#a78bfa',
-            barTextColor: '#1e1b4b',
           },
-          // Delivery — rose
+          // Delivery: rose
           {
             id: 'delivery',
             startTime: '07-28-2025',
@@ -241,7 +224,6 @@
             progress: 0,
             dependency: 'post-prod',
             barBackgroundColor: '#e11d48',
-            barTextColor: '#ffffff',
           },
           {
             id: 'premiere',

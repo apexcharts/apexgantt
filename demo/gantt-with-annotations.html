@@ -31,17 +31,16 @@
     </style>
   </head>
   <body>
-    <h2>Annotations: vertical lines to mark key dates</h2>
+    <h2>Annotations: key dates and date ranges</h2>
     <p class="subtitle">
-      Use <code>annotations</code> with an <code>x1</code> date to draw a labelled vertical line. Add
-      <code>x2</code> for a shaded date-range band (see the API docs).
+      Use <code>annotations</code> with an <code>x1</code> date to draw a labelled vertical line. Add an
+      <code>x2</code> date to shade the range between the two, like the code-freeze band over the last week of QA.
     </p>
     <div id="svg-gantt"></div>
     <script>
       const ganttOptions = {
         width: '100%',
         height: 580,
-        viewMode: 'week',
         fontFamily: 'Inter, sans-serif',
         fontSize: '12px',
         fontWeight: '500',
@@ -57,6 +56,17 @@
             label: {
               text: 'Feature Freeze',
               fontColor: '#b91c1c',
+            },
+          },
+          {
+            // x1 + x2 draws a shaded band across the date range.
+            x1: '05-12-2025',
+            x2: '05-16-2025',
+            bgColor: 'rgba(245, 158, 11, 0.14)',
+            borderColor: '#f59e0b',
+            label: {
+              text: 'Code Freeze',
+              fontColor: '#b45309',
             },
           },
           {

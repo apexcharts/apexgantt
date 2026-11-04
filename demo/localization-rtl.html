@@ -150,6 +150,8 @@
             launch: 'Lancement',
           },
           messages: {
+            zoomIn: 'Zoom avant',
+            zoomOut: 'Zoom arrière',
             addTask: 'Ajouter une tâche',
             deleteSelected: 'Supprimer la sélection',
             undo: 'Annuler (Ctrl+Z)',
@@ -173,6 +175,15 @@
             validationStartRequired: 'La date de début est requise',
             validationEndRequired: 'La date de fin est requise',
             validationEndAfterStart: 'La date de fin doit être postérieure à la date de début',
+            // Screen readers announce a bar with these. `start` and `end` come
+            // already formatted in the chart's date locale.
+            barAriaLabel: ({name, start, end, progress}) =>
+              `${name} : du ${start} au ${end}` + (progress === undefined ? '' : `, ${progress} % terminé`),
+            barAriaValueText: ({start, end, durationDays}) => `du ${start} au ${end}, ${durationDays} jours`,
+            summaryAriaLabel: ({name, canToggle, collapsed}) =>
+              canToggle
+                ? `${name} (récapitulatif), ${collapsed ? 'développer' : 'réduire'}`
+                : `${name} (récapitulatif)`,
           },
         },
         de: {
@@ -187,6 +198,8 @@
             launch: 'Start',
           },
           messages: {
+            zoomIn: 'Vergrößern',
+            zoomOut: 'Verkleinern',
             addTask: 'Aufgabe hinzufügen',
             deleteSelected: 'Auswahl löschen',
             undo: 'Rückgängig (Strg+Z)',
@@ -210,6 +223,13 @@
             validationStartRequired: 'Startdatum ist erforderlich',
             validationEndRequired: 'Enddatum ist erforderlich',
             validationEndAfterStart: 'Das Enddatum muss nach dem Startdatum liegen',
+            barAriaLabel: ({name, start, end, progress}) =>
+              `${name}: ${start} bis ${end}` + (progress === undefined ? '' : `, ${progress} % erledigt`),
+            barAriaValueText: ({start, end, durationDays}) => `${start} bis ${end}, ${durationDays} Tage`,
+            summaryAriaLabel: ({name, canToggle, collapsed}) =>
+              canToggle
+                ? `${name} (Zusammenfassung), ${collapsed ? 'aufklappen' : 'zuklappen'}`
+                : `${name} (Zusammenfassung)`,
           },
         },
         ar: {
@@ -218,6 +238,8 @@
           dayjsName: 'ar',
           names: {phase: 'مرحلة التصميم', research: 'بحث', mockups: 'نماذج أولية', dev: 'التطوير', launch: 'الإطلاق'},
           messages: {
+            zoomIn: 'تكبير',
+            zoomOut: 'تصغير',
             addTask: 'إضافة مهمة',
             deleteSelected: 'حذف المحدد',
             undo: 'تراجع (Ctrl+Z)',
@@ -241,6 +263,11 @@
             validationStartRequired: 'تاريخ البدء مطلوب',
             validationEndRequired: 'تاريخ الانتهاء مطلوب',
             validationEndAfterStart: 'يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء',
+            barAriaLabel: ({name, start, end, progress}) =>
+              `${name}: من ${start} إلى ${end}` + (progress === undefined ? '' : `، مكتملة بنسبة ${progress}%`),
+            barAriaValueText: ({start, end, durationDays}) => `من ${start} إلى ${end}، ${durationDays} يوم`,
+            summaryAriaLabel: ({name, canToggle, collapsed}) =>
+              canToggle ? `${name} (ملخص)، ${collapsed ? 'توسيع' : 'طي'}` : `${name} (ملخص)`,
           },
         },
         he: {
@@ -249,6 +276,8 @@
           dayjsName: 'he',
           names: {phase: 'שלב העיצוב', research: 'מחקר', mockups: 'אבטיפוס', dev: 'פיתוח', launch: 'השקה'},
           messages: {
+            zoomIn: 'הגדלה',
+            zoomOut: 'הקטנה',
             addTask: 'הוספת משימה',
             deleteSelected: 'מחיקת הנבחרים',
             undo: 'בטל (Ctrl+Z)',
@@ -272,6 +301,11 @@
             validationStartRequired: 'תאריך התחלה נדרש',
             validationEndRequired: 'תאריך סיום נדרש',
             validationEndAfterStart: 'תאריך הסיום חייב להיות אחרי תאריך ההתחלה',
+            barAriaLabel: ({name, start, end, progress}) =>
+              `${name}: מ-${start} עד ${end}` + (progress === undefined ? '' : `, ${progress}% הושלמו`),
+            barAriaValueText: ({start, end, durationDays}) => `מ-${start} עד ${end}, ${durationDays} ימים`,
+            summaryAriaLabel: ({name, canToggle, collapsed}) =>
+              canToggle ? `${name} (סיכום), ${collapsed ? 'הרחבה' : 'כיווץ'}` : `${name} (סיכום)`,
           },
         },
       };

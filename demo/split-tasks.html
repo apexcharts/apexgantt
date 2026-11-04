@@ -98,10 +98,10 @@
   <body>
     <div class="demo-container">
       <div class="demo-header">
-        <h1>ApexGantt — Split Tasks</h1>
+        <h1>ApexGantt: Split Tasks</h1>
         <p>
           A task can be split into worked segments separated by gaps on a single row. The overall span, dependencies,
-          and drag/resize all keep working — the segments ride along.
+          and drag/resize all keep working, with the segments riding along.
         </p>
       </div>
 
@@ -111,8 +111,12 @@
           <li>"Implementation" starts pre-split into two worked spans with a gap.</li>
           <li><strong>Split "Testing"</strong> cuts it at Jun 18 and resumes Jun 22 (a 3-day gap).</li>
           <li>
-            <strong>Drag</strong> a split bar — all its segments move together. <strong>Resize</strong> a handle — the
-            outer segment adjusts.
+            A split keeps the task's finish date: "Testing" still ends Jun 26, and the work after the gap is shorter. To
+            show a slip instead, pass new <code>segments</code> through <code>gantt.updateTask()</code>.
+          </li>
+          <li>
+            <strong>Drag</strong> a split bar and all its segments move together. <strong>Resize</strong> a handle and
+            the outer segment adjusts.
           </li>
           <li><strong>Clear split</strong> restores a single contiguous bar.</li>
         </ul>
@@ -123,7 +127,7 @@
           class="btn btn-primary"
           onclick="gantt.splitTask('t3', '2026-06-18', { resumeAt: '2026-06-22' }); refresh();"
         >
-          Split "Testing" (gap Jun 18–22)
+          Split "Testing" (pause Jun 19 to 21)
         </button>
         <button class="btn" onclick="gantt.updateTask('t3', { segments: [] }); refresh();">
           Clear "Testing" split
@@ -147,7 +151,7 @@
             startTime: '2026-06-09',
             endTime: '2026-06-24',
             progress: 55,
-            // Pre-split: work Jun 9–13, pause, resume Jun 19–24.
+            // Already split: work Jun 9 to 13, pause, resume Jun 19 to 24.
             segments: [
               {start: '2026-06-09', end: '2026-06-13'},
               {start: '2026-06-19', end: '2026-06-24'},

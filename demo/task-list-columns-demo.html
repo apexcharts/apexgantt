@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ApexGantt — Task List Columns Demo</title>
+    <title>ApexGantt - Task List Columns Demo</title>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
     <script src="../apexgantt.min.js"></script>
     <style>
@@ -241,15 +241,15 @@
   <body>
     <div class="demo-container">
       <div class="demo-header">
-        <h1>ApexGantt — Task List Columns</h1>
+        <h1>ApexGantt: Task List Columns</h1>
         <p>
           Use <code>columnConfig</code> to control which columns appear in the task list, their order, and width. By
           default (<code>autoSizeColumns</code>) each column fits its header + content and the panel grows so nothing
-          clips; toggle it off to compare with the legacy fixed-width behavior. Toggle columns on/off, drag to reorder,
-          or set a minimum pixel width per column — the chart updates instantly. <strong>Tip:</strong> drag the handle
-          at the right edge of any column header to make that column wider or thinner (double-click the handle to reset
-          it), or drag a column header left/right to reorder columns. Disable these with
-          <code>resizableColumns: false</code> / <code>reorderableColumns: false</code>.
+          clips; toggle it off to compare with fixed-width columns. Toggle columns on/off, drag to reorder, or set a
+          minimum pixel width per column, and the chart updates instantly. <strong>Tip:</strong> drag the handle at the
+          right edge of any column header to make that column wider or thinner (double-click the handle to reset it), or
+          drag a column header left/right to reorder columns. Disable these with <code>resizableColumns: false</code> /
+          <code>reorderableColumns: false</code>.
         </p>
       </div>
 
@@ -295,21 +295,33 @@
     <script>
       // ── Available columns ────────────────────────────────────────────────────
 
+      const ColumnKey = ApexGantt.ColumnKey;
+
       const ALL_COLUMNS = [
-        {key: 'name', title: 'Task Name', defaultMinWidth: 120},
-        {key: 'startTime', title: 'Start', defaultMinWidth: 170},
-        {key: 'duration', title: 'Duration', defaultMinWidth: 150},
-        {key: 'progress', title: 'Progress', defaultMinWidth: 50},
+        {key: ColumnKey.Name, title: 'Task Name', defaultMinWidth: 120},
+        {key: ColumnKey.StartTime, title: 'Start', defaultMinWidth: 170},
+        {key: ColumnKey.Duration, title: 'Duration', defaultMinWidth: 150},
+        {key: ColumnKey.Progress, title: 'Progress', defaultMinWidth: 50},
       ];
 
       // ── Mutable state ────────────────────────────────────────────────────────
 
       // Current order (array of column keys in display order)
-      let columnOrder = ['name', 'startTime', 'duration', 'progress'];
+      let columnOrder = [ColumnKey.Name, ColumnKey.StartTime, ColumnKey.Duration, ColumnKey.Progress];
       // Visibility map
-      const visible = {name: true, startTime: true, duration: true, progress: true};
+      const visible = {
+        [ColumnKey.Name]: true,
+        [ColumnKey.StartTime]: true,
+        [ColumnKey.Duration]: true,
+        [ColumnKey.Progress]: true,
+      };
       // Min-width overrides in px (used as floors; content can grow past them)
-      const minWidths = {name: 120, startTime: 70, duration: 50, progress: 50};
+      const minWidths = {
+        [ColumnKey.Name]: 120,
+        [ColumnKey.StartTime]: 70,
+        [ColumnKey.Duration]: 50,
+        [ColumnKey.Progress]: 50,
+      };
       // Whether columns auto-size to fit their content (default on).
       let autoSize = true;
 
@@ -481,7 +493,7 @@
       const container = document.getElementById('svg-gantt');
 
       const gantt = new ApexGantt(container, {
-        viewMode: 'month',
+        pixelsPerDay: 4.9, // month-level zoom
         series: tasks,
         columnConfig: buildColumnConfig(),
         autoSizeColumns: autoSize,
@@ -494,8 +506,8 @@
 
       function applyColumns() {
         const config = buildColumnConfig();
+        // update() keeps the current task data; only the column settings change.
         gantt.update({
-          series: tasks,
           columnConfig: config,
           autoSizeColumns: autoSize,
           tasksContainerWidth: computeTasksContainerWidth(),
@@ -519,11 +531,11 @@
       // ── Presets ──────────────────────────────────────────────────────────────
 
       const PRESETS = {
-        default: ['name', 'startTime', 'duration', 'progress'],
-        nameOnly: ['name'],
-        nameProgress: ['name', 'progress'],
-        compact: ['name', 'duration'],
-        nameStart: ['name', 'startTime'],
+        default: [ColumnKey.Name, ColumnKey.StartTime, ColumnKey.Duration, ColumnKey.Progress],
+        nameOnly: [ColumnKey.Name],
+        nameProgress: [ColumnKey.Name, ColumnKey.Progress],
+        compact: [ColumnKey.Name, ColumnKey.Duration],
+        nameStart: [ColumnKey.Name, ColumnKey.StartTime],
       };
 
       function applyPreset(name) {
@@ -547,8 +559,8 @@
           const cb = document.createElement('input');
           cb.type = 'checkbox';
           cb.checked = !!visible[key];
-          // "name" column must always stay visible
-          if (key === 'name') cb.disabled = true;
+          // The Name column always stays visible
+          if (key === ColumnKey.Name) cb.disabled = true;
 
           cb.addEventListener('change', () => {
             visible[key] = cb.checked;

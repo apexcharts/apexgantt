@@ -55,7 +55,7 @@
     </style>
   </head>
   <body>
-    <h2>Dependency Arrows — rounded joints, hit area, tooltips, custom classes</h2>
+    <h2>Dependency Arrows: rounded joints, hit area, tooltips, custom classes</h2>
     <p class="subtitle">
       Hover any arrow to see the from / to / lag tooltip. Cross-stage links (Foundations → Framing) are dashed magenta;
       the blocked QA dependency is solid red. Use the slider to see the corner-radius effect live.
@@ -116,7 +116,7 @@
           dependency: 'framing',
           stage: 'structural',
         },
-        // Blocked: QA can't start until MEP is done — flagged
+        // Blocked: QA can't start until MEP is done, so this link is flagged
         {
           id: 'qa',
           name: 'Quality Inspection',
@@ -136,6 +136,27 @@
         },
       ];
 
+      // The arrow styling the sliders change. Kept apart from the rest of the
+      // options so a slider can send just this to gantt.update(): passing
+      // `series` there would reload the tasks and drop the user's edits.
+      function dependencyOptions(cornerRadius, hitWidth) {
+        return {
+          cornerRadius,
+          hitWidth,
+          classBuilder: ({fromTask, toTask}) => {
+            if (toTask.blocked) return 'dep-blocked';
+            if (fromTask.stage !== toTask.stage && (fromTask.stage || toTask.stage)) return 'dep-cross-stage';
+            return '';
+          },
+          tooltipTemplate: ({fromTask, toTask, type, lag}) => `
+            <div><strong>${escape(fromTask.name)} → ${escape(toTask.name)}</strong></div>
+            <div><strong>Type:</strong> <span>${escape(type)}</span></div>
+            <div><strong>Lag:</strong> <span>${lag} day${lag === 1 ? '' : 's'}</span></div>
+            ${toTask.blocked ? '<div style="color:#dc2626;font-weight:600">Blocked</div>' : ''}
+          `,
+        };
+      }
+
       function buildOptions(cornerRadius, hitWidth) {
         return {
           width: '100%',
@@ -148,27 +169,13 @@
           barBorderRadius: '6px',
           barMargin: 6,
           rowHeight: 36,
-          dependencies: {
-            cornerRadius,
-            hitWidth,
-            classBuilder: ({fromTask, toTask}) => {
-              if (toTask.blocked) return 'dep-blocked';
-              if (fromTask.stage !== toTask.stage && (fromTask.stage || toTask.stage)) return 'dep-cross-stage';
-              return '';
-            },
-            tooltipTemplate: ({fromTask, toTask, type, lag}) => `
-              <div><strong>${escape(fromTask.name)} → ${escape(toTask.name)}</strong></div>
-              <div><strong>Type:</strong> <span>${escape(type)}</span></div>
-              <div><strong>Lag:</strong> <span>${lag} day${lag === 1 ? '' : 's'}</span></div>
-              ${toTask.blocked ? '<div style="color:#dc2626;font-weight:600">Blocked</div>' : ''}
-            `,
-          },
+          dependencies: dependencyOptions(cornerRadius, hitWidth),
           series,
         };
       }
 
       const host = document.getElementById('svg-gantt');
-      let gantt = new ApexGantt(host, buildOptions(10, 10));
+      const gantt = new ApexGantt(host, buildOptions(10, 10));
       gantt.render();
 
       const radiusInput = document.getElementById('radius');
@@ -181,7 +188,8 @@
         const h = parseInt(hitInput.value, 10);
         radiusVal.textContent = r;
         hitVal.textContent = h;
-        gantt.update(buildOptions(r, h));
+        // Only the changed slice: dragged and resized bars keep their new dates.
+        gantt.update({dependencies: dependencyOptions(r, h)});
       }
 
       radiusInput.addEventListener('input', update);

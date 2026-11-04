@@ -127,11 +127,11 @@
   <body>
     <div class="demo-container">
       <div class="demo-header">
-        <h1>ApexGantt — UI State Persistence</h1>
+        <h1>ApexGantt: UI State Persistence</h1>
         <p>
           Zoom, scroll, expand/collapse, selection, sort, and filter are captured as a serializable snapshot via
-          <code>getState()</code> / <code>setState()</code>. This demo also enables <code>persistState</code>, so the
-          view is remembered across reloads via localStorage.
+          <code>getState()</code> / <code>setState()</code>. This demo also sets <code>persistState</code>, so the view
+          is remembered across reloads in localStorage.
         </p>
       </div>
 
@@ -143,8 +143,9 @@
             <strong>select</strong> a row, or <strong>zoom</strong> (Ctrl + scroll).
           </li>
           <li>
-            This chart has <code>persistState: true</code> — <strong>reload the page</strong> and the view comes back
-            exactly as you left it.
+            This chart sets <code>persistState: { key: 'apexgantt-demo-state' }</code>, so when you
+            <strong>reload the page</strong> the view comes back exactly as you left it.
+            <code>persistState: true</code> does the same under the default key, <code>'apexgantt-state'</code>.
           </li>
           <li>
             <strong>Save snapshot</strong> captures the current state; <strong>mess it up</strong> then
@@ -176,7 +177,7 @@
 
       <div>
         <label style="font-size: 13px; color: #555; font-weight: 600">Last saved snapshot</label>
-        <pre class="snapshot" id="snapshot">— none yet —</pre>
+        <pre class="snapshot" id="snapshot">(none yet)</pre>
       </div>
     </div>
 
@@ -197,7 +198,7 @@
           {key: ApexGantt.ColumnKey.Progress, title: 'Progress', flexGrow: 1},
         ],
         series: [
-          {id: 'phase-1', name: 'Phase 1 — Discovery', startTime: '2024-01-01', endTime: '2024-01-31', progress: 100},
+          {id: 'phase-1', name: 'Phase 1: Discovery', startTime: '2024-01-01', endTime: '2024-01-31', progress: 100},
           {
             id: 'task-1',
             name: 'Stakeholder interviews',
@@ -214,7 +215,7 @@
             parentId: 'phase-1',
             progress: 100,
           },
-          {id: 'phase-2', name: 'Phase 2 — Design', startTime: '2024-02-01', endTime: '2024-02-29', progress: 60},
+          {id: 'phase-2', name: 'Phase 2: Design', startTime: '2024-02-01', endTime: '2024-02-29', progress: 60},
           {
             id: 'task-3',
             name: 'UX wireframes',
@@ -231,7 +232,7 @@
             parentId: 'phase-2',
             progress: 40,
           },
-          {id: 'phase-3', name: 'Phase 3 — Development', startTime: '2024-03-01', endTime: '2024-04-30', progress: 20},
+          {id: 'phase-3', name: 'Phase 3: Development', startTime: '2024-03-01', endTime: '2024-04-30', progress: 20},
           {
             id: 'task-5',
             name: 'Backend API',
@@ -291,6 +292,12 @@
       container.addEventListener('sortChange', renderStatus);
       container.addEventListener('filterChange', renderStatus);
       container.addEventListener('selectionChange', renderStatus);
+      // Collapsing and expanding rows fires no event of its own, so read the
+      // state again after anything that can change it: the buttons above, and
+      // a click or key press inside the chart (a row's chevron, the arrow keys).
+      document.querySelector('.toolbar').addEventListener('click', renderStatus);
+      container.addEventListener('click', renderStatus);
+      container.addEventListener('keyup', renderStatus);
       renderStatus();
     </script>
   </body>

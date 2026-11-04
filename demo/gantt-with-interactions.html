@@ -80,9 +80,9 @@
     </style>
   </head>
   <body>
-    <h2>Interactions — drag, resize, and inline edit</h2>
+    <h2>Interactions: drag, resize, and inline edit</h2>
     <p class="subtitle">
-      Drag tasks to reschedule, resize to adjust duration, or double-click to edit — all updates are logged below
+      Drag tasks to reschedule, resize to adjust duration, or double-click to edit. All updates are logged below
       (<code>enableTaskDrag</code>, <code>enableTaskResize</code>, <code>enableTaskEdit</code>)
     </p>
     <div id="svg-gantt"></div>
@@ -94,7 +94,6 @@
       const ganttOptions = {
         width: '100%',
         height: 540,
-        viewMode: 'week',
         fontFamily: 'Inter, sans-serif',
         fontSize: '12px',
         fontWeight: '500',
@@ -275,9 +274,14 @@
         addLog('RESIZE', 'tag-resize', `"${nameOf(taskId)}" now ${newStartTime} \u2192 ${newEndTime}`);
       });
 
+      // taskUpdateSuccess fires for every committed edit, drags and resizes
+      // included, and `source` says which kind it was. Drags and resizes
+      // already have their own entries above, so log the rest here (an edit
+      // in the dialog, a keyboard move, a progress drag).
       el.addEventListener('taskUpdateSuccess', (e) => {
-        const t = e.detail.updatedTask;
-        addLog('EDIT', 'tag-edit', `"${t.name}" updated`);
+        const {source, updatedTask} = e.detail;
+        if (source === 'drag' || source === 'resize') return;
+        addLog('EDIT', 'tag-edit', `"${updatedTask.name}" updated (${source})`);
       });
     </script>
   </body>

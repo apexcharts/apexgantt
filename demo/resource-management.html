@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Resource Management - ApexGantt</title>
+    <title>Colour by Team - ApexGantt</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -49,10 +49,10 @@
     </style>
   </head>
   <body>
-    <h2>Resource Management — color-coded by team/trade</h2>
+    <h2>Colour by team</h2>
     <p class="subtitle">
-      Color-coded by trade/team using per-task
-      <code>barBackgroundColor</code> to visualize resource allocation across parallel work streams
+      Each trade or team gets its own bar colour through the per-task <code>barBackgroundColor</code>, so resource
+      allocation across parallel work streams reads at a glance
     </p>
     <div class="legend">
       <div class="legend-item">
@@ -85,7 +85,6 @@
       const ganttOptions = {
         width: '100%',
         height: 660,
-        viewMode: 'week',
         fontFamily: 'Inter, sans-serif',
         fontSize: '12px',
         fontWeight: '500',
@@ -98,7 +97,7 @@
         enableTaskResize: true,
         annotations: [
           {
-            x1: '07-14-2025',
+            x1: '07-19-2025',
             bgColor: 'rgba(239, 68, 68, 0.06)',
             label: {text: 'Code Inspection'},
           },
@@ -111,7 +110,7 @@
           },
         ],
         series: [
-          // Phase 1 — Design
+          // Phase 1: Design
           {
             id: 'design',
             startTime: '06-02-2025',
@@ -160,7 +159,7 @@
             type: 'milestone',
             dependency: 'permits',
           },
-          // Phase 2 — Rough-in
+          // Phase 2: Rough-in
           {
             id: 'rough-in',
             startTime: '06-23-2025',
@@ -243,7 +242,7 @@
             type: 'milestone',
             dependency: 'hvac',
           },
-          // Phase 3 — Finishes
+          // Phase 3: Finishes
           {
             id: 'finishes',
             startTime: '07-21-2025',

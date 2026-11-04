@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ApexGantt — Critical Path</title>
+    <title>Critical Path - ApexGantt</title>
     <script src="../apexgantt.min.js"></script>
     <style>
       body {
@@ -77,7 +77,7 @@
     </style>
   </head>
   <body>
-    <h1>ApexGantt — Critical Path Highlighting</h1>
+    <h1>ApexGantt: Critical Path Highlighting</h1>
     <p>
       The critical path is the longest chain of dependent tasks. Any delay on a critical task delays the entire project.
       Critical bars and arrows are highlighted in red.
@@ -96,14 +96,14 @@
 
     <!-- Section 1: simple linear chain, all tasks critical -->
     <div class="section">
-      <h2>Linear chain — all tasks are critical</h2>
+      <h2>Linear chain: all tasks are critical</h2>
       <p>A → B → C → D. Every task is on the only path, so all are critical.</p>
       <div id="gantt-linear"></div>
     </div>
 
     <!-- Section 2: parallel paths, only the longer one is critical -->
     <div class="section">
-      <h2>Parallel paths — only the longer path is critical</h2>
+      <h2>Parallel paths: only the longer path is critical</h2>
       <p>
         Start → A (10 d) → End and Start → B (3 d) → C (3 d) → End.<br />
         Path A is 10 days; path B+C is 6 days. <strong>Path A is critical.</strong>
@@ -113,8 +113,10 @@
 
     <!-- Section 3: toggle + drag to see recalculation -->
     <div class="section">
-      <h2>Interactive — toggle critical path / drag tasks</h2>
-      <p>Use the button to toggle highlighting. Drag or resize a task bar — critical path recalculates on release.</p>
+      <h2>Interactive: toggle critical path, drag tasks</h2>
+      <p>
+        Use the button to toggle highlighting. Drag or resize a task bar and the critical path recalculates on release.
+      </p>
       <div class="controls">
         <button id="toggle-btn" class="active">Critical path: ON</button>
       </div>
@@ -127,7 +129,6 @@
         enableCriticalPath: true,
         enableTaskDrag: false,
         enableTaskResize: false,
-        viewMode: 'week',
         series: [
           {id: 'a', name: 'Design', startTime: '01-01-2025', endTime: '01-07-2025', progress: 100},
           {id: 'b', name: 'Development', startTime: '01-08-2025', endTime: '01-21-2025', progress: 60, dependency: 'a'},
@@ -138,11 +139,10 @@
 
       // ── Parallel paths ────────────────────────────────────────────────────
       // Start 01-01, path-A: 10 days (critical), path-B+C: 6 days (slack=4)
-      new ApexGantt(document.getElementById('gantt-parallel'), {
+      const parallel = new ApexGantt(document.getElementById('gantt-parallel'), {
         enableCriticalPath: true,
         enableTaskDrag: false,
         enableTaskResize: false,
-        viewMode: 'week',
         series: [
           {id: 'start', name: 'Project Start', startTime: '01-01-2025', endTime: '01-01-2025', progress: 100},
           // Long path (critical)
@@ -171,8 +171,10 @@
             progress: 80,
             dependency: {taskId: 'path-b', type: 'FS'},
           },
-          // Merge point — depends on both path-a and path-c
-          // CPM picks the longer predecessor (path-a)
+          // Merge point. Project End depends on both path-a and path-c: the
+          // dependency field holds one predecessor, so the second link is
+          // added with addDependency() after render. The critical path follows
+          // the longer chain into it (path-a).
           {
             id: 'end',
             name: 'Project End',
@@ -182,20 +184,24 @@
             dependency: {taskId: 'path-a', type: 'FS'},
           },
         ],
-      }).render();
+      });
+      parallel.render();
+      parallel.addDependency('path-c', 'end');
+      // addDependency() is undoable like any edit; clear the history so the
+      // chart opens with nothing to undo.
+      parallel.clearHistory();
 
       // ── Interactive ───────────────────────────────────────────────────────
       const interactiveGantt = new ApexGantt(document.getElementById('gantt-interactive'), {
         enableCriticalPath: true,
         enableTaskDrag: true,
         enableTaskResize: true,
-        viewMode: 'week',
         series: [
           {id: 'i-a', name: 'Requirements', startTime: '01-01-2025', endTime: '01-05-2025', progress: 100},
           {id: 'i-b', name: 'Design', startTime: '01-06-2025', endTime: '01-12-2025', progress: 80, dependency: 'i-a'},
           {
             id: 'i-c',
-            name: 'Dev — Core',
+            name: 'Dev: Core',
             startTime: '01-13-2025',
             endTime: '01-26-2025',
             progress: 40,
@@ -203,7 +209,7 @@
           },
           {
             id: 'i-d',
-            name: 'Dev — UI',
+            name: 'Dev: UI',
             startTime: '01-13-2025',
             endTime: '01-19-2025',
             progress: 20,

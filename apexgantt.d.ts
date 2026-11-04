@@ -18,12 +18,25 @@ declare interface AccessibilityOptions {
  * Interface representing an annotation in the graph.
  */
 export declare interface Annotation {
+    /** Fill of a range annotation. @default the chart's `annotationBgColor` */
     readonly bgColor?: string;
+    /** Border colour. @default the chart's `annotationBorderColor` */
     readonly borderColor?: string;
-    readonly borderDashArray?: number;
+    /**
+     * Dash pattern for the border, as an SVG `stroke-dasharray`: a single
+     * length (equal dash and gap) or a list of dash and gap lengths in px, e.g.
+     * `[6, 3]`. `0` or `[]` draws it solid. Falls back to the chart's
+     * `annotationBorderDashArray`.
+     * @default the chart's `annotationBorderDashArray` (`[]`, solid)
+     */
+    readonly borderDashArray?: number | number[];
+    /** Border width in px. @default the chart's `annotationBorderWidth` */
     readonly borderWidth?: number;
+    /** Optional text label drawn at the top of the annotation. */
     readonly label?: AnnotationLabel;
+    /** Start date (a line when `x2` is omitted), in `inputDateFormat`. */
     readonly x1: string;
+    /** End date. When set, a filled region from `x1` to `x2` is drawn. */
     readonly x2?: null | string;
 }
 
@@ -31,11 +44,21 @@ export declare interface Annotation {
  * Interface representing the label of an annotation.
  */
 export declare interface AnnotationLabel {
+    /** Label text colour. @default the chart's `fontColor` */
     readonly fontColor?: string;
+    /** Label font family. @default the chart's `fontFamily` */
     readonly fontFamily?: string;
+    /** Label font size. @default the chart's `fontSize` */
     readonly fontSize?: string;
+    /** Label font weight. @default the chart's `fontWeight` */
     readonly fontWeight?: string;
+    /**
+     * Orientation of this label's text. Falls back to the chart's
+     * `annotationOrientation`.
+     * @default the chart's `annotationOrientation` (`Orientation.Horizontal`)
+     */
     readonly orientation?: Orientation;
+    /** Label text. */
     readonly text?: string;
 }
 
@@ -90,8 +113,43 @@ declare class ApexGantt extends BaseChart {
      * the user supplies an explicit zoom via `update()` or the toolbar.
      */
     private needsAutoFitZoom;
+    /**
+     * True from the first render until its first frame applies the RTL start
+     * scroll (see ScrollManager.setInitialHorizontalScroll). Only that first
+     * paint opens at the start of the timeline: re-renders restore the captured
+     * position, and a timeline-only re-render (zoom) anchors its own.
+     */
+    private pendingStartScroll;
+    /**
+     * Set when `scrollToTask` or `setState({scroll})` scrolls after a render and
+     * before its first frame, so that frame's start scroll and scroll restore do
+     * not undo it. Reset by every render.
+     */
+    private scrollRequestedSinceRender;
+    /** Whether the caller passed `height` to the constructor (read before defaults are merged). */
+    private readonly heightFromUser;
+    /**
+     * True while `height` is unset and the container has a height of its own, so
+     * the chart fills it and follows its size instead of writing the 500px default.
+     */
+    private fillsContainerHeight;
+    /** The inline height render() last wrote, so it can be told apart from the page's own. */
+    private writtenHeight;
     private arrowLink;
+    /** Owns the live task data: edits land here, not in `options.series`. */
     private dataManager;
+    /**
+     * The last `series` as the user passed it, before `parsing`. Kept so an
+     * `update({parsing})` without new data re-parses the source rows rather than
+     * already-parsed tasks.
+     */
+    private rawSeries;
+    /**
+     * The `calendar` option as the user passed it (`undefined` when not passed).
+     * Theme defaults carry `calendar: {}`, so the merged options cannot tell "no
+     * calendar" from an explicit `{}`, which turns a Monday to Friday week on.
+     */
+    private userCalendar;
     /** Active sort criteria. Empty array = natural (input) order. */
     private sortCriteria;
     /** Active filter predicate, or null when no filter is applied. */
@@ -156,21 +214,69 @@ declare class ApexGantt extends BaseChart {
      */
     private getPaddedDateRange;
     /**
-     * Build a TimelineGeometry from the current data state. Fallback used by
-     * partial-update paths when `currentGeometry` hasn't been captured yet
-     * (i.e., before the first full render). Prefer `this.currentGeometry`
-     * whenever possible — see its declaration.
+     * Build a TimelineGeometry from the current data state, through the same
+     * builder the TimeLine draws its header with. Used to capture
+     * `currentGeometry` after every full render and timeline re-render, and as
+     * the fallback for partial-update paths before the first one. Prefer
+     * `this.currentGeometry` whenever possible (see its declaration).
      */
     private buildFreshGeometry;
-    private commandContext;
     /**
-     * Single funnel for task updates originating from interactive sources
-     * (drag, resize, progress, dialog edit). Builds an `UpdateTaskCommand`,
-     * executes it through the bridge, records it in history, and cascades
-     * summary ancestor recompute. Bound to `this` so it can be passed down to
-     * TimeLine / VirtualScrollCoordinator as a plain callback.
+     * The options bars are painted from: `this.options` with `barBackgroundColor`
+     * replaced by the fill StyleManager resolved at the last render
+     * (`--apex-gantt-bar-fill`, an explicit option, `--apx-accent`, the default).
+     * Bars used to read the option alone, so the variable and the token never
+     * reached them. A per-task `barBackgroundColor` still wins inside Bar.
+     */
+    private paintOptions;
+    private commandContext;
+    /** `mergeKey` of the gesture whose lead update `beforeTaskUpdate` last vetoed; its later updates are skipped. */
+    private vetoedMergeKey;
+    /** The open {@link batchEdits} call, or `null`. */
+    private editBatch;
+    /**
+     * Run several task edits as one: a parent dragged or moved by keyboard with
+     * its descendants, or the undo / redo of such a gesture. Each edit still goes
+     * through the commit path (hook, `taskUpdate`, undo history), but the work
+     * every edit would repeat over the whole chart runs once at the end: the data
+     * rebuild (tree, summaries, levels, WBS, dependency text), the summary rows,
+     * the project-boundary lines, the critical path and any full render. Without
+     * it a parent with 1000 descendants took seconds per drag.
+     *
+     * `taskUpdateSuccess` for edits inside the batch fires at the end, so its
+     * `updatedTask` carries the rebuilt values. Nested calls join the outer batch.
+     */
+    private batchEdits;
+    /** The commit callback handed to bars: {@link commitTaskUpdate}, able to batch a gesture's edits. */
+    private barCommit;
+    /** Run the refreshes a batch deferred, then fire its held `taskUpdateSuccess` events. */
+    private flushEditBatch;
+    /** A full render now, or at the end of the open batch. */
+    private renderOrDefer;
+    /**
+     * Single funnel for every task edit: drag, resize, progress drag, keyboard
+     * move / resize, dialog save, inline edit and `updateTask()`. Runs
+     * `beforeTaskUpdate`, then builds an `UpdateTaskCommand`, executes it through
+     * the bridge (which cascades summary ancestors) and records it in history,
+     * firing `taskUpdate` before and `taskUpdateSuccess` after (unless
+     * `meta.silent`). Undo / redo bypass this and fire neither.
+     *
+     * Returns `false` when the edit was not applied: the hook vetoed it, the
+     * lead update of the same `meta.mergeKey` gesture was vetoed, or applying
+     * it threw (`taskUpdateError` fires; rethrown for `source: 'api'`). The bar
+     * is then repainted from the model so a dragged bar snaps back. Bound to
+     * `this` so it can be passed down to TimeLine / VirtualScrollCoordinator as
+     * a plain callback.
      */
     private commitTaskUpdate;
+    /** Dispatch one of the task-update events on the chart element. */
+    private dispatchTaskEvent;
+    /**
+     * Put a bar back where the model says it is after a rejected edit: a drag,
+     * resize or progress drag has already moved it on screen. No-op when the
+     * bar is not rendered.
+     */
+    private repaintBarFromModel;
     /**
      * Record a single command into history and fire `historyChange`. Centralized
      * so every recording path (interactive + programmatic) emits the same event
@@ -233,8 +339,13 @@ declare class ApexGantt extends BaseChart {
     /**
      * Set the global ApexCharts license key.
      *
-     * Call this once before creating any chart instance, typically at app startup.
-     * Without a valid license the chart renders with a watermark.
+     * ApexGantt is included in the Premium plan and above. Without a key, or with
+     * a key for a lower plan, the chart renders with a trial watermark.
+     *
+     * Call it once, typically at app startup. It may also be called after charts
+     * have rendered (since 3.17.0): charts already on the page drop or keep their
+     * watermark when the key arrives. Calling it before the first `render()`
+     * avoids showing the watermark for a frame.
      *
      * @param key - The license key string provided by ApexCharts.
      *
@@ -281,6 +392,7 @@ declare class ApexGantt extends BaseChart {
     private setupRowBackgroundColors;
     private fadeArrowsAfterAnimation;
     private renderDependencyArrows;
+    private drawDependencyArrows;
     private setupDependencyArrowEvents;
     /**
      * Recompute the critical path from current data and re-sync the DOM. Stale
@@ -323,48 +435,105 @@ declare class ApexGantt extends BaseChart {
      */
     private createToolbarItem;
     private createToolbarButton;
+    /** Value the user last chose in each custom toolbar select, kept across toolbar rebuilds. */
+    private toolbarSelectValues;
     private createToolbarSelect;
-    /**
-     * Update chart options and re-render.
-     *
-     * Merges the supplied options with the current configuration. Only the keys
-     * you pass are changed; unspecified keys keep their current values. Passing
-     * `undefined` for a key resets it to its default value.
-     *
-     * Scroll position, collapsed/expanded state, and current zoom level are
-     * preserved across updates unless explicitly overridden.
-     *
-     * @param options - Partial or full `GanttUserOptions` to apply.
-     *
-     * @example
-     * ```ts
-     * // Zoom to month density and update tasks
-     * gantt.update({ pixelsPerDay: 4.9, series: newTasks });
-     *
-     * // Toggle dark theme at runtime
-     * gantt.update({ theme: 'dark' });
-     * ```
-     */
     /**
      * Merge nested object option groups (baseline, barLabel) explicitly so a
      * partial user-supplied override doesn't blow away unspecified subfields.
      * Spread layers are: theme defaults → carried-over current options → incoming.
      */
     private mergeNestedOptionGroups;
-    update(options: GanttUserOptions): void;
+    /**
+     * Update chart options and re-render.
+     *
+     * Merges the supplied options with the current configuration. Only the keys
+     * you pass are changed; unspecified keys keep their current values. Passing
+     * `undefined` for a key resets it to its default value. The exception is a
+     * call that switches `theme`: the color options the theme sets (such as
+     * `barBackgroundColor`, `fontColor` and `rowBackgroundColors`; the full list
+     * is on the `theme` option) return to the new theme's values, user-set ones
+     * included, unless the same call passes them. Every other option carries
+     * over.
+     *
+     * The current tasks are kept, with every edit made by dragging,
+     * `updateTask()`, `addTask()`, `deleteTask()`, `moveTask()` or a dependency
+     * change. Passing `series` (or `parsing`) replaces the data and clears the
+     * undo history. Passing `calendar` or `inputDateFormat` rebuilds the working
+     * calendar.
+     *
+     * Scroll position and the current zoom level are preserved unless explicitly
+     * overridden; collapsed/expanded state stays with the kept tasks.
+     *
+     * @param options - Any subset of `GanttUserOptions` to apply.
+     *
+     * @example
+     * ```ts
+     * // Zoom to month density and replace the tasks
+     * gantt.update({ pixelsPerDay: 4.9, series: newTasks });
+     *
+     * // Toggle dark theme at runtime; the tasks (and their edits) stay
+     * gantt.update({ theme: 'dark' });
+     *
+     * // Keep a brand bar color through the switch
+     * gantt.update({ theme: 'dark', barBackgroundColor: brandColor });
+     * ```
+     */
+    update(options: GanttUpdateOptions): void;
+    /**
+     * The task inputs an `update()` call replaces the data with, or `null` when
+     * the current tasks (edits included) stay. Only an explicit `series` or
+     * `parsing` replaces them; `options.series` is never read back, so a later
+     * update (a theme change, say) cannot bring old data back.
+     */
+    private seriesForUpdate;
+    /**
+     * The data side of `update()`: rebuild the working calendar when `calendar`
+     * or `inputDateFormat` is passed, then load the replacement tasks, if any.
+     * The calendar is built from the user's own `calendar` option, so a theme
+     * change (whose defaults carry `calendar: {}`) never turns one on or off.
+     */
+    private applyDataUpdate;
+    /**
+     * Turn a `series` option into task inputs, mapped through `parsing` when one
+     * is set. Returns `null` when the parsing config is invalid.
+     */
+    private resolveSeries;
+    /**
+     * Hand the data layer the working calendar built from the user's own
+     * `calendar` option (see {@link userCalendar}) and the current date format.
+     */
+    private applyWorkingCalendar;
+    /**
+     * The mode the chart is showing now, read from its background luminance in
+     * any CSS colour syntax. The `theme` option is consulted only when that
+     * colour cannot be resolved: an explicit `theme: 'light'` over a dark custom
+     * background still reads as dark, so `update({theme: 'dark'})` keeps the
+     * user's colours instead of resetting them.
+     */
     private detectCurrentTheme;
     /**
      * Imperatively update a single task's data and reflect the change in the UI
      * without triggering a full re-render.
      *
      * Useful for applying real-time changes (e.g. progress updates from a server)
-     * with minimal DOM work. Only the affected task bar and row are updated.
+     * with minimal DOM work. Only the affected task bar and row are updated; a
+     * change to `segments` or `collapsed` re-renders. A task whose row is not
+     * rendered (collapsed parent, filtered out, outside the virtual window) is
+     * updated all the same.
+     *
+     * Runs `beforeTaskUpdate` (returning `false` cancels), is recorded in undo
+     * history, and fires `taskUpdate` then `taskUpdateSuccess` with
+     * `source: 'api'`. Pass `{silent: true}` to skip those two events, for
+     * example when applying a server echo or rolling back a rejected save.
      *
      * @param taskId - The `id` of the task to update.
-     * @param updatedTask - A partial `Task` object containing only the fields to change.
-     *   Supply `startTime`, `endTime`, `progress`, `name`, etc. — any subset is valid.
+     * @param updatedTask - The task fields to change, in `TaskInput` form (`type: 'milestone'`
+     *   works as a string). Supply `startTime`, `endTime`, `progress`, `name`, etc.; any subset is valid.
+     * @param options - `silent` suppresses `taskUpdate` and `taskUpdateSuccess`.
      *
-     * @throws {Error} If no task with the given `taskId` exists in the current dataset.
+     * @throws {Error} If no task with the given `taskId` exists in the current
+     *   dataset, or if the updated task fails validation (`taskUpdateError` fires first).
      *
      * @example
      * ```ts
@@ -373,17 +542,29 @@ declare class ApexGantt extends BaseChart {
      *
      * // Shift a task's dates
      * gantt.updateTask('t3', { startTime: '2026-06-01', endTime: '2026-06-15' });
+     *
+     * // Apply a value the server sent back, without re-triggering your save listener
+     * gantt.updateTask('t3', { progress: 80 }, { silent: true });
      * ```
      */
-    updateTask(taskId: string, updatedTask: Partial<Task>): void;
+    updateTask(taskId: string, updatedTask: Partial<TaskInput>, options?: UpdateTaskOptions): void;
     /**
-     * Split a task into separate worked segments at `at`, producing a gap on the
-     * timeline. The segment containing `at` is cut so its first piece ends at `at`
-     * and the rest resumes at `resumeAt` (default: the next day — pass a later
-     * `resumeAt` to open a wider gap). A task with no segments yet is treated as a
-     * single span. Routed through `updateTask`, so it is validated, undoable, and
-     * emits `taskUpdate`. No-op on milestones, summary bars, or when `at` does not
+     * Split a task into separate worked segments at `at`. The segment containing
+     * `at` is cut so its first piece ends at `at` and the rest resumes at
+     * `resumeAt` (default: the day after `at`, which leaves no visible gap when
+     * dates are whole days; pass a later `resumeAt` to open one). A task with no segments yet is treated as a
+     * single span. Routed through `updateTask`, so it runs `beforeTaskUpdate`, is
+     * validated and undoable, and fires `taskUpdate` / `taskUpdateSuccess` with
+     * `source: 'api'`. No-op on milestones, summary bars, or when `at` does not
      * fall strictly inside a worked span.
+     *
+     * The task keeps its finish date: the gap is taken out of the existing span,
+     * so the work after it is shorter rather than later. To show a slip (work
+     * resuming later and finishing later), pass the new `segments` through
+     * `updateTask` instead. `resumeAt` must fall after `at` and no later than
+     * the segment's last day (day-only formats, whose end day is worked) or
+     * before its end (formats with time); anything else is rejected with a
+     * console warning and the task is left unchanged.
      *
      * @example gantt.splitTask('t3', '2026-06-10', { resumeAt: '2026-06-14' });
      */
@@ -431,14 +612,22 @@ declare class ApexGantt extends BaseChart {
      * the same transaction, so undo restores both tasks and edges atomically.
      * Edges that reference reparented children survive untouched.
      *
+     * The remaining summary rows' dates and progress are recomputed at once. A
+     * parent left with no children stops being a summary; one with no
+     * `startTime` of its own keeps the span its summary bar showed as its
+     * `startTime`/`endTime` (in `inputDateFormat`), recorded in the same undo
+     * step so undo restores it as it was. That edit fires no `taskUpdate`.
+     *
      * If a `beforeTaskDelete` option is configured and it returns `false`, the
      * removal is cancelled and this method returns `false`.
      *
      * @param taskId - The id of the task to remove.
      * @param options - `cascade` mode; defaults to `'forbid'`.
      * @returns `true` if removed, `false` if the hook cancelled.
-     * @throws When no task with the given id exists, or when `cascade: 'forbid'`
-     *   and the task has children.
+     * @throws When no task with the given id exists, when `cascade: 'forbid'`
+     *   and the task has children, or when a parent would be left with no
+     *   children, no `startTime` and no summary span to keep (an undated parent
+     *   with `showSummaryBar: false`). Nothing changes when it throws.
      */
     deleteTask(taskId: string, options?: {
         cascade?: 'forbid' | 'children' | 'orphan';
@@ -454,13 +643,32 @@ declare class ApexGantt extends BaseChart {
      * @returns `true` if the move was applied, `false` when the
      *   `beforeTaskMove` hook cancelled.
      *
+     * Moving a parent's last child away leaves that parent as
+     * {@link deleteTask} does, in the same undo step.
+     *
      * @throws When `taskId` does not exist, when `newParentId` does not exist,
-     *   or when the move would create a cycle (moving a task into its own
-     *   descendant or onto itself).
+     *   when the move would create a cycle (moving a task into its own
+     *   descendant or onto itself), or when it would leave a parent with no
+     *   children, no `startTime` and no summary span to keep.
      */
     moveTask(taskId: string, options?: {
         newParentId?: string | null;
     }): boolean;
+    /**
+     * Before a delete or move leaves each of `parentIds` with no children, give
+     * the ones that rely on their children for dates the span their summary bar
+     * shows (`DataManager.datesForEmptiedParent`), as recorded edits. The data
+     * layer would date them anyway once they are empty; doing it here first puts
+     * the edit in the same undo step, so undo gives the parent back its own
+     * (missing) dates once its children are restored. Fires no update events.
+     */
+    /**
+     * Throw, before anything changes, when one of `parentIds` would be left
+     * with no children and no dates: a parent with no `startTime` that is not
+     * drawn as a summary bar (`showSummaryBar: false`), so it has no span to keep.
+     */
+    private assertCanEmpty;
+    private dateEmptiedParents;
     /**
      * Tell whether an edge `fromId → toId` would be accepted right now without
      * actually committing it. Used by the interactive draw UI to color the
@@ -502,8 +710,13 @@ declare class ApexGantt extends BaseChart {
      * Recorded in the undo history, emits a `dependencyAdded` event, and runs
      * through the `beforeDependencyChange` hook.
      *
+     * The edge is judged by the same rules as {@link canAddDependency}: a
+     * self-link, a missing task, a duplicate, a link that closes a cycle, and
+     * (unless `dependencies.allowSummaryDescendantLinks` is `true`) a link
+     * between a task and its own ancestor or descendant all throw.
+     *
      * @returns `true` if the edge was added, `false` if the hook cancelled.
-     * @throws When either task does not exist, or when the edge already exists.
+     * @throws When the edge breaks one of those rules.
      */
     addDependency(fromId: string, toId: string, options?: {
         type?: DependencyType;
@@ -572,8 +785,10 @@ declare class ApexGantt extends BaseChart {
      * predicate. The predicate is recompiled so changed columns/format apply.
      */
     private reapplyFilterAfterUpdate;
-    /** Shared filter-evaluation context (date format + calendar). */
+    /** Shared filter-evaluation context (date format, calendar and snap step). */
     private filterContext;
+    /** The snap step the Duration column counts in, for sorting, filtering and grouping on it. */
+    private snapInfo;
     /** Compile a structured rule set into a predicate using the current columns/context. */
     private compileRules;
     /** Normalize the `groupBy` option/argument into a {@link GroupCriterion} or null. */
@@ -699,12 +914,92 @@ declare class ApexGantt extends BaseChart {
      * Backs the per-row scroll chevrons; call it directly to "locate" a task from
      * search results, selection, or your own toolbar button.
      *
-     * @returns `true` when a scroll was applied, `false` when the task is unknown
-     *   or already fully visible.
+     * By default a task hidden under a collapsed parent (or, while grouping, in a
+     * collapsed group) is revealed first: its collapsed ancestors and group are
+     * opened, then the row is scrolled to. Pass `{expand: false}` to leave them
+     * closed.
      *
-     * @example gantt.scrollToTask('task-42');
+     * @param taskId - The `id` of the task to show.
+     * @param options - `expand` (default `true`) opens collapsed ancestors and groups.
+     * @returns `true` when the task's row is shown (scrolled to, or already in
+     *   view); `false` for an unknown id, a task the active filter hides, or a
+     *   hidden task with `expand: false`.
+     *
+     * @example
+     * ```ts
+     * gantt.scrollToTask('task-42');
+     * gantt.scrollToTask('task-42', { expand: false }); // only if already visible
+     * ```
      */
-    scrollToTask(taskId: string): boolean;
+    scrollToTask(taskId: string, options?: ScrollToTaskOptions): boolean;
+    /**
+     * Return a task as it is now, edits included, or `null` for an unknown id.
+     * The result is a copy, its `baseline`, `segments`, `assignees` and
+     * `dependency` included: changing it does not change the chart (use
+     * {@link updateTask} for that). Custom fields you added to a task are
+     * copied by reference.
+     *
+     * @example const task = gantt.getTask('task-42');
+     */
+    getTask(taskId: string): Task | null;
+    /**
+     * Return every task as it is now, edits included, as copies (like
+     * {@link getTask}) in tree order (each parent before its children).
+     * Collapsed and filtered-out tasks are included.
+     *
+     * The tasks do not carry every link: a task's `dependency` holds only the
+     * link it was loaded with (removing that link clears it), so a link added
+     * with {@link addDependency} or drawn by the user is not in them. To save
+     * the chart's data, save {@link getDependencies} with the tasks.
+     *
+     * @example const tasks = gantt.getTasks();
+     */
+    getTasks(): Task[];
+    /**
+     * Return every dependency link as it is now, as copies: the links the tasks
+     * were loaded with and the ones added with {@link addDependency} or drawn
+     * by the user, less any removed. Undo and redo are reflected.
+     *
+     * Save it with {@link getTasks} to keep the links. After loading the saved
+     * tasks, add each link that {@link canAddDependency} accepts (the ones the
+     * tasks carry are already there) and call {@link clearHistory}.
+     *
+     * @example const links = gantt.getDependencies(); // [{fromId: 'a', toId: 'b', type: 'FS', lag: 0}]
+     */
+    getDependencies(): DependencyLink[];
+    /**
+     * Open a collapsed parent so its children show. View state only: not
+     * recorded in undo history, and saved with the view state like
+     * `setState({collapsed})`. Renders once, only when the state changes.
+     *
+     * @returns `false` for an unknown id or a task with no children, otherwise `true`.
+     *
+     * @example gantt.expandTask('phase-1');
+     */
+    expandTask(taskId: string): boolean;
+    /**
+     * Collapse a parent so its children hide. The mirror of {@link expandTask}.
+     *
+     * @returns `false` for an unknown id or a task with no children, otherwise `true`.
+     *
+     * @example gantt.collapseTask('phase-1');
+     */
+    collapseTask(taskId: string): boolean;
+    /** Shared body of {@link expandTask} and {@link collapseTask}. */
+    private setTaskCollapsed;
+    /**
+     * Nearest-edge scroll that brings a task's bar and row into view, for a task
+     * whose row is in the visible list. Returns whether a scroll was applied.
+     */
+    private scrollTaskIntoView;
+    /**
+     * Scroll bookkeeping at the start of a render. Returns whether the scroll
+     * this render captures is worth restoring: one captured before the first
+     * frame (a second render() in the same task) is not a position anyone chose.
+     */
+    private beginRenderScroll;
+    /** Record a page-requested scroll so the next frame's start scroll and restore leave it alone. */
+    private noteRequestedScroll;
     /**
      * Capture the current UI view state — zoom, scroll, collapse, selection, sort,
      * and filter — as a serializable object. Pair with {@link setState} to save
@@ -733,7 +1028,12 @@ declare class ApexGantt extends BaseChart {
     private applyGroupState;
     /** Apply the `filterRules` / `quickFilter` slice of a {@link GanttUiState} (no render). */
     private applyFilterState;
-    /** Restore scroll offsets after a render (deferred so the DOM has laid out). */
+    /**
+     * Restore scroll offsets after a render (deferred so the DOM has laid out).
+     * `horizontal` is measured from where the time axis starts, as `getState`
+     * reports it, and is written to the timeline body (and the header and proxy
+     * scrollbar with it) rather than to the proxy alone.
+     */
     private applyScrollState;
     /** Resolve the persistence config, or `null` when disabled / storage is unavailable (SSR). */
     private resolvePersistence;
@@ -821,6 +1121,12 @@ declare class ApexGantt extends BaseChart {
      * deletion so descendants are removed before their parents.
      */
     private depthOf;
+    /**
+     * The parent a task passed to {@link addTask} will land under:
+     * `options.parentId` over `input.parentId` (as the insert applies them), or
+     * `undefined` for a root task, including when the id matches no task.
+     */
+    private resolveAddParent;
     private dispatchTaskAdded;
     private dispatchTaskDeleted;
     private dispatchTaskMoved;
@@ -884,40 +1190,63 @@ declare class ApexGantt extends BaseChart {
     private findPreviousSiblingId;
     private dispatchDependencyChanged;
     /**
-     * Internal entry point used by inline editors in the task-list panel.
-     * Applies the partial update via `updateTaskInUI` and emits the same
-     * `taskUpdate` / `taskUpdateSuccess` / `taskUpdateError` events that the
-     * inline TaskForm emits, so consumers see a uniform event stream regardless
-     * of which UI surface produced the change.
+     * Internal entry point used by inline editors in the task-list panel. Goes
+     * through {@link commitTaskUpdate} with `source: 'inline'`, so the hook,
+     * history and `taskUpdate` / `taskUpdateSuccess` / `taskUpdateError` events
+     * match every other edit path. Returns `false` when the edit was vetoed or
+     * failed; the editor then restores the cell's original content.
      */
     private commitInlineEdit;
-    /** Returns an array of currently selected task objects. Requires `enableSelection: true`. */
+    /** Whether the "selection is off" warning has been logged for this chart. */
+    private selectionOffWarned;
+    /**
+     * Log, once per chart, that a selection method was called while
+     * `enableSelection` is off and therefore did nothing.
+     */
+    private warnSelectionOff;
+    /**
+     * Returns the currently selected tasks as `Task` objects, in the order they
+     * were selected. Requires `enableSelection: true`; otherwise returns `[]`
+     * and warns once.
+     */
     getSelectedTasks(): Task[];
-    /** Programmatically set the selection to the given task IDs. Requires `enableSelection: true`. */
+    /**
+     * Replace the selection with the given task ids (unknown ids are ignored).
+     * Fires `selectionChange` when the selection changed. Requires
+     * `enableSelection: true`; otherwise does nothing and warns once.
+     */
     setSelectedTasks(ids: string[]): void;
-    /** Clear all selected tasks. Requires `enableSelection: true`. */
+    /**
+     * Clear all selected tasks. Fires `selectionChange` when something was
+     * selected. Requires `enableSelection: true`; otherwise does nothing and
+     * warns once.
+     */
     clearSelection(): void;
     /**
-     * Zoom in by one step (increase timeline resolution).
+     * Zoom in by one step: multiplies `pixelsPerDay` by 1.4, keeping the centre
+     * of the visible timeline in place.
      *
-     * Scale order from finest to coarsest: `Day → Week → Month → Quarter → Year`.
-     * Calling `zoomIn()` when already at `Day` view has no effect.
+     * Zoom is continuous, not a list of presets. The header tiers (year, quarter,
+     * month, week, day, hour, minute) follow from the resulting `pixelsPerDay`,
+     * so a tier changes after about five steps. The value is clamped to the zoom
+     * range (about 0.25 to 7680 px per day); at the top of it this does nothing.
      *
      * @example
      * ```ts
-     * gantt.zoomIn(); // e.g. Month → Week
+     * gantt.zoomIn(); // e.g. 25.7 px/day (week tier) becomes 36 px/day
      * ```
      */
     zoomIn(): void;
     /**
-     * Zoom out by one step (decrease timeline resolution).
+     * Zoom out by one step: divides `pixelsPerDay` by 1.4, keeping the centre of
+     * the visible timeline in place.
      *
-     * Scale order from finest to coarsest: `Day → Week → Month → Quarter → Year`.
-     * Calling `zoomOut()` when already at `Year` view has no effect.
+     * The mirror of {@link zoomIn}: continuous, clamped to the same range (about
+     * 0.25 to 7680 px per day), and a no-op at the bottom of it.
      *
      * @example
      * ```ts
-     * gantt.zoomOut(); // e.g. Month → Quarter
+     * gantt.zoomOut(); // e.g. 25.7 px/day (week tier) becomes about 18.4 px/day
      * ```
      */
     zoomOut(): void;
@@ -928,6 +1257,28 @@ declare class ApexGantt extends BaseChart {
      * Normalize dimension value to CSS string
      */
     private normalizeDimension;
+    /** Write the height render() resolves, or leave the container's own in place. */
+    private applyRenderHeight;
+    /**
+     * The inline height render() writes, or `null` to leave the container's own.
+     *
+     * An explicit `height` is always written. Without one, a container that
+     * already has a height (a CSS rule, an inline style, a flex or grid track)
+     * is filled and followed through the container ResizeObserver: writing the
+     * 500px default inline used to override that CSS. A container whose height
+     * only comes from its content gets the 500px default, as before.
+     *
+     * "Without one" is the constructor's raw options, plus any later `update()`
+     * that leaves `height` at its default.
+     */
+    private resolveRenderHeight;
+    /**
+     * Whether the container's height comes from the page rather than from its
+     * content. Probed with a child one pixel taller than the container: a box
+     * sized by its content grows to fit it, a box with a height of its own does
+     * not. The probe is removed in the same task, so it is never painted.
+     */
+    private containerHasOwnHeight;
     /**
      * resize observer for container to handle responsive width and height changes
      */
@@ -1172,7 +1523,8 @@ export declare type BeforeDependencyChangeHook = (context: {
 
 /**
  * Synchronous veto hook for `gantt.addTask()`. Return `false` to cancel the
- * insertion; any other return value (including `undefined`) lets it proceed.
+ * insertion; any other return value (including `undefined`, or a Promise)
+ * lets it proceed.
  */
 export declare type BeforeTaskAddHook = (context: {
     input: TaskInput;
@@ -1202,9 +1554,11 @@ export declare type BeforeTaskMoveHook = (context: {
 }) => boolean | undefined | void;
 
 /**
- * Synchronous veto hook for `gantt.updateTask()` and inline edits. Receives
- * the task as it exists in the chart plus the partial update about to be
- * applied. Return `false` to cancel.
+ * Synchronous veto hook for every task edit: drag, resize, progress drag,
+ * keyboard move / resize, dialog save, inline edit and `gantt.updateTask()`.
+ * Receives the task as it exists in the chart plus the partial update about
+ * to be applied. Return `false` to cancel; any other return value (including
+ * a Promise) lets it proceed.
  */
 export declare type BeforeTaskUpdateHook = (context: {
     task: Task;
@@ -1224,19 +1578,25 @@ declare interface BorderOptions {
 
 /**
  * Working calendar configuration. When set, weekends + holidays drive
- * duration math, summary aggregation, and (in 5.1.B) timeline stripes.
- * Absent = today's behavior (every day is a working day, no stripes).
+ * duration math, summary aggregation, and timeline stripes.
+ *
+ * Any `calendar` object turns the working calendar on, even `{}`, which gives
+ * a Monday to Friday week with no holidays. Leave the option out and every day
+ * is a working day (no stripes, no snapping).
  */
 export declare interface CalendarOptions {
     /**
-     * Weekdays that count as working days. 0 = Sunday, 6 = Saturday.
+     * Weekdays that count as working days. 0 = Sunday, 6 = Saturday. Numeric
+     * strings (`'1'`) are read as numbers. A list that names no weekday from 0
+     * to 6 (`[]`, `[7]`) logs a warning and Monday to Friday is used.
      * @default [1, 2, 3, 4, 5]
      */
     readonly workingWeekdays?: number[];
     /**
      * Specific dates that are non-working regardless of weekday. Each entry
      * may be a date string, Date object, or `{date, label}` for tooltipped
-     * entries.
+     * entries. Strings are read with `inputDateFormat`, like task dates, and
+     * ISO `YYYY-MM-DD` is accepted whatever the format.
      * @default []
      */
     readonly holidays?: ReadonlyArray<HolidayEntry>;
@@ -1308,7 +1668,18 @@ export declare interface ColumnListItem {
      * or any other string for a custom column with a `render` function.
      */
     readonly key: ColumnKey | string;
+    /**
+     * Header text for the column, also used for the header's `aria-label` and
+     * when auto-sizing the column. For a built-in `ColumnKey` the default title
+     * (for example `'End'` for `ColumnKey.EndTime`) is used if this is missing
+     * at runtime, so plain JavaScript configs can omit it.
+     */
     readonly title: string;
+    /**
+     * Minimum CSS width of the column, used in `minmax()`. With
+     * `autoSizeColumns` on it is the column's preferred (default) width.
+     * @default '30px'
+     */
     readonly minWidth?: string;
     /**
      * Upper bound for auto-sized column width (e.g. `'240px'`). Caps how wide the
@@ -1316,7 +1687,9 @@ export declare interface ColumnListItem {
      * can't dominate the panel. Ignored when auto-sizing is off. @default '320px'
      */
     readonly maxWidth?: string;
+    /** Share of the free panel width the column takes, used as `fr` units in the CSS grid. @default 1 */
     readonly flexGrow?: number;
+    /** Set `false` to keep the column in the config but hide it. @default true */
     readonly visible?: boolean;
     /**
      * Whether this column can be resized by dragging the handle at its header's
@@ -1509,6 +1882,7 @@ export declare interface CrosshairOptions {
     readonly crosshairLabelFormat?: CrosshairLabelFormatter;
 }
 
+/** The dark preset: the colours of a chart created with `theme: 'dark'`. */
 export declare const DarkTheme: GanttTheme;
 
 /**
@@ -1531,7 +1905,8 @@ export declare class DataParser {
     private static processParsingValue;
     /**
      * Build a TaskInput from a raw item using the provided config.
-     * Returns null if required fields are missing or cannot be extracted.
+     * Returns null when `id` or `name` is missing. A missing start date is
+     * settled later by {@link keepScheduledRows}, once every row is known.
      */
     private static buildTaskInput;
     /**
@@ -1541,6 +1916,15 @@ export declare class DataParser {
      * @returns Array of TaskInput objects
      */
     static parse(data: unknown[], config: ParsingConfig): TaskInput[];
+    /**
+     * Drop rows that have no start date and no dated row below them. A parent
+     * row may leave its dates to its children (its summary bar spans them), so
+     * an undated row is kept when a dated row sits somewhere underneath it.
+     * Any other undated row (an unscheduled backlog item, a row with only an
+     * end date) is skipped with a warning, as it would have nothing to draw.
+     * Ids are matched by value, so a numeric id and a string `parentId` meet.
+     */
+    private static keepScheduledRows;
     /**
      * validate parsing configuration
      * @param config - parsing configuration to validate
@@ -1605,6 +1989,28 @@ export declare interface DependencyContext {
 }
 
 /**
+ * One dependency link of the chart, as `gantt.getDependencies()` returns it:
+ * the links the tasks were loaded with (each task's `dependency`) and the ones
+ * added later with `gantt.addDependency()` or drawn on the chart.
+ */
+export declare interface DependencyLink {
+    /** ID of the predecessor task, where the arrow starts. */
+    readonly fromId: string;
+    /** ID of the successor task, where the arrow ends. */
+    readonly toId: string;
+    /**
+     * Dependency type.
+     * @default 'FS'
+     */
+    readonly type: DependencyType;
+    /**
+     * Lag (positive) or lead (negative) in days, as on `TaskDependency.lag`.
+     * @default 0
+     */
+    readonly lag: number;
+}
+
+/**
  * Visual + interaction options for dependency arrows.
  *
  * Arrows are rendered as SVG paths between bars with subtly rounded joints
@@ -1664,8 +2070,10 @@ export declare interface DependencyOptions {
      * are derived from its descendants, so such links are semantically
      * meaningless and confuse downstream date math (e.g. critical path).
      *
-     * Only consulted when `editable: true`. The same rule applies to the
-     * programmatic `gantt.addDependency()` and `gantt.canAddDependency()`.
+     * Applies to links drawn by hand (`editable: true`) and to the programmatic
+     * API whether or not `editable` is set: `gantt.canAddDependency()` reports
+     * such a link as `'summary-descendant'` and `gantt.addDependency()` throws.
+     * Links given in the data (`dependency` on a task) are not checked.
      *
      * @default false
      */
@@ -1833,11 +2241,11 @@ declare interface GanttDependencyConfig {
  * ```
  */
 export declare interface GanttEventMap {
-    /** Fires when a task is being updated (before completion). */
+    /** Fires once per accepted edit on every edit path, just before it is applied. */
     taskUpdate: CustomEvent<TaskUpdateEventDetail>;
     /** Fires when task form validation fails. */
     taskValidationError: CustomEvent<TaskValidationErrorEventDetail>;
-    /** Fires after a task update completes successfully. */
+    /** Fires once per edit on every edit path, after it has been applied. */
     taskUpdateSuccess: CustomEvent<TaskUpdateSuccessEventDetail>;
     /** Fires when a task update fails with an error. */
     taskUpdateError: CustomEvent<TaskUpdateErrorEventDetail>;
@@ -1847,9 +2255,9 @@ export declare interface GanttEventMap {
     taskDeleted: CustomEvent<TaskDeletedEventDetail>;
     /** Fires after a task is re-parented via `gantt.moveTask()`. */
     taskMoved: CustomEvent<TaskMovedEventDetail>;
-    /** Fires after a dependency edge is created via `gantt.addDependency()`. */
+    /** Fires after a dependency edge is created via `gantt.addDependency()` or drawn on the chart. */
     dependencyAdded: CustomEvent<DependencyChangeEventDetail>;
-    /** Fires after a dependency edge is removed via `gantt.removeDependency()`. */
+    /** Fires after a dependency edge is removed via `gantt.removeDependency()` or with a deleted task. */
     dependencyRemoved: CustomEvent<DependencyChangeEventDetail>;
     /** Fires when a task bar is dragged to a new position. */
     taskDragged: CustomEvent<TaskDraggedEventDetail>;
@@ -1877,7 +2285,7 @@ export declare interface GanttEventMap {
 
 export declare const GanttEvents: {
     /**
-     * emits when a task is being updated (before completion)
+     * emits once per accepted edit on every edit path, just before it is applied
      */
     readonly TASK_UPDATE: "taskUpdate";
     /**
@@ -1885,7 +2293,7 @@ export declare const GanttEvents: {
      */
     readonly TASK_VALIDATION_ERROR: "taskValidationError";
     /**
-     * emits after a task update completes successfully
+     * emits once per edit on every edit path, after it has been applied
      */
     readonly TASK_UPDATE_SUCCESS: "taskUpdateSuccess";
     /**
@@ -1969,6 +2377,10 @@ export declare type GanttExportFormat = 'svg' | 'png' | 'pdf';
  * that embed runtime values are functions so each locale controls grammar.
  */
 export declare interface GanttMessages {
+    /** Zoom-in toolbar button (its tooltip and aria-label). @default 'Zoom In' */
+    readonly zoomIn: string;
+    /** Zoom-out toolbar button (its tooltip and aria-label). @default 'Zoom Out' */
+    readonly zoomOut: string;
     /** "Add task" toolbar button. @default 'Add task' */
     readonly addTask: string;
     /** "Delete selected" toolbar button. @default 'Delete selected' */
@@ -2061,24 +2473,36 @@ export declare interface GanttMessages {
     readonly startLabel: string;
     /** Baseline tooltip "End:" label. @default 'End:' */
     readonly endLabel: string;
-    /** Builds a summary-bar aria-label. */
+    /**
+     * Builds a summary-bar aria-label. `task` is the summary task itself, for
+     * labels that need more than its name (an owner, a status, a custom field).
+     */
     readonly summaryAriaLabel: (ctx: {
         name: string;
         canToggle: boolean;
         collapsed: boolean;
+        readonly task: Task;
     }) => string;
-    /** Builds an interactive/read-only bar aria-label. `progress` is set for read-only bars. */
+    /**
+     * Builds an interactive/read-only bar aria-label. `progress` is set for
+     * read-only bars. `task` is the bar's task, with its current values.
+     */
     readonly barAriaLabel: (ctx: {
         name: string;
         start: string;
         end: string;
         progress?: number;
+        readonly task: Task;
     }) => string;
-    /** Builds the bar aria-valuetext (interactive bars). */
+    /**
+     * Builds the bar aria-valuetext (interactive bars). `task` is the bar's task,
+     * with its current values.
+     */
     readonly barAriaValueText: (ctx: {
         start: string;
         end: string;
         durationDays: number;
+        readonly task: Task;
     }) => string;
     /** Builds the progress-handle aria-label. @default `${name} progress` */
     readonly progressAriaLabel: (name: string) => string;
@@ -2106,21 +2530,29 @@ export declare interface GanttStatePersistenceOptions {
 }
 
 /**
- * Complete color palette for the chart UI.
+ * Color palette of a built-in preset, holding the colours the chart renders
+ * for that mode.
  *
- * Use `LightTheme` or `DarkTheme` as a starting point and spread-override
- * individual fields, or pass a fully custom object. Pass the result as
- * `GanttUserOptions.theme` when using a `ThemeMode` string is insufficient.
+ * The `theme` option only takes a {@link ThemeMode} string. To start from a
+ * preset and change a few colours, spread it into the top-level options and
+ * override fields:
+ * `new ApexGantt(el, {...LightTheme, barBackgroundColor: '#22C55E', series: tasks})`.
+ * Keys that share a name with a `GanttUserOptions` colour option apply when
+ * spread; `textColor` is the same colour as the `fontColor` option. Keys marked
+ * "Derived" describe a surface the chart paints from those options: they are
+ * informational, not options, and have no effect when spread.
  *
  * @see {@link LightTheme} {@link DarkTheme} {@link getTheme}
  */
 export declare interface GanttTheme {
     readonly tooltipBGColor: string;
     readonly tooltipBorderColor: string;
+    /** Derived from `fontColor`; not an option. */
     readonly tooltipTextColor: string;
     readonly cellBorderColor: string;
     readonly rowBackgroundColors: readonly string[];
     readonly headerBackground: string;
+    /** Derived from `fontColor`; not an option. */
     readonly headerTextColor: string;
     readonly barBackgroundColor: string;
     readonly barTextColor: string;
@@ -2140,25 +2572,45 @@ export declare interface GanttTheme {
     /** Stroke color for dependency arrows on the critical path. */
     readonly criticalArrowColor: string;
     readonly backgroundColor: string;
+    /** Text colour, the `fontColor` option. Derived: spread `fontColor` to change it. */
     readonly textColor: string;
     readonly borderColor: string;
     readonly annotationBgColor: string;
     readonly annotationBorderColor: string;
+    /** Derived from `backgroundColor`; not an option. */
     readonly dialogBgColor: string;
+    /** Derived from `borderColor`; not an option. */
     readonly dialogBorderColor: string;
+    /** Derived from `barBackgroundColor`; not an option. */
     readonly buttonBgColor: string;
+    /** Derived from `barTextColor`; not an option. */
     readonly buttonTextColor: string;
+    /** Derived from `arrowColor`; not an option. */
     readonly buttonHoverBgColor: string;
+    /** Derived from `backgroundColor`; not an option. */
     readonly toolbarBgColor: string;
+    /** Derived from `borderColor`; not an option. */
     readonly toolbarBorderColor: string;
+    /** Derived from `cellBorderColor`; not an option. */
     readonly toolbarHoverBgColor: string;
+    /** Derived from `backgroundColor`; not an option. */
     readonly scrollbarTrackColor: string;
+    /** Derived from `borderColor`; not an option. */
     readonly scrollbarThumbColor: string;
+    /** Derived from `cellBorderColor`; not an option. */
     readonly scrollbarThumbHoverColor: string;
+    /** Derived from `cellBorderColor`; not an option. */
     readonly splitBarColor: string;
+    /** Derived from `arrowColor`; not an option. */
     readonly splitBarHoverColor: string;
+    /** Derived from `borderColor`; not an option. */
     readonly splitBarBorderColor: string;
+    /** Derived from `fontColor`; not an option. */
     readonly splitBarHandleColor: string;
+    /** Text colour for the task list, headers and tooltips. Optional so existing custom palettes stay valid. */
+    readonly fontColor?: string;
+    /** Crosshair line colour. Optional so existing custom palettes stay valid. */
+    readonly crosshairColor?: string;
 }
 
 /**
@@ -2175,7 +2627,12 @@ export declare interface GanttUiState {
     version: number;
     /** Zoom level as pixels-per-day (same unit as the `pixelsPerDay` option). */
     zoom?: number;
-    /** Scroll offsets in pixels: `horizontal` = timeline, `vertical` = grid rows. */
+    /**
+     * Scroll offsets in pixels: `horizontal` = timeline, `vertical` = grid rows.
+     * `horizontal` is measured from where the time axis starts: the left edge in
+     * LTR, the right edge under RTL (`locale.direction: 'rtl'`), so `0` is the
+     * start of the timeline either way.
+     */
     scroll?: {
         horizontal: number;
         vertical: number;
@@ -2218,12 +2675,24 @@ export declare interface GanttUiState {
 }
 
 /**
+ * Options accepted by `gantt.update()`: any subset of {@link GanttUserOptions}.
+ * Only the keys you pass change; a key passed as `undefined` returns to its
+ * default. The exception is a call that switches `theme`: the color options
+ * the theme sets (listed on {@link GanttUserOptions.theme}) return to the new
+ * theme's values unless the same call passes them. The current tasks (edits included) are kept unless
+ * `series` or `parsing` is passed, which replaces the data and clears the undo
+ * history.
+ */
+export declare type GanttUpdateOptions = Partial<GanttUserOptions>;
+
+/**
  * Top-level configuration object for `ApexGantt`.
  *
  * Pass this to `new ApexGantt(element, options)` or to `gantt.update(options)`.
- * Every field is optional except `series`. Use a `GanttTheme` object or a
- * `ThemeMode` string for the `theme` field; for per-task styling use the
- * corresponding fields on `TaskInput`.
+ * Every field is optional except `series`. The `theme` field takes a
+ * `ThemeMode` string; to start from a preset's colours, spread `LightTheme` or
+ * `DarkTheme` into these options. For per-task styling use the corresponding
+ * fields on `TaskInput`.
  *
  * @example
  * ```ts
@@ -2235,19 +2704,42 @@ export declare interface GanttUiState {
  * ```
  */
 export declare interface GanttUserOptions {
-    /** Color theme preset. `'light'` (default) or `'dark'`. */
+    /**
+     * Color theme preset. `'light'` (default) or `'dark'`.
+     *
+     * An `update()` that switches the theme returns the color options the theme
+     * sets (`annotationBgColor`, `annotationBorderColor`, `arrowColor`,
+     * `backgroundColor`, `barBackgroundColor`, `barTextColor`, `borderColor`,
+     * `cellBorderColor`, `criticalArrowColor`, `criticalBarColor`,
+     * `crosshairColor`, `fontColor`, `headerBackground`, `milestoneColor`,
+     * `rowBackgroundColors`, `summaryBarColor`, `tooltipBGColor`,
+     * `tooltipBorderColor`) to the new theme's values, user-set ones included,
+     * unless the same call passes them. Every other option carries over.
+     *
+     * @default 'light'
+     */
     readonly theme?: ThemeMode;
     /** Localization, date-locale, and text-direction (RTL) options. See {@link LocaleOptions}. @default { direction: 'ltr' } */
     readonly locale?: LocaleOptions;
-    /** Background color of annotation markers. @default '#F9D1FC' */
+    /** Background color of annotation markers. @default '#DBEAFE' (light) / '#4A2D4D' (dark) */
     readonly annotationBgColor?: string;
-    /** Border color of annotation markers. @default '#E273EA' */
+    /** Border color of annotation markers. @default '#60A5FA' (light) / '#8B4D8F' (dark) */
     readonly annotationBorderColor?: string;
-    /** SVG stroke-dasharray for annotation borders, e.g. `[6, 3]`. @default [] */
+    /**
+     * Dash pattern for annotation borders, as an SVG `stroke-dasharray`: dash and
+     * gap lengths in px, e.g. `[6, 3]`. An empty array draws a solid border. An
+     * annotation's own `borderDashArray` wins over this. @default []
+     */
     readonly annotationBorderDashArray?: number[];
     /** Border width of annotation markers in pixels. @default 2 */
     readonly annotationBorderWidth?: number;
-    /** Whether annotation lines are drawn horizontally or vertically. @default Orientation.Horizontal */
+    /**
+     * Orientation of annotation LABELS: `Orientation.Horizontal` reads left to
+     * right, `Orientation.Vertical` runs the text up the annotation's edge. It
+     * turns only the label: the line or region itself still runs down the task
+     * rows. An annotation's own `label.orientation` wins over this.
+     * @default Orientation.Horizontal
+     */
     readonly annotationOrientation?: Orientation;
     /** Array of annotation objects to overlay on the timeline. @default [] */
     readonly annotations?: Annotation[];
@@ -2262,11 +2754,20 @@ export declare interface GanttUserOptions {
      * `annotationBorderColor` when omitted. @default '#7C3AED'
      */
     readonly projectBoundaryColor?: string;
-    /** Color of dependency arrows between tasks. @default '#94A3B8' */
+    /**
+     * Color of dependency arrows between tasks. `--apex-gantt-dependency-line` on
+     * the container overrides it, and `--apx-grid` applies while it is left at
+     * its default. Resolved at render. @default '#94A3B8'
+     */
     readonly arrowColor?: string;
     /** Background color of the whole chart container. @default '#FFFFFF' */
     readonly backgroundColor?: string;
-    /** Default background fill color for task bars. @default '#87B7FE' (light) / '#818CF8' (dark) */
+    /**
+     * Default background fill color for task bars. `--apex-gantt-bar-fill` on the
+     * container overrides it, and `--apx-accent` applies while it is left at its
+     * default; a task's own `barBackgroundColor` wins over all of them. Resolved
+     * at render. @default '#87B7FE' (light) / '#818CF8' (dark)
+     */
     readonly barBackgroundColor?: string;
     /** CSS border-radius applied to task bars. @default '5px' */
     readonly barBorderRadius?: string;
@@ -2278,9 +2779,9 @@ export declare interface GanttUserOptions {
      * chips/icons/avatars.
      */
     readonly barLabel?: BarLabelOptions;
-    /** Top and bottom margin inside each row for the task bar in pixels. @default 4 */
+    /** Top and bottom margin inside each row for the task bar in pixels. @default 8 */
     readonly barMargin?: number;
-    /** Text color rendered inside task bars. @default '#FFFFFF' */
+    /** Text color rendered inside task bars. A task's own `barTextColor` wins. @default '#FFFFFF' */
     readonly barTextColor?: string;
     /**
      * Fill color for summary (group) bars. Renders distinct from regular task
@@ -2297,8 +2798,11 @@ export declare interface GanttUserOptions {
     readonly baseline?: Partial<BaselineOptions>;
     /**
      * Working calendar config. When set, weekends + holidays drive duration
-     * math, summary aggregation, and timeline stripes. Absent = every day
-     * is a working day. See {@link CalendarOptions}.
+     * math, summary aggregation, and timeline stripes. Any object turns it on,
+     * even `{}` (a Monday to Friday week). Absent = every day is a working day.
+     * `update({calendar})` rebuilds it; `update({calendar: undefined})` turns it
+     * off. See {@link CalendarOptions}.
+     * @default undefined
      */
     readonly calendar?: CalendarOptions;
     /**
@@ -2393,7 +2897,7 @@ export declare interface GanttUserOptions {
      *
      * Auto-enabled when `enableTaskEdit` is `true` unless explicitly set to
      * `false`. Set `enableInlineEdit: false` alongside `enableTaskEdit: true`
-     * to keep the bar-click dialog without inline cell editing.
+     * to keep the bar double-click dialog without inline cell editing.
      * @default false
      */
     readonly enableInlineEdit?: boolean;
@@ -2443,9 +2947,22 @@ export declare interface GanttUserOptions {
     readonly reorderableColumns?: boolean;
     /** Allow the task-list panel to be resized by dragging the divider. @default true */
     readonly enableResize?: boolean;
-    /** Allow tasks to be reordered by dragging rows in the task list. @default true */
+    /**
+     * Allow task bars to be dragged horizontally on the timeline to reschedule
+     * them (start and end move together, snapped to `snapUnit`). Dragging a
+     * parent moves its children with it. It does not reorder rows; drawing
+     * dependency links is `dependencies.editable`. Each move runs
+     * `beforeTaskUpdate`, is undoable, and fires `taskDragged`.
+     * @default true
+     */
     readonly enableTaskDrag?: boolean;
-    /** Show the inline task-edit form when a task row is clicked. @default false */
+    /**
+     * Open the task-edit dialog (name, start, end, progress) when a task bar is
+     * double-clicked, or when Enter is pressed on a focused bar or task-list row. Saving
+     * runs `beforeTaskUpdate` with only the changed fields. Also turns on
+     * `enableInlineEdit` unless that is set explicitly.
+     * @default false
+     */
     readonly enableTaskEdit?: boolean;
     /** Allow task bars to be resized by dragging their handles. @default true */
     readonly enableTaskResize?: boolean;
@@ -2500,8 +3017,9 @@ export declare interface GanttUserOptions {
      * row renders below the last real task and reads like a button: clicking
      * it inserts a new root-level placeholder task and emits `taskAdded`.
      *
-     * Disabled while row virtualisation is active (dataset >= 50 rows) — at
-     * that point the toolbar Add button or context menu is the better
+     * Hidden while row virtualisation is active, which is whenever more than
+     * 50 rows are visible (collapsed and filtered-out rows do not count). At
+     * that size the toolbar Add button or the context menu is the better
      * affordance. Off by default.
      *
      * @default false
@@ -2555,15 +3073,33 @@ export declare interface GanttUserOptions {
     readonly fontWeight?: string;
     /** Background color of the timeline and task-list header row. @default '#F8F9FB' (light) / '#2A2A2A' (dark) */
     readonly headerBackground?: string;
-    /** Height of the chart. Accepts a pixel number or a CSS string. @default 500 */
+    /**
+     * Height of the chart. Accepts a pixel number or a CSS string.
+     *
+     * When omitted and the container already has a height of its own (a CSS
+     * rule, an inline style, a flex or grid track), the chart fills the container
+     * and follows its size. A container sized only by its content gets 500px.
+     * @default 500
+     */
     readonly height?: number | string;
-    /** dayjs-compatible format string used to parse `startTime` / `endTime` values. @default 'MM-DD-YYYY' */
+    /**
+     * dayjs-compatible format string used to parse `startTime` / `endTime` values.
+     * Changing it with `update()` does not rewrite the stored dates, so pass
+     * `series` in the new format alongside it.
+     * @default 'MM-DD-YYYY'
+     */
     readonly inputDateFormat?: string;
     /** Alternating row background colors. The pattern cycles automatically. @default ['#FFFFFF'] */
     readonly rowBackgroundColors?: readonly string[];
     /** Height of each task row in pixels. @default 40 */
     readonly rowHeight?: number;
-    /** Task data array. Required. Each item must satisfy `TaskInput`, or use `parsing` to map custom field names. */
+    /**
+     * Task data array. Required. Each item must satisfy `TaskInput`, or use
+     * `parsing` to map custom field names. Read when the chart is created and
+     * whenever `update()` is passed `series` (which replaces the data and clears
+     * the undo history). Any other `update()` keeps the current tasks, edits
+     * included; read them back with `getTasks()`.
+     */
     readonly series: TaskInput[] | Record<string, unknown>[];
     /** Initial pixel width of the task-list panel. @default 425 */
     readonly tasksContainerWidth?: number;
@@ -2573,8 +3109,13 @@ export declare interface GanttUserOptions {
     readonly tooltipBorderColor?: string;
     /** HTML `id` for the tooltip container element. @default 'apexgantt-tooltip-container' */
     readonly tooltipId?: string;
-    /** Custom function returning an HTML string for the task tooltip. */
-    readonly tooltipTemplate?: (task: Task, dateFormat: string) => string;
+    /**
+     * Custom function returning an HTML string for the task tooltip. Called as
+     * `(task, dateFormat, context)`; `context.durationText` is the task's
+     * duration as the Duration column shows it (snap unit, working days).
+     * @default built-in template (name, start, end, duration, progress)
+     */
+    readonly tooltipTemplate?: TooltipTemplate;
     /**
      * Initial zoom level expressed as **pixels per day**. Continuous; the
      * timeline header automatically picks calendar tiers (year/quarter/month/
@@ -2587,7 +3128,7 @@ export declare interface GanttUserOptions {
      * - Week ≈ `25.7`
      * - Day = `80`
      *
-     * Bounds are clamped to roughly `[0.25, 1280]` px/day. Values outside this
+     * Bounds are clamped to roughly `[0.25, 7680]` px/day. Values outside this
      * range are clipped.
      *
      * **When omitted**, the chart auto-fits the full data range into the visible
@@ -2597,7 +3138,13 @@ export declare interface GanttUserOptions {
     readonly pixelsPerDay?: number;
     /** Width of the chart. Accepts a pixel number or a CSS string. @default '100%' */
     readonly width?: number | string;
-    /** Field-mapping config to parse non-standard task shapes without manual data transformation. */
+    /**
+     * Field-mapping config to parse non-standard task shapes without manual data
+     * transformation. Passing `parsing` to `update()` re-parses the last raw
+     * `series` (or the one passed alongside it), replacing the current data and
+     * clearing the undo history.
+     * @default undefined
+     */
     readonly parsing?: ParsingConfig;
     /** Show a checkbox column for multi-select. Only applies when `enableSelection` is true. @default true */
     readonly showCheckboxColumn?: boolean;
@@ -2642,31 +3189,45 @@ export declare interface GanttUserOptions {
     /** `aria-label` for the task-list table, used by screen readers. @default 'Task list' */
     readonly taskListAriaLabel?: string;
     /**
-     * Veto hook called immediately before a task is inserted via `gantt.addTask()`.
-     * Return `false` (or a promise resolving to `false`) to cancel the insertion.
-     * Useful for confirming with the user, enforcing permissions, or validating
-     * the payload against external rules.
+     * Veto hook called immediately before a task is inserted via
+     * `gantt.addTask()`, the toolbar Add button, the add-task row or drawing a
+     * task on the timeline. Receives one object, `{input, parentId}`: the task
+     * input about to be inserted and the id of the parent it will land under
+     * (the `addTask()` option, else `input.parentId`; `undefined` for a root
+     * task, including an id that matches no task). Return `false` to cancel the insertion. Useful for enforcing
+     * permissions or validating the payload against external rules.
      *
-     * Synchronous returns are honoured; async returns are awaited but the
-     * `gantt.addTask()` call itself stays synchronous, so vetoing an
-     * already-resolved insertion is best done by emitting an event from a
-     * companion `taskAdded` listener.
+     * Hooks are synchronous: the return value is read immediately, so a
+     * returned Promise is not a veto (it is not `false`) and the insertion goes
+     * ahead. To confirm asynchronously, cancel here and call `addTask()` again
+     * once the answer arrives.
      *
      * @default undefined
      */
     readonly beforeTaskAdd?: BeforeTaskAddHook;
     /**
-     * Veto hook called before any update path (drag, resize, progress drag,
-     * inline edit, dialog edit, or `gantt.updateTask()`) commits. Return `false`
-     * to reject the change.
+     * Veto hook called before every task edit is applied: bar drag, resize,
+     * progress drag, keyboard move / resize, dialog save, inline edit, and
+     * `gantt.updateTask()` (also `splitTask()`). Receives one object,
+     * `{task, updates}`: the task as it is now and the fields about to change
+     * (only the changed fields for a dialog save). Return `false` to reject the
+     * change; the bar is repainted from the model and no `taskUpdate`,
+     * `taskDragged`, `taskResized` or `taskProgressChanged` fires. When a parent
+     * drag or keyboard move is rejected, the children moved with it are skipped
+     * too; rejecting one of those children keeps only that child in place, and
+     * the hook is still asked about the others. Undo and redo do not call it.
+     *
+     * Synchronous: a returned Promise is not a veto.
      *
      * @default undefined
      */
     readonly beforeTaskUpdate?: BeforeTaskUpdateHook;
     /**
      * Veto hook called immediately before a task is re-parented via
-     * `gantt.moveTask()`. Return `false` to cancel. The hook receives the task
-     * plus the resolved old and new parent ids (`undefined` for root).
+     * `gantt.moveTask()` (also keyboard indent / outdent and the context menu).
+     * Receives one object, `{task, oldParentId, newParentId}`, with the parent
+     * ids `undefined` for a root. Return `false` to cancel. Synchronous: a
+     * returned Promise is not a veto.
      *
      * @default undefined
      */
@@ -2724,7 +3285,11 @@ export declare interface GroupCriterion {
     readonly accessor?: (task: Task) => unknown;
     /** Format a raw group value into the header label. Defaults to `String(value)`. */
     readonly label?: (value: unknown) => string;
-    /** Order of the group headers by key. @default 'asc' */
+    /**
+     * Order of the group headers by their underlying value: numbers numerically,
+     * dates chronologically, text alphabetically. The "(None)" group is always
+     * last. @default 'asc'
+     */
     readonly direction?: SortDirection;
 }
 
@@ -2819,6 +3384,7 @@ declare interface InteractiveOptions {
     readonly beforeDependencyChange?: BeforeDependencyChangeHook;
 }
 
+/** The light preset: the colours of a chart with no colour options. */
 export declare const LightTheme: GanttTheme;
 
 /**
@@ -2847,8 +3413,10 @@ export declare interface LocaleOptions {
 }
 
 /**
- * Controls whether an annotation line or region is drawn horizontally
- * (spanning the full chart width) or vertically (spanning the full chart height).
+ * Orientation of an annotation's label text. `Horizontal` reads left to right
+ * along the top of the annotation; `Vertical` runs the text up its leading edge,
+ * which keeps a label on a narrow line from spilling across the timeline. Only
+ * the label turns: the annotation itself still runs down the task rows.
  */
 export declare enum Orientation {
     Horizontal = "horizontal",
@@ -2862,6 +3430,12 @@ export declare enum Orientation {
  * data object. Use this when your API returns data with different key names
  * than the `TaskInput` interface expects. Pass the result as
  * `GanttUserOptions.parsing`.
+ *
+ * A row needs an `id` and a `name`; a row without either is skipped with a
+ * warning. A row with no start date is kept only when it is a parent of a
+ * dated row (directly or further down), and its summary bar spans its
+ * children. Any other row with no start date (an unscheduled item, a row with
+ * only an end date) is skipped with a warning.
  *
  * @example
  * ```ts
@@ -2884,8 +3458,18 @@ export declare interface ParsingConfig {
     parentId?: ParsingValue;
     dependency?: ParsingValue;
     barBackgroundColor?: ParsingValue;
+    /** Source of the per-task `barTextColor` (the label colour inside the bar). */
+    barTextColor?: ParsingValue;
     rowBackgroundColor?: ParsingValue;
     collapsed?: ParsingValue;
+    /** Path to `TaskInput.showSummaryBar` (a boolean; `false` draws a parent as a normal bar). */
+    showSummaryBar?: ParsingValue;
+    /** Path to `TaskInput.baseline`, a `{start, end}` object of planned dates. */
+    baseline?: ParsingValue;
+    /** Path to `TaskInput.segments`, an array of `{start, end}` worked spans. */
+    segments?: ParsingValue;
+    /** Path to `TaskInput.assignees`, an array of `Assignee` objects. */
+    assignees?: ParsingValue;
 }
 
 declare interface ParsingOptions {
@@ -2994,6 +3578,17 @@ declare namespace renderers {
 }
 export { renderers }
 
+/** Options for `gantt.scrollToTask()`. */
+export declare interface ScrollToTaskOptions {
+    /**
+     * Open the task's collapsed ancestors (and, while grouping, its collapsed
+     * group) before scrolling. With `false`, a task hidden that way is not
+     * scrolled to and `scrollToTask()` returns `false`.
+     * @default true
+     */
+    readonly expand?: boolean;
+}
+
 /**
  * Detail payload for the `selectionChange` event.
  *
@@ -3049,9 +3644,15 @@ export declare type SortDirection = 'asc' | 'desc';
  * return value of `getSelectedTasks()`.
  */
 export declare interface Task extends TaskInput {
+    /** Start date. Always present after normalisation (an empty string on a summary row given no dates). */
+    readonly startTime: string;
     /** End date is always present after normalisation (defaults to `startTime` for milestones). */
     readonly endTime: string;
-    /** Nesting depth in the task hierarchy. `0` = top-level task. */
+    /**
+     * Nesting depth in the task hierarchy, counted from 1: a top-level task is
+     * `1`, its children `2`, and so on (the row's `aria-level`). Recomputed
+     * whenever the tree changes.
+     */
     readonly level?: number;
     /**
      * Work Breakdown Structure code derived from the task's position in the
@@ -3142,22 +3743,30 @@ export declare interface TaskDeletedEventDetail {
 /**
  * Declares a predecessor/successor relationship between two tasks.
  *
- * Attach one or more of these to `TaskInput.dependency` to draw arrows between
- * task bars and have them respected during drag/resize operations.
+ * Set one of these as `TaskInput.dependency` to draw an arrow from the
+ * predecessor's bar to this task's bar. A task's `dependency` takes one
+ * predecessor; add more links with `gantt.addDependency()`.
+ *
+ * Links are drawn and analysed (critical path, the Predecessors and Successors
+ * columns) but never move tasks: dragging or resizing a bar does not shift its
+ * successors, and a successor that starts too early is not rescheduled.
  */
 export declare interface TaskDependency {
     /** ID of the task this task depends on */
     readonly taskId: string;
     /** Dependency type. Defaults to 'FS' (Finish-to-Start) */
     readonly type?: DependencyType;
-    /** Lag/lead in days. Positive = lag (delay), negative = lead (overlap). Defaults to 0. */
+    /**
+     * Lag (positive, a delay) or lead (negative, an overlap) in days. Counts
+     * working days when a `calendar` is set and calendar days otherwise. It feeds
+     * the critical path and the arrow tooltip only; it never moves a task.
+     * @default 0
+     */
     readonly lag?: number;
     /**
-     * Unit for `lag`. When a working calendar is configured (`GanttUserOptions.calendar`),
-     * the default is `'working'` — lag is interpreted as working days, so weekends and
-     * holidays don't count. Without a calendar, working and calendar days coincide so
-     * the setting has no effect. `'calendar'` forces raw calendar-day lag regardless.
-     * @default 'working'
+     * Has no effect: `lag` always counts working days when a calendar is set and
+     * calendar days otherwise.
+     * @deprecated Ignored. Remove it from your data.
      */
     readonly lagUnit?: 'working' | 'calendar';
 }
@@ -3165,9 +3774,11 @@ export declare interface TaskDependency {
 /**
  * Detail payload for the `taskDragged` event.
  *
- * Fires when a task bar is dropped at a new horizontal position. All dates are
- * formatted using `GanttUserOptions.inputDateFormat`. `affectedChildTasks`
- * lists any sub-tasks whose dates were shifted as a side-effect.
+ * Fires when a task bar is dropped at a new horizontal position, after
+ * `beforeTaskUpdate` accepted the move (a vetoed drag fires nothing and the
+ * bar returns to its place). All dates are formatted using
+ * `GanttUserOptions.inputDateFormat`. `affectedChildTasks` lists the sub-tasks
+ * whose dates were shifted with it.
  */
 export declare interface TaskDraggedEventDetail {
     taskId: string;
@@ -3200,7 +3811,7 @@ export declare type TaskFilterPredicate = (task: Task) => boolean;
  * or to `DataParser.parse()`.
  *
  * Dates are supplied as strings and parsed using `GanttUserOptions.inputDateFormat`
- * (default: `'YYYY-MM-DD'`). Any format understood by dayjs is valid when the
+ * (default: `'MM-DD-YYYY'`). Any format understood by dayjs is valid when the
  * corresponding `inputDateFormat` is specified.
  *
  * @example
@@ -3208,10 +3819,10 @@ export declare type TaskFilterPredicate = (task: Task) => boolean;
  * const task: TaskInput = {
  *   id: 'task-1',
  *   name: 'Design Phase',
- *   startTime: '2026-01-01',
- *   endTime: '2026-01-15',
+ *   startTime: '01-01-2026',
+ *   endTime: '01-15-2026',
  *   progress: 60,
- *   type: TaskType.Task,
+ *   type: 'task',
  * };
  * ```
  */
@@ -3222,13 +3833,22 @@ export declare interface TaskInput {
     readonly name: string;
     /**
      * Task start date string. Parsed using `GanttUserOptions.inputDateFormat`.
-     * @example `'2026-01-01'` (default format `'YYYY-MM-DD'`)
+     * Required for a task or milestone. A parent row may omit it (and
+     * `endTime`): its summary bar spans its children. A task with no
+     * `startTime` and no children throws. When such a parent later loses its
+     * last child (`deleteTask`, `moveTask`, or `updateTask` with a new
+     * `parentId`), it is given the span its summary bar showed as its own
+     * `startTime` and `endTime`, written in `inputDateFormat`.
+     * @example `'01-01-2026'` (default format `'MM-DD-YYYY'`)
      */
-    readonly startTime: string;
+    readonly startTime?: string;
     /**
      * Task end date string. Parsed using `GanttUserOptions.inputDateFormat`.
-     * When omitted, the task renders as a milestone on `startTime`.
-     * @example `'2026-01-15'`
+     * When omitted and `type` is not set, a task without children renders as a
+     * milestone on `startTime`, and a parent drawn as a summary bar stays a
+     * `'task'` spanning its children. A task with `type: 'task'` needs an
+     * `endTime`.
+     * @example `'01-15-2026'`
      */
     readonly endTime?: string;
     /**
@@ -3238,24 +3858,38 @@ export declare interface TaskInput {
     readonly progress?: number;
     /**
      * Visual type of the task. `'task'` renders a bar; `'milestone'` renders a
-     * diamond marker. @default TaskType.Task
+     * diamond marker. Accepts the `TaskType` enum or its string value. Any other
+     * value logs a warning.
+     * @default 'task' when `endTime` is set or the task is a summary parent, `'milestone'` otherwise
      */
-    readonly type?: TaskType;
+    readonly type?: TaskType | `${TaskType}`;
     /**
      * ID of the parent task. Nested tasks are rendered as children in the
-     * task list and inherit the parent's row background color.
+     * task list and inherit the parent's row background color. Compared by
+     * value, so `'1'` finds a task whose `id` is the number `1`. A `parentId`
+     * that matches no task, or that makes a cycle (a task naming itself, or a
+     * under b under a), logs a warning and the task is attached to the root.
      */
     readonly parentId?: string;
     /**
-     * Dependency on another task. Accepts either a plain task ID string
+     * Dependency on one predecessor task. Accepts either a plain task ID string
      * (backwards-compatible, treated as Finish-to-Start with 0 lag) or a full
-     * `TaskDependency` object for typed dependency with lag/lead support.
+     * `TaskDependency` object for typed dependency with lag/lead support. Add
+     * more predecessors with `gantt.addDependency()`. Links never move tasks.
      * @example `'task-2'`
      * @example `{ taskId: 'task-2', type: 'FS', lag: 2 }`
      */
     readonly dependency?: string | TaskDependency;
     /** Override the task bar fill color for this specific task. */
     readonly barBackgroundColor?: string;
+    /**
+     * Override the colour of the label drawn inside this task's bar (`barLabel`
+     * position `'inside'`, or `'auto'` when the label fits). Labels drawn outside
+     * the bar use the chart's font colour. Pair it with `barBackgroundColor` when
+     * a per-task fill needs a contrasting label.
+     * @default undefined (the chart-level `barTextColor`)
+     */
+    readonly barTextColor?: string;
     /** Override the row background color for this specific task row. */
     readonly rowBackgroundColor?: string;
     /**
@@ -3273,9 +3907,13 @@ export declare interface TaskInput {
     /**
      * When `true`, this task renders as a summary (group) bar whose date range
      * is automatically computed from the earliest start and latest end of all
-     * its descendants. The task's own `startTime`/`endTime` are ignored — a
-     * warning is logged if both are provided. Drag, resize, and progress are
-     * disabled on summary bars; they are always read-only.
+     * its descendants. The bar always spans that computed range: a
+     * `startTime`/`endTime` given on the task is kept in its data but does not
+     * move the bar, and no warning is logged. Drag, resize, and progress are
+     * disabled on summary bars; they are always read-only. A `true` value is
+     * dropped when the task loses its last child, so it draws as an ordinary
+     * bar (or a milestone, when its type came from a missing `endTime`); an
+     * explicit `false` is kept.
      * @default true
      */
     readonly showSummaryBar?: boolean;
@@ -3289,7 +3927,10 @@ export declare interface TaskInput {
      * Worked spans of a split task. When two or more are provided, the task
      * renders as separate bar pieces with gaps between them, and its
      * `startTime`/`endTime` are derived from the segments (first start → last end).
-     * Omit (or provide fewer than two) for a normal contiguous task.
+     * Omit (or provide fewer than two) for a normal contiguous task: a single
+     * segment sets `startTime`/`endTime` and is not kept.
+     * Each entry needs `start` and `end`; an entry missing either is dropped
+     * with a warning.
      * Split a task at runtime via `gantt.splitTask()`.
      */
     readonly segments?: readonly TaskSegment[];
@@ -3312,8 +3953,9 @@ export declare interface TaskMovedEventDetail {
  * Detail payload for the `taskProgressChanged` event.
  *
  * Fires when the in-bar progress handle is dragged to a new value (the white
- * wedge that becomes visible on bar hover). Both values are integer percent
- * 0–100; identical-value drags are suppressed.
+ * wedge that becomes visible on bar hover), after `beforeTaskUpdate` accepted
+ * it. Both values are integer percent 0 to 100; identical-value drags are
+ * suppressed.
  */
 export declare interface TaskProgressChangedEventDetail {
     taskId: string;
@@ -3325,7 +3967,8 @@ export declare interface TaskProgressChangedEventDetail {
 /**
  * Detail payload for the `taskResized` event.
  *
- * Fires when a task bar is resized by dragging its left or right handle.
+ * Fires when a task bar is resized by dragging its left or right handle, after
+ * `beforeTaskUpdate` accepted the change.
  * `durationChange` is the signed delta in days (positive = longer, negative = shorter).
  * All date strings are formatted using `GanttUserOptions.inputDateFormat`.
  */
@@ -3370,8 +4013,9 @@ export declare enum TaskType {
 /**
  * Detail payload for the `taskUpdateError` event.
  *
- * Fires when a task update fails after submission. `error` contains the
- * underlying `Error` instance for logging or user feedback.
+ * Fires when applying an accepted edit throws (for example a task that fails
+ * validation). `error` contains the underlying `Error` instance for logging
+ * or user feedback. The chart keeps the previous values.
  */
 export declare interface TaskUpdateErrorEventDetail {
     taskId: string;
@@ -3382,26 +4026,49 @@ export declare interface TaskUpdateErrorEventDetail {
 /**
  * Detail payload for the `taskUpdate` event.
  *
- * Fires immediately when a task update is submitted (before server-side
- * validation). Use `taskUpdateSuccess` or `taskUpdateError` to react to the
- * final outcome.
+ * Fires once per edit, after `beforeTaskUpdate` accepted it and just before it
+ * is applied, on every edit path (see {@link TaskUpdateSource}). Does not fire
+ * for undo / redo or for `updateTask(id, updates, {silent: true})`. Use
+ * `taskUpdateSuccess` or `taskUpdateError` to react to the final outcome.
  */
 export declare interface TaskUpdateEventDetail {
     taskId: string;
+    /** The fields this edit changes. */
     updates: Partial<Task>;
+    /** The task as it will read once the edit is applied. */
     updatedTask: Task;
+    /** The edit path that produced the update. */
+    source: TaskUpdateSource;
     timestamp: number;
 }
 
 /**
+ * Which edit path produced a task update. Carried by `taskUpdate` and
+ * `taskUpdateSuccess` so one listener can tell the paths apart.
+ *
+ * - `'api'`: `gantt.updateTask()` (and `gantt.splitTask()`, which calls it)
+ * - `'dialog'`: the edit dialog opened by double-clicking a bar
+ * - `'drag'`: dragging a bar (and the children moved with a parent)
+ * - `'inline'`: an inline cell edit in the task list
+ * - `'keyboard'`: moving or resizing a focused bar with the arrow keys
+ * - `'progress'`: dragging the in-bar progress handle
+ * - `'resize'`: dragging a bar's resize handle
+ */
+export declare type TaskUpdateSource = 'api' | 'dialog' | 'drag' | 'inline' | 'keyboard' | 'progress' | 'resize';
+
+/**
  * Detail payload for the `taskUpdateSuccess` event.
  *
- * Fires after a task update completes without error. `updatedTask` contains
- * the fully resolved `Task` object with all applied changes.
+ * Fires once per edit after it has been applied, on every edit path (see
+ * {@link TaskUpdateSource}). `updatedTask` contains the fully resolved `Task`
+ * object with all applied changes. Does not fire for undo / redo or for
+ * `updateTask(id, updates, {silent: true})`.
  */
 export declare interface TaskUpdateSuccessEventDetail {
     taskId: string;
     updatedTask: Task;
+    /** The edit path that produced the update. */
+    source: TaskUpdateSource;
     timestamp: number;
 }
 
@@ -3536,6 +4203,14 @@ export declare interface ToolbarSelect {
         value: string;
         text: string;
     }>;
+    /**
+     * Initially selected option `value`. Once the user picks an option, that
+     * choice is kept across re-renders; pass a new item object (for example
+     * through `update({toolbarItems})`) to set the value again. Ignored when it
+     * matches none of `options`.
+     * @default undefined (the placeholder, or the first option when there is none)
+     */
+    value?: string;
     /** Called when the selected value changes. */
     onChange: (value: string, context: ToolbarContext) => void;
 }
@@ -3554,7 +4229,41 @@ declare interface TooltipOptions {
     readonly tooltipBGColor: string;
     readonly tooltipBorderColor: string;
     readonly tooltipId: string;
-    readonly tooltipTemplate?: (task: Task, dateFormat: string) => string;
+    readonly tooltipTemplate?: TooltipTemplate;
+}
+
+/**
+ * Builds the bar tooltip's HTML. `context` carries values worked out with the
+ * chart's settings (see {@link TooltipTemplateContext}); a two-argument
+ * function still works.
+ */
+export declare type TooltipTemplate = (task: Task, dateFormat: string, context?: TooltipTemplateContext) => string;
+
+/**
+ * Values the chart works out for `tooltipTemplate`, passed as its third
+ * argument so a template can show what the task list shows.
+ */
+export declare interface TooltipTemplateContext {
+    /**
+     * The task's duration exactly as the Duration column shows it: a count of
+     * the `snapUnit`'s base unit (`'45 m'`, `'6 h'`, `'14 d'`), or of working
+     * days (`'5 wd'`) when a `calendar` is set with day snapping.
+     */
+    readonly durationText: string;
+}
+
+/**
+ * Options for `gantt.updateTask()`.
+ */
+export declare interface UpdateTaskOptions {
+    /**
+     * Suppress the `taskUpdate` and `taskUpdateSuccess` events for this call.
+     * Use it for rollbacks and for applying a server echo, so the listener that
+     * saves edits does not send the same change back. The change is still
+     * vetted by `beforeTaskUpdate` and recorded in undo history.
+     * @default false
+     */
+    silent?: boolean;
 }
 
 export { }

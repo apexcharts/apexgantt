@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ApexGantt — Accessibility Demo (WCAG 2.1 AA)</title>
+    <title>ApexGantt - Accessibility Demo (WCAG 2.1 AA)</title>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet" />
     <script src="../apexgantt.min.js"></script>
     <style>
@@ -61,7 +61,7 @@
     </style>
   </head>
   <body>
-    <h1>ApexGantt — Accessibility Demo</h1>
+    <h1>ApexGantt: Accessibility Demo</h1>
     <p class="subtitle">WCAG 2.1 AA · ARIA roles · Keyboard navigation · Focus management · prefers-reduced-motion</p>
 
     <div id="gantt-a11y"></div>
@@ -70,23 +70,26 @@
       <h2>⌨️ Keyboard Navigation</h2>
       <ul>
         <li>Click any task row or press <kbd>Tab</kbd> to focus the task list.</li>
-        <li><kbd>↑</kbd> / <kbd>↓</kbd> — move between rows</li>
-        <li><kbd>→</kbd> — expand a collapsed parent / move to first child</li>
-        <li><kbd>←</kbd> — collapse an expanded parent / move to parent row</li>
-        <li><kbd>Home</kbd> — jump to first row &nbsp;|&nbsp; <kbd>End</kbd> — jump to last row</li>
-        <li><kbd>Space</kbd> — select / deselect the focused row</li>
-        <li><kbd>Enter</kbd> — open the edit form for the focused row (when task editing is enabled)</li>
-        <li><kbd>Escape</kbd> — release focus from the task list</li>
+        <li><kbd>↑</kbd> / <kbd>↓</kbd>: move between rows</li>
+        <li><kbd>→</kbd>: expand a collapsed parent, or move to its first child</li>
+        <li><kbd>←</kbd>: collapse an expanded parent, or move to the parent row</li>
+        <li><kbd>Home</kbd>: jump to the first row &nbsp;|&nbsp; <kbd>End</kbd>: jump to the last row</li>
+        <li><kbd>Space</kbd>: select or deselect the focused row (<code>enableSelection</code>)</li>
+        <li><kbd>Enter</kbd>: open the edit form for the focused row (<code>enableTaskEdit</code>)</li>
+        <li><kbd>Escape</kbd>: clear the selection, then release focus from the task list</li>
         <li>
-          Task bars in the timeline are focusable via <kbd>Tab</kbd>; press <kbd>Enter</kbd> or <kbd>Space</kbd> to open
-          the edit form.
+          Task bars in the timeline are focusable with <kbd>Tab</kbd>. On a focused bar, <kbd>Enter</kbd> or
+          <kbd>Space</kbd> opens the edit form, <kbd>←</kbd> / <kbd>→</kbd> move the bar one snap unit
+          (<code>enableTaskDrag</code>), and <kbd>Shift</kbd>+<kbd>←</kbd> / <kbd>→</kbd> resize its end
+          (<code>enableTaskResize</code>). Each move is undoable like a drag.
         </li>
       </ul>
     </div>
 
     <script>
       const ganttOptions = {
-        taskListAriaLabel: 'Project task list — WCAG 2.1 AA demo',
+        taskListAriaLabel: 'Project task list, WCAG 2.1 AA demo',
+        enableSelection: true,
         enableTaskEdit: true,
         enableTaskDrag: true,
         enableTaskResize: true,
@@ -97,7 +100,7 @@
             id: 'phase1',
             startTime: '03-01-2025',
             endTime: '03-31-2025',
-            name: 'Phase 1 — Planning',
+            name: 'Phase 1: Planning',
             progress: 100,
           },
           {
@@ -137,7 +140,7 @@
             id: 'phase2',
             startTime: '04-01-2025',
             endTime: '05-15-2025',
-            name: 'Phase 2 — Development',
+            name: 'Phase 2: Development',
             progress: 60,
           },
           {
@@ -169,7 +172,7 @@
             id: 'phase3',
             startTime: '05-16-2025',
             endTime: '05-30-2025',
-            name: 'Phase 3 — Launch',
+            name: 'Phase 3: Launch',
             progress: 0,
           },
           {
@@ -203,7 +206,7 @@
             <div style="padding:10px 14px;">
               <strong>${task.name}</strong><br/>
               <small>Start: ${task.startTime}</small><br/>
-              <small>End: ${task.endTime || '—'}</small><br/>
+              <small>End: ${task.endTime || 'n/a'}</small><br/>
               <small>Progress: ${task.progress ?? 0}%</small>
             </div>
           `;
