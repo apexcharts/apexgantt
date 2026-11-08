@@ -129,6 +129,20 @@ declare class ApexGantt extends BaseChart {
     /** Whether the caller passed `height` to the constructor (read before defaults are merged). */
     private readonly heightFromUser;
     /**
+     * The option keys the page passed, through the constructor and every
+     * `update()`. Merged with the theme defaults, a value the page set looks
+     * like any other, and only these outrank the `--apex-gantt-*` variables and
+     * the family tokens. A key passed as `undefined` leaves; a theme switch
+     * takes out the colours the theme owns unless the same call passes them.
+     */
+    private readonly explicitKeys;
+    /**
+     * The dark theme colours in force came from the page design system's
+     * variant, not from the page: they go back to the light ones when the
+     * variant does.
+     */
+    private variantModeApplied;
+    /**
      * True while `height` is unset and the container has a height of its own, so
      * the chart fills it and follows its size instead of writing the 500px default.
      */
@@ -222,11 +236,12 @@ declare class ApexGantt extends BaseChart {
      */
     private buildFreshGeometry;
     /**
-     * The options bars are painted from: `this.options` with `barBackgroundColor`
-     * replaced by the fill StyleManager resolved at the last render
-     * (`--apex-gantt-bar-fill`, an explicit option, `--apx-accent`, the default).
-     * Bars used to read the option alone, so the variable and the token never
-     * reached them. A per-task `barBackgroundColor` still wins inside Bar.
+     * The options bars are painted from: `this.options` with `barBackgroundColor`,
+     * the font and the tooltip background replaced by what StyleManager resolved
+     * at the last render (an option the page passed, `--apex-gantt-*`, `--apx-*`,
+     * the design system, the default). Bars used to read the options alone, so
+     * the variables and the tokens never reached them. A per-task
+     * `barBackgroundColor` still wins inside Bar.
      */
     private paintOptions;
     private commandContext;
@@ -505,6 +520,32 @@ declare class ApexGantt extends BaseChart {
      */
     private applyWorkingCalendar;
     /**
+     * Keep {@link explicitKeys} in step with an `update()`: keys passed as
+     * `undefined` reset and leave, a theme switch returns the colours the theme
+     * owns to its defaults (so they leave too, unless this call passes them),
+     * and every key this call passes joins. A `theme` or `backgroundColor` the
+     * page passes makes the mode the page's, so a variant fill is dropped.
+     */
+    private trackExplicitKeys;
+    /**
+     * A `backgroundColor` passed through `update()` (with no theme switch) takes
+     * the mode over from a variant fill, so the colours the fill darkened and the
+     * page has not passed go to the defaults of the mode that background reads
+     * as, the mode StyleManager paints in. Without this a light background kept
+     * the dark rows, header and text the fill left in the options.
+     */
+    private takeBackVariantForBackground;
+    /**
+     * The page design system's variant as the lowest-ranked source of the theme
+     * (D6). A chart whose page passed neither `theme` nor `backgroundColor`
+     * takes the dark theme's colours while the variant is dark, for every colour
+     * option the page did not pass, and goes back to the light ones when the
+     * variant changes or the design system goes away. A light variant changes
+     * nothing. The dark paper is the theme's own: the design system never paints
+     * it.
+     */
+    private applyDesignSystemVariant;
+    /**
      * The mode the chart is showing now, read from its background luminance in
      * any CSS colour syntax. The `theme` option is consulted only when that
      * colour cannot be resolved: an explicit `theme: 'light'` over a dark custom
@@ -512,6 +553,21 @@ declare class ApexGantt extends BaseChart {
      * user's colours instead of resetting them.
      */
     private detectCurrentTheme;
+    /**
+     * The chart's mode for the design system's gate and the export's paper:
+     * the theme the page passed (a registered theme's `mode` for a name), else
+     * a dark design-system variant that filled an unset theme, else what the
+     * background reads as. See {@link resolveGanttMode}.
+     */
+    private resolveMode;
+    /**
+     * The opaque base of a PNG or PDF export: the paper the chart paints (its
+     * `backgroundColor` through the family chain, `--apex-gantt-background-color`
+     * and `--apx-surface` included), resolved to a colour a canvas takes. A
+     * transparent or unreadable paper takes the mode's: the dark theme's, or the
+     * design system's paper when its variant chose the dark mode, else white.
+     */
+    private exportBackground;
     /**
      * Imperatively update a single task's data and reflect the change in the UI
      * without triggering a full re-render.
@@ -1854,6 +1910,10 @@ declare interface CommonOptions {
     readonly reorderableColumns: boolean;
     readonly tasksContainerWidth: number;
     readonly width: number | string;
+    /** See {@link GanttUserOptions.tokens}. */
+    readonly tokens?: boolean;
+    /** See {@link GanttUserOptions.designSystem}. */
+    readonly designSystem?: boolean;
 }
 
 declare interface CriticalPathOptions {
@@ -2533,7 +2593,8 @@ export declare interface GanttStatePersistenceOptions {
  * Color palette of a built-in preset, holding the colours the chart renders
  * for that mode.
  *
- * The `theme` option only takes a {@link ThemeMode} string. To start from a
+ * The `theme` option takes a {@link ThemeMode} string or the name of a theme
+ * registered on the family registry, not a `GanttTheme`. To start from a
  * preset and change a few colours, spread it into the top-level options and
  * override fields:
  * `new ApexGantt(el, {...LightTheme, barBackgroundColor: '#22C55E', series: tasks})`.
@@ -2614,6 +2675,13 @@ export declare interface GanttTheme {
 }
 
 /**
+ * The `theme` option: a {@link ThemeMode}, or the name of a theme registered
+ * on the family registry (`registerTheme` from `apex-commons`), which brings
+ * its tokens and, through its `mode`, the light or dark colours.
+ */
+export declare type GanttThemeName = ThemeMode | (string & {});
+
+/**
  * A serializable snapshot of the Gantt's view state: everything that is a
  * user's "where I left off" rather than the task data itself. Produced by
  * `gantt.getState()` and consumed by `gantt.setState()`; also what the opt-in
@@ -2690,9 +2758,9 @@ export declare type GanttUpdateOptions = Partial<GanttUserOptions>;
  *
  * Pass this to `new ApexGantt(element, options)` or to `gantt.update(options)`.
  * Every field is optional except `series`. The `theme` field takes a
- * `ThemeMode` string; to start from a preset's colours, spread `LightTheme` or
- * `DarkTheme` into these options. For per-task styling use the corresponding
- * fields on `TaskInput`.
+ * `ThemeMode` string or a registered theme's name; to start from a preset's
+ * colours, spread `LightTheme` or `DarkTheme` into these options. For
+ * per-task styling use the corresponding fields on `TaskInput`.
  *
  * @example
  * ```ts
@@ -2705,7 +2773,12 @@ export declare type GanttUpdateOptions = Partial<GanttUserOptions>;
  */
 export declare interface GanttUserOptions {
     /**
-     * Color theme preset. `'light'` (default) or `'dark'`.
+     * Color theme preset. `'light'` (default) or `'dark'`, or the name of a
+     * theme registered on the family registry (`registerTheme` from
+     * `apex-commons`, or `ApexCharts.registerTheme`): its `tokens` rank below
+     * the `--apx-*` tokens and above the design system, and its `mode: 'dark'`
+     * picks the dark theme's colours (light otherwise). A theme registered
+     * under `'light'` or `'dark'` adds its tokens to that theme.
      *
      * An `update()` that switches the theme returns the color options the theme
      * sets (`annotationBgColor`, `annotationBorderColor`, `arrowColor`,
@@ -2716,9 +2789,32 @@ export declare interface GanttUserOptions {
      * `tooltipBorderColor`) to the new theme's values, user-set ones included,
      * unless the same call passes them. Every other option carries over.
      *
+     * Left unset (and with no `backgroundColor` passed), the chart follows a
+     * page design system that declares a dark variant (Ignite UI's
+     * `--ig-theme-variant: dark`, with the `apexgantt/ignite-ui` add-on
+     * loaded): it renders the dark theme's colours until the variant changes. A
+     * theme you pass is always kept. An `update()` that unsets it (`theme:
+     * undefined`) returns the chart to no theme: the light colours, or the
+     * variant's dark ones.
+     *
      * @default 'light'
      */
-    readonly theme?: ThemeMode;
+    readonly theme?: GanttThemeName;
+    /**
+     * `false` stops the chart reading the shared `--apx-*` family tokens and the
+     * page's design system (including its light or dark variant). Options and
+     * `--apex-gantt-*` variables still apply.
+     * @default true
+     */
+    readonly tokens?: boolean;
+    /**
+     * `false` stops the chart reading the page's design system (Ignite UI's
+     * `--ig-*` tokens, including its variant). The `--apx-*` family tokens still
+     * apply. Has an effect only while the `apexgantt/ignite-ui` add-on is
+     * loaded: without it the chart reads no design system.
+     * @default true
+     */
+    readonly designSystem?: boolean;
     /** Localization, date-locale, and text-direction (RTL) options. See {@link LocaleOptions}. @default { direction: 'ltr' } */
     readonly locale?: LocaleOptions;
     /** Background color of annotation markers. @default '#DBEAFE' (light) / '#4A2D4D' (dark) */
@@ -2755,21 +2851,22 @@ export declare interface GanttUserOptions {
      */
     readonly projectBoundaryColor?: string;
     /**
-     * Color of dependency arrows between tasks. `--apex-gantt-dependency-line` on
-     * the container overrides it, and `--apx-grid` applies while it is left at
-     * its default. Resolved at render. @default '#94A3B8'
+     * Color of dependency arrows between tasks. When you do not pass it,
+     * `--apex-gantt-dependency-line` on the container sets it, then `--apx-grid`,
+     * then a page design system's hairline colour. Resolved at render.
+     * @default '#94A3B8'
      */
     readonly arrowColor?: string;
     /** Background color of the whole chart container. @default '#FFFFFF' */
     readonly backgroundColor?: string;
     /**
-     * Default background fill color for task bars. `--apex-gantt-bar-fill` on the
-     * container overrides it, and `--apx-accent` applies while it is left at its
-     * default; a task's own `barBackgroundColor` wins over all of them. Resolved
-     * at render. @default '#87B7FE' (light) / '#818CF8' (dark)
+     * Default background fill color for task bars. When you do not pass it,
+     * `--apex-gantt-bar-fill` on the container sets it, then `--apx-accent`, then
+     * a page design system's accent; a task's own `barBackgroundColor` wins over
+     * all of them. Resolved at render. @default '#87B7FE' (light) / '#818CF8' (dark)
      */
     readonly barBackgroundColor?: string;
-    /** CSS border-radius applied to task bars. @default '5px' */
+    /** CSS border-radius applied to task bars; not scaled by `--apx-radius-factor`. @default '5px' */
     readonly barBorderRadius?: string;
     /**
      * Per-task bar label. Default renders the task name immediately to the

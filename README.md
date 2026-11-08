@@ -75,7 +75,9 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `series` | `TaskInput[]` | **required** | Task data array. See data format below. Passing `series` to `update()` replaces the data and clears the undo history; any other `update()` keeps the current tasks, edits included (read them back with `getTasks()`). |
-| `theme` | `'light' \| 'dark'` | `'light'` | Built-in color theme preset. An `update()` that switches the theme returns the color options the theme sets (`barBackgroundColor`, `fontColor`, `rowBackgroundColors`, `arrowColor` and the others listed there) to the new theme's values, user-set ones included, unless the same call passes them; every other option carries over. See [`update(options)`](#1-updateoptions). |
+| `theme` | `'light' \| 'dark' \| string` | `'light'` | Built-in color theme preset, or the name of a theme registered on the family registry (see [Named themes](#named-themes)). An `update()` that switches the theme returns the color options the theme sets (`barBackgroundColor`, `fontColor`, `rowBackgroundColors`, `arrowColor` and the others listed there) to the new theme's values, user-set ones included, unless the same call passes them; every other option carries over. Left unset (with no `backgroundColor`), it follows a design system that declares a dark variant. See [`update(options)`](#1-updateoptions). |
+| `tokens` | `boolean` | `true` | `false` stops the chart reading the `--apx-*` family tokens and the page's design system (including its variant). |
+| `designSystem` | `boolean` | `true` | `false` stops the chart reading the page's design system (Ignite UI's `--ig-*` tokens, including its variant). The `--apx-*` tokens still apply. Has an effect only while the `apexgantt/ignite-ui` add-on is loaded; see [Design systems](#design-systems-ignite-ui). |
 | `width` | `number \| string` | `'100%'` | Width of the chart container. |
 | `height` | `number \| string` | `500` | Height of the chart container. When omitted and the container already has a height of its own (a CSS rule, an inline style, a flex or grid track), the chart fills the container and follows its size; a container sized only by its content gets `500`. |
 | `pixelsPerDay` | `number` | _auto-fit_ | Continuous zoom level. The header tier (year/quarter/month/week/day/hour/minute) is auto-picked from this value. Reference points: `0.5` ≈ year, `1.6` ≈ quarter, `4.9` ≈ month, `25.7` ≈ week, `80` = day. Bounds clamp to roughly `[0.25, 7680]`. **When omitted**, the chart auto-fits the data span into the visible timeline area on first render; supply an explicit value (or zoom via the toolbar) to take control. |
@@ -97,14 +99,14 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `filterRules` | `FilterRuleSet` | `undefined` | Initial structured filter (advanced filter builder): `{ match: 'all' \| 'any', rules: FilterRule[] }`. Each `FilterRule` is `{ field, operator, value? }`; combined with `'all'` (AND) or `'any'` (OR). Compiles to the same view-only filter as `filterBy` and takes precedence over it. See [Sorting & Filtering](#sorting--filtering). |
 | `enableFilterBuilder` | `boolean` | `false` | Show a built-in advanced filter builder in the toolbar: a "Filter" button (with an active-rule count badge) that opens a popover for composing field/operator/value conditions combined with All / Any. Drives the same view-only filter as `gantt.setFilterRules()`. See [Sorting & Filtering](#sorting--filtering). |
 | `groupBy` | `GroupCriterion \| ColumnKey \| string` | `undefined` | Initial grouping. When set, the parent/child tree is suspended and tasks are bucketed under collapsible group headers (label + member count). Pass a bare column key, or a `GroupCriterion` (`{ field, accessor?, label?, direction? }`) for custom value extraction, labelling, and header order. Also available at runtime via `gantt.groupBy()` / `gantt.clearGrouping()`. See [Grouping](#grouping). |
-| `barBackgroundColor` | `string` | `'#87B7FE'` (light) / `'#818CF8'` (dark) | Default background fill color for task bars. `--apex-gantt-bar-fill` on the container overrides it, and `--apx-accent` applies while it is left at its default; a task's own `barBackgroundColor` wins over all of them. See [Family theme tokens](#family-theme-tokens---apx-). |
-| `barBorderRadius` | `string` | `'5px'` | CSS border-radius applied to task bars. |
+| `barBackgroundColor` | `string` | `'#87B7FE'` (light) / `'#818CF8'` (dark) | Default background fill color for task bars. When you do not pass it, `--apex-gantt-bar-fill` on the container sets it, then `--apx-accent`; a task's own `barBackgroundColor` wins over all of them. See [Family theme tokens](#family-theme-tokens---apx-). |
+| `barBorderRadius` | `string` | `'5px'` | CSS border-radius applied to task bars. Not scaled by `--apx-radius-factor` (see [Corner radius](#corner-radius)). |
 | `barMargin` | `number` | `8` | Top and bottom margin inside each row for the task bar. |
 | `barTextColor` | `string` | `'#FFFFFF'` | Text color rendered inside task bars. A task's own `barTextColor` wins. |
 | `barLabel` | `BarLabelOptions` | `{ position: 'right', field: 'name' }` | Per-task bar label. Defaults to `position: 'right'` so labels stay visible regardless of bar width. Set `position: 'inside'` to render centered inside the bar, `'left'` to render before it, or `'auto'` to pick between `'inside'` and `'right'` based on bar width; supply `render: (task) => string \| HTMLElement` to compose the name with chips, icons, or owner info. When `position: 'left'`, the timeline auto-reserves `120px` of leading space so labels don't disappear under the task-list panel — tune via `barLabel.leadingPadding`. Outside labels are not currently rendered for milestones. |
 | `summaryBarColor` | `string` | `'#94A3B8'` (light) / `'#8FBCBC'` (dark) | Fill color for summary (group) bars. |
 | `milestoneColor` | `string` | `'#7C3AED'` (light) / `'#A78BFA'` (dark) | Fill color for milestone diamonds. |
-| `arrowColor` | `string` | `'#94A3B8'` (light) / `'#94A3B8'` (dark) | Color of dependency arrows between tasks. Subtle slate-gray by default so links don't compete with bars. `--apex-gantt-dependency-line` on the container overrides it, and `--apx-grid` applies while it is left at its default. |
+| `arrowColor` | `string` | `'#94A3B8'` (light) / `'#94A3B8'` (dark) | Color of dependency arrows between tasks. Subtle slate-gray by default so links don't compete with bars. When you do not pass it, `--apex-gantt-dependency-line` on the container sets it, then `--apx-grid`. |
 | `dependencies` | `DependencyOptions` | `{}` | Polish + editing for dependency arrows: `cornerRadius` (rounded joints), `hitWidth` (invisible thicker stroke for hover/click targeting), `tooltipTemplate: (ctx) => string` (HTML on hover; requires non-zero `hitWidth`), `classBuilder: (ctx) => string \| string[]` (per-arrow CSS class for cross-team / blocked / etc), `editable: boolean` (hover darkens the arrow, click selects it and reveals a "✕" affordance: click the ✕ or press <kbd>Delete</kbd> to remove via the undoable command path; on bar hover two anchor circles appear at the bar's start/finish edges, and dragging from one to another bar draws a dashed preview that commits the new dependency on release; the (source-anchor, target-anchor) pair determines the type: right→left FS, left→left SS, right→right FF, left→right SF), `allowSummaryDescendantLinks: boolean` (allow edges between a summary task and its descendants, drawn or added with `gantt.addDependency()`; off by default since such edges confuse downstream date math). When `editable: true`, `hitWidth` is auto-bumped to at least `12` if unset. The `ctx` carries `fromTask`, `toTask`, `type`, and `lag`. |
 | `calendar` | `CalendarOptions` | `undefined` | Working-calendar config. When set, weekends and holidays drive duration math, summary aggregation, and timeline stripes: durations stop counting calendar days and start counting working days. Any `calendar` object turns it on, even `{}`, which gives a Monday to Friday week. Leave the option out and every day is a working day (no stripes, no snap). Fields: `workingWeekdays: number[]` (0 = Sunday to 6 = Saturday; default `[1, 2, 3, 4, 5]`; numeric strings are read as numbers, and a list naming no weekday from 0 to 6 logs a warning and uses Monday to Friday), `holidays: Array<string \| Date \| { date, label? }>` (non-working dates regardless of weekday; mixed forms allowed; strings are read with `inputDateFormat` like task dates, and ISO `YYYY-MM-DD` always works), `showNonWorkingStripes: boolean` (tint weekend and holiday columns, over the row backgrounds and under the bars, arrows and annotations; default `true`), `holidayTooltip: (ctx) => string` (optional HTML shown while the pointer is over a holiday column of the timeline, bars excepted; `ctx.date` is the Date, `ctx.label` is whichever string was supplied in the matching entry), `dragSnapMode: 'next' \| 'previous' \| 'allow'` (what happens when a drag/resize commits onto a non-working day: `'next'` (default) snaps forward, `'previous'` snaps backward, `'allow'` permits non-working start/end. Drag preserves the source task's working-day duration across the snap; resize snaps the moving endpoint only. No effect when `snapUnit !== 'day'` or the input format carries time tokens). `update({calendar})` rebuilds the calendar and `update({calendar: undefined})` turns it off; a theme change keeps it. |
 | `borderColor` | `string` | `'#E5E7EB'` (light) / `'#3A3A3A'` (dark) | Color of cell and row divider lines. |
@@ -1391,6 +1393,8 @@ await gantt.exportChart('png');
 
 > PNG and PDF rasterize the chart via a `<canvas>`, so they run in the browser (not in headless/jsdom environments). The PDF is generated dependency-free (a single page embedding a JPEG of the chart).
 
+PNG and PDF lay the chart over its own paper: `backgroundColor` as it resolves through `--apex-gantt-background-color` and `--apx-surface`, so a dark chart exports dark. A transparent paper exports on the theme's paper (white, or the dark theme's), or on the Ignite UI paper when the [add-on](#design-systems-ignite-ui) chose the dark mode from the sheet's variant.
+
 ### 25. `getState()`
 
 Capture the current UI view state (zoom, scroll, collapse, selection, sort, filter) as a JSON-serializable `GanttUiState`. Pair with `setState()` to save and restore "where the user left off", for example to your own backend.
@@ -1646,17 +1650,17 @@ Every chart in the ApexCharts family reads the same five root tokens, so a page 
 }
 ```
 
-Custom properties inherit, so declaring them on `:root` reaches every chart on the page. They resolve **below anything you configured explicitly**, so adopting them cannot change a chart that was already themed:
+Custom properties inherit, so declaring them on `:root` reaches every chart on the page. Every colour and font option resolves through the same order as the rest of the family, higher wins:
 
 ```
-product CSS variable  >  explicit option  >  --apx-* token  >  built-in default
+option you passed  >  --apex-gantt-* variable  >  --apx-* token  >  registered theme  >  design system  >  theme default
 ```
 
-An option set to a value equal to its built-in default is indistinguishable from one left alone, and the token wins there. Set a product variable if you need a value pinned regardless.
+An option counts as passed when it is in the options you gave the constructor or any `update()`, even at its default value; passing it as `undefined` in an `update()` takes it back, and so does an `update()` that switches `theme` for the colours the theme owns, unless the same call passes them. Options you did not pass rank last, so a variable or a token themes them.
 
 ### What Gantt reads
 
-Gantt reads the four root tokens `--apx-accent`, `--apx-fore`, `--apx-grid` and `--apx-surface`. It does **not** read `--apx-series-N`: bars take one fill, not a categorical palette, so colour individual tasks with their `barBackgroundColor` instead.
+Gantt reads the four root tokens `--apx-accent`, `--apx-fore`, `--apx-grid` and `--apx-surface`, and `--apx-font-family` for `fontFamily`. It does **not** read `--apx-series-N`: bars take one fill, not a categorical palette, so colour individual tasks with their `barBackgroundColor` instead.
 
 | Root token      | Gantt option it stands in for                              |
 | --------------- | ---------------------------------------------------------- |
@@ -1665,7 +1669,7 @@ Gantt reads the four root tokens `--apx-accent`, `--apx-fore`, `--apx-grid` and 
 | `--apx-grid`    | `cellBorderColor`, `arrowColor`                            |
 | `--apx-surface` | `backgroundColor`, `headerBackground`, the base row colour |
 
-The product variables, set on the container (or anything it inherits from), win over the option:
+The product variables, set on the container (or anything it inherits from), win over every option you did not pass:
 
 | Variable | Option |
 | --- | --- |
@@ -1682,10 +1686,10 @@ A task's own `barBackgroundColor` still wins over every layer. Values resolve wh
 
 ### Named themes
 
-`registerTheme` from `@apex/commons` records a named set of tokens on a registry shared by the whole family, so a brand theme registered once from any product is resolvable by name from all of them:
+`registerTheme` from `apex-commons` records a named set of tokens on a registry shared by the whole family, so a brand theme registered once from any product is resolvable by name from all of them:
 
 ```js
-import {registerTheme} from '@apex/commons';
+import {registerTheme} from 'apex-commons';
 
 registerTheme('acme', {
   tokens: {accent: '#5b21b6', fore: '#101828', grid: '#e4e7ec', surface: '#ffffff'},
@@ -1694,4 +1698,37 @@ registerTheme('acme', {
 
 A named theme's tokens sit one layer below the CSS `--apx-*` tokens, so the cascade still wins over the registry.
 
-Gantt reads the CSS `--apx-*` tokens directly. It has no theme-name option, so the named-theme layer does not apply to it; use the CSS tokens (or a `prefers-color-scheme` block over them) to theme it alongside the rest of the family.
+Reference it through the `theme` option. Its tokens fill the same slots as the `--apx-*` tokens (see [What Gantt reads](#what-gantt-reads)), one rank below them. A theme registered with `mode: 'dark'` gives every other colour the dark theme's value; without one it is light:
+
+```js
+registerTheme('dusk', {mode: 'dark', tokens: {accent: '#0f766e', surface: '#1c1917'}});
+new ApexGantt(el, {series, theme: 'dusk'});
+```
+
+An `update()` that passes a theme of the same mode keeps the colours you set; one that changes the mode resets them as described for `theme`. A name nothing is registered under renders as `'light'`. A theme registered under `'light'` or `'dark'` adds its tokens to that built-in theme.
+
+### Corner radius
+
+`--apx-radius-factor` multiplies Gantt's own built-in corner radii: menus, dialogs, the task form, tooltips, dropdowns, scrollbars, milestones and roll-ups. Unset, it is `1` and every radius is exactly as before. The toolbar frame shared with the other products keeps its radii for now. The `barBorderRadius` and `dependencies.cornerRadius` options are yours and are not scaled. `tokens: false` keeps the built-in radii. The tooltip, which the chart mounts outside its container, follows the factor the chart sees, so a factor set on the container or a wrapper reaches it too.
+
+```css
+:root {
+  --apx-radius-factor: 1.5;
+}
+```
+
+### Design systems (Ignite UI)
+
+Ignite UI theming is an add-on. Load it once and Gantt charts follow the Ignite UI theme on the page: bars, text, gridlines, the header, the tooltip, the font, light or dark.
+
+```js
+import 'apexgantt/ignite-ui';
+```
+
+Without a bundler, load `apexgantt.ignite-ui.min.js` with a script tag, before or after `apexgantt.min.js`. Load it before the first render: a chart rendered earlier picks it up on its next `render()` or `update()`. `designSystem: false` turns it off for one chart. Without the add-on the `--ig-*` tokens are ignored, with no error; the `--apx-*` tokens work either way.
+
+The add-on also themes ApexTree and ApexSankey on the same page; with several of them, load it from the newest package. ApexCharts charts take their own add-on, `apexcharts/features/ignite-ui`. That one themes Gantt charts as well, but from a script tag only once `apexcharts.js` has loaded, so on a script-tag page load `apexgantt.ignite-ui.min.js` (or `apex-commons.ignite-ui.min.js`) for the Gantt charts.
+
+With the add-on loaded, on a page that loads an Ignite UI theme, the chart reads its tokens as the lowest-ranked layer above the theme defaults: `fontColor` from `--ig-gray-800`, `cellBorderColor` and `arrowColor` from `--ig-gray-300`, `barBackgroundColor` from `--ig-primary-seed`, `fontFamily` from `--ig-font-family`, and (from Ignite UI 7.5.0) `headerBackground` from `--ig-surface-raised` and `tooltipBGColor` from `--ig-surface-overlay`. `backgroundColor` and the row colours keep the theme's own. Anything above it (an option you passed, an `--apex-gantt-*` variable, an `--apx-*` token) still wins.
+
+When the sheet declares a dark variant and you passed neither `theme` nor `backgroundColor`, the chart takes the dark theme's colours (for every colour option you did not pass) and goes back to the light ones when the variant changes; call `gantt.render()` after switching the sheet. Text and border colours from the design system apply only while the chart's mode matches the sheet's variant: the `theme` you passed (a registered theme's `mode`), else the variant, else what your `backgroundColor` reads as. Turn the layer off with `designSystem: false`, or every token read with `tokens: false`.
