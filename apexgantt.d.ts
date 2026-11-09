@@ -86,9 +86,18 @@ declare class ApexGantt extends BaseChart {
     private options;
     /** Current zoom level as pixels-per-ms. Source of truth for all timeline math. */
     private pixelsPerMs;
-    /** Resolved, localized user-facing strings (English defaults + `locale.messages`). */
+    /**
+     * The `locale` option resolved against its pack: messages, tag, date locale,
+     * direction and display formats. Memoised per merged `locale` object.
+     */
+    private get resolvedLocale();
+    /** A string message of the resolved locale, filled with `params`. */
+    private readonly text;
+    /** The column list with built-in titles from the resolved messages (`columnConfig[].title` wins). */
+    private resolveColumns;
+    /** Resolved, localized user-facing strings (English defaults, then the pack's, then `locale.messages`). */
     private get messages();
-    /** Whether the current `locale.direction` resolves to right-to-left (mirrors the time axis). */
+    /** Whether the resolved direction (the user's, else the pack's) is right-to-left (mirrors the time axis). */
     private get isRtl();
     /**
      * Geometry of the timeline header currently on screen. Captured at every full
@@ -113,6 +122,19 @@ declare class ApexGantt extends BaseChart {
      * the user supplies an explicit zoom via `update()` or the toolbar.
      */
     private needsAutoFitZoom;
+    /** The `inputDateFormat` already warned about, so its token warning logs once per chart. */
+    private warnedInputDateFormat;
+    /** Invalid `calendar` header settings already warned about (`key:value`), so each logs once per chart. */
+    private readonly warnedCalendarSettings;
+    /**
+     * `locale.timelineHeaderFormat` rows (`tier.position`) whose override failed
+     * and was warned about. Kept per chart, not per module: two charts each warn,
+     * and a wrapper that sends new function objects on every update still warns
+     * only once.
+     */
+    private readonly warnedHeaderFormats;
+    /** Passed to the TimeLine: warn once per row when a header label override fails. */
+    private readonly onHeaderFormatError;
     /**
      * True from the first render until its first frame applies the RTL start
      * scroll (see ScrollManager.setInitialHorizontalScroll). Only that first
@@ -164,6 +186,17 @@ declare class ApexGantt extends BaseChart {
      * calendar" from an explicit `{}`, which turns a Monday to Friday week on.
      */
     private userCalendar;
+    /**
+     * `locale.direction` as the user passed it (`undefined` when unset). Theme
+     * defaults carry `direction: 'ltr'`, which would otherwise mask a pack's `dir`.
+     */
+    private userDirection;
+    /** True while the chart root's `lang` was set by the chart from `locale.tag` or the pack. */
+    private rootLangOwned;
+    /** The root's own `lang` before the chart set one (`null` when it had none), restored when the tag goes. */
+    private hostLang;
+    /** Set once a string `locale.pack` has been warned about, so it logs once per chart. */
+    private warnedStringPack;
     /** Active sort criteria. Empty array = natural (input) order. */
     private sortCriteria;
     /** Active filter predicate, or null when no filter is applied. */
@@ -219,14 +252,6 @@ declare class ApexGantt extends BaseChart {
      * distributing the extra space via `flexGrow`.
      */
     private effectivePanelWidth;
-    /**
-     * Project date span padded for the current bar-label leading pad. When the
-     * `barLabel.position` is `'left'` (or the user sets an explicit
-     * `leadingPadding`), the start is extended backward so the leading area
-     * renders as real timeline columns (e.g. Jan/Feb headers + gridlines) rather
-     * than an empty visual gutter.
-     */
-    private getPaddedDateRange;
     /**
      * Build a TimelineGeometry from the current data state, through the same
      * builder the TimeLine draws its header with. Used to capture
@@ -503,6 +528,26 @@ declare class ApexGantt extends BaseChart {
      */
     private seriesForUpdate;
     /**
+     * Warn, once per chart, when `locale.pack` is a string (as an old wrapper
+     * bridge may send). Packs are objects; a string is ignored.
+     */
+    private warnOnStringPack;
+    /**
+     * Mark the chart root with the resolved `locale.tag` (or the pack's tag).
+     * The attribute is touched only when a tag resolves, or when the chart set
+     * it earlier: without a tag the root keeps whatever `lang` the host gave it,
+     * and a host `lang` overwritten by a tag comes back when the tag goes.
+     */
+    private applyRootLang;
+    /** Give the root back the `lang` it had before the chart set one (none, if it had none). */
+    private releaseRootLang;
+    /**
+     * Warn, once per chart and format, when `inputDateFormat` holds a token the
+     * bundled format plugins print as a value (such as `Q` or `k`) outside
+     * `[brackets]`. Before those plugins such a letter printed as written.
+     */
+    private warnOnPluginTokensInInputFormat;
+    /**
      * The data side of `update()`: rebuild the working calendar when `calendar`
      * or `inputDateFormat` is passed, then load the replacement tasks, if any.
      * The calendar is built from the user's own `calendar` option, so a theme
@@ -545,6 +590,11 @@ declare class ApexGantt extends BaseChart {
      * it.
      */
     private applyDesignSystemVariant;
+    /**
+     * Warn, once per chart and value, about a `calendar.weekStart` or
+     * `calendar.fiscalYearStartMonth` the header has to ignore.
+     */
+    private warnOnInvalidCalendarSettings;
     /**
      * The mode the chart is showing now, read from its background luminance in
      * any CSS colour syntax. The `theme` option is consulted only when that
@@ -1638,7 +1688,10 @@ declare interface BorderOptions {
  *
  * Any `calendar` object turns the working calendar on, even `{}`, which gives
  * a Monday to Friday week with no holidays. Leave the option out and every day
- * is a working day (no stripes, no snapping).
+ * is a working day (no stripes, no snapping). The exception is a `calendar`
+ * that holds only the header settings `weekStart` and `fiscalYearStartMonth`:
+ * it moves where week, quarter and year cells start and leaves every day a
+ * working day.
  */
 export declare interface CalendarOptions {
     /**
@@ -1679,6 +1732,29 @@ export declare interface CalendarOptions {
      * @default 'next'
      */
     readonly dragSnapMode?: 'next' | 'previous' | 'allow';
+    /**
+     * First day of the week, 0 (Sunday) to 6 (Saturday). Week cells in the
+     * timeline header start on it, and week numbers (`w`, the built-in `Wk`
+     * labels) follow it. Unset, the `locale.dateLocale`'s own `weekStart`
+     * applies (Monday for `de`, Saturday for `ar`), else Sunday. Anything other
+     * than a whole number from 0 to 6 logs a warning and is ignored.
+     *
+     * This and {@link fiscalYearStartMonth} only shape the timeline header: a
+     * `calendar` that holds nothing else does not turn the working calendar on.
+     * @default undefined (the date locale's week start, else 0)
+     */
+    readonly weekStart?: number;
+    /**
+     * First month of the fiscal year, 1 (January) to 12 (December). Quarter and
+     * year cells in the timeline header start on fiscal boundaries, and their
+     * built-in labels read as fiscal periods: with `4` (April), the year cell
+     * from April 2026 to March 2027 reads `FY2026` (a fiscal year is named by
+     * the calendar year it starts in) and its first quarter reads `#1 Apr-Jun`.
+     * Month, week and day cells are unaffected. Anything other than a whole
+     * number from 1 to 12 logs a warning and January is used.
+     * @default 1
+     */
+    readonly fiscalYearStartMonth?: number;
 }
 
 /**
@@ -2242,6 +2318,14 @@ declare interface GanttCalendarConfig {
     readonly calendar: CalendarOptions;
 }
 
+/** Default crosshair label patterns as strings, for JSON and Blazor users. */
+export declare interface GanttCrosshairFormat {
+    /** dayjs pattern on day-and-coarser tiers. @default 'ddd MM/DD/YYYY' */
+    readonly date?: string;
+    /** dayjs pattern on halfday, hour and minute tiers. @default 'MM/DD HH:mm' */
+    readonly time?: string;
+}
+
 declare interface GanttData {
     readonly annotations: Annotation[];
     readonly series: TaskInput[];
@@ -2249,9 +2333,12 @@ declare interface GanttData {
 
 /**
  * A dayjs-compatible locale object (the shape exported by `dayjs/locale/*`
- * modules). Pass one to {@link LocaleOptions.dateLocale} to localize every date,
- * month, and weekday the timeline renders. ApexGantt registers it on its own
- * bundled dayjs instance, so the host does not need to import dayjs locales.
+ * modules). Pass one to {@link LocaleOptions.dateLocale} to localize the month,
+ * weekday and meridiem names in the timeline header, the dates in bar
+ * aria-labels, and the default crosshair label. Dates shown with
+ * `inputDateFormat` (task list, tooltips, task form) keep that format.
+ * ApexGantt registers it on its own bundled dayjs instance, so the host does
+ * not need to import dayjs locales.
  *
  * Structurally mirrors dayjs's `ILocale`; an imported `dayjs/locale/*` object
  * satisfies it directly. Only `name` is required.
@@ -2267,8 +2354,19 @@ export declare interface GanttDateLocale {
     readonly yearStart?: number;
     readonly formats?: Partial<Record<string, string>>;
     readonly relativeTime?: Partial<Record<string, string>>;
-    readonly meridiem?: (hour: number, minute: number, isLowercase: boolean) => string;
-    readonly ordinal?: (n: number) => string;
+    /**
+     * AM/PM name for an hour. Besides dayjs's function form it takes a plain
+     * `[am, pm]` pair (`['午前', '午後']`), which is JSON-safe: the first name is
+     * used before noon and the second from noon on, in both cases.
+     * @default undefined (dayjs's English `AM`/`PM`)
+     */
+    readonly meridiem?: ((hour: number, minute: number, isLowercase: boolean) => string) | readonly [am: string, pm: string];
+    /**
+     * Ordinal form of a number (the `Do` token). Besides dayjs's function form
+     * it takes a template string in which `{n}` is the number (`'{n}日'`).
+     * @default undefined (dayjs's English `1st`, `2nd`)
+     */
+    readonly ordinal?: ((n: number) => string) | string;
 }
 
 declare interface GanttDependencyConfig {
@@ -2430,9 +2528,38 @@ export declare const GanttEvents: {
 export declare type GanttExportFormat = 'svg' | 'png' | 'pdf';
 
 /**
+ * A first-party or custom locale pack: plain JSON-safe data. Explicit
+ * `locale.*` and `calendar.*` options always win over the pack's values.
+ */
+export declare interface GanttLocalePack {
+    /** BCP 47 tag, used for the chart root `lang`, plural rules and collation. */
+    readonly tag: string;
+    /** `'draft'` until a native-speaker reviewer signs it off. */
+    readonly status: 'draft' | 'reviewed';
+    /** Text direction of the language. `locale.direction` wins. @default 'ltr' */
+    readonly dir?: 'ltr' | 'rtl';
+    /** Message overrides. `locale.messages` wins key by key. @default undefined */
+    readonly messages?: GanttMessagesInput;
+    /** Date names and formats. `locale.dateLocale` wins. @default undefined */
+    readonly dateLocale?: GanttDateLocale;
+    /** Header labels. `locale.timelineHeaderFormat` wins per tier and row. @default undefined */
+    readonly timelineHeaderFormat?: TimelineHeaderFormat;
+    /** Display pattern for dates when `inputDateFormat` has no time tokens. `locale.displayDateFormat` wins. @default undefined */
+    readonly displayDateFormat?: string;
+    /** Display pattern for dates when `inputDateFormat` has time tokens. `locale.displayDateFormat` wins. @default undefined */
+    readonly displayDateTimeFormat?: string;
+    /** Crosshair patterns. `crosshairLabelFormat` and `locale.crosshairFormat` win. @default undefined */
+    readonly crosshairFormat?: GanttCrosshairFormat;
+    /** First day of the week, 0 to 6. `calendar.weekStart` wins. Never turns on working days. @default undefined */
+    readonly weekStart?: number;
+    /** First month of the fiscal year, 1 to 12. `calendar.fiscalYearStartMonth` wins. Never turns on working days. @default undefined */
+    readonly fiscalYearStartMonth?: number;
+}
+
+/**
  * Every user-facing string the Gantt generates internally (toolbar, context
- * menu, task form, validation, baseline tooltip, add-task row, and bar
- * aria-labels). Override any subset via {@link LocaleOptions.messages}; unset
+ * menu, task form, validation, bar and baseline tooltips, add-task row, and
+ * bar aria-labels). Override any subset via {@link LocaleOptions.messages}; unset
  * keys keep their English defaults ({@link DEFAULT_GANTT_MESSAGES}). Strings
  * that embed runtime values are functions so each locale controls grammar.
  */
@@ -2477,8 +2604,42 @@ export declare interface GanttMessages {
     readonly filterRemoveCondition: string;
     /** Filter builder: empty-state text shown when no conditions exist. @default 'No conditions yet.' */
     readonly filterNoConditions: string;
-    /** Filter builder: human-readable label for a comparison operator. */
+    /**
+     * Filter builder: human-readable label for a comparison operator. By default
+     * it reads the `filterOperator*` key of the operator (`filterOperatorGt` for
+     * `'gt'`); an unknown operator prints as is.
+     */
     readonly filterOperatorLabel: (operator: FilterOperator) => string;
+    /** Filter operator `contains`. @default 'contains' */
+    readonly filterOperatorContains: string;
+    /** Filter operator `notContains`. @default 'does not contain' */
+    readonly filterOperatorNotContains: string;
+    /** Filter operator `equals`. @default 'equals' */
+    readonly filterOperatorEquals: string;
+    /** Filter operator `notEquals`. @default 'does not equal' */
+    readonly filterOperatorNotEquals: string;
+    /** Filter operator `startsWith`. @default 'starts with' */
+    readonly filterOperatorStartsWith: string;
+    /** Filter operator `endsWith`. @default 'ends with' */
+    readonly filterOperatorEndsWith: string;
+    /** Filter operator `gt`. @default 'greater than' */
+    readonly filterOperatorGt: string;
+    /** Filter operator `gte`. @default 'greater or equal' */
+    readonly filterOperatorGte: string;
+    /** Filter operator `lt`. @default 'less than' */
+    readonly filterOperatorLt: string;
+    /** Filter operator `lte`. @default 'less or equal' */
+    readonly filterOperatorLte: string;
+    /** Filter operator `before`. @default 'before' */
+    readonly filterOperatorBefore: string;
+    /** Filter operator `after`. @default 'after' */
+    readonly filterOperatorAfter: string;
+    /** Filter operator `on`. @default 'on' */
+    readonly filterOperatorOn: string;
+    /** Filter operator `isEmpty`. @default 'is empty' */
+    readonly filterOperatorIsEmpty: string;
+    /** Filter operator `notEmpty`. @default 'is not empty' */
+    readonly filterOperatorNotEmpty: string;
     /** Group header label for tasks whose group value is empty. @default '(None)' */
     readonly groupNone: string;
     /** Group header member-count label, e.g. `(3)`. @default `(n)` => `(${n})` */
@@ -2487,6 +2648,15 @@ export declare interface GanttMessages {
     readonly exportFailedNoChart: string;
     /** Generic export-failure alert. @default 'Export failed. Please check the console for details.' */
     readonly exportFailedGeneric: string;
+    /**
+     * Name of an exported file, without its extension. Param: `timestamp`.
+     * @default 'gantt-chart-{timestamp}'
+     */
+    readonly exportFileName: string;
+    /** Toolbar selection count, shown while tasks are selected. Param: `count`. @default '{count} selected' */
+    readonly selectedCount: string;
+    /** Name of a task added from the toolbar or the add-task row. @default 'New task' */
+    readonly newTaskName: string;
     /** Context-menu "Edit task". @default 'Edit task' */
     readonly editTask: string;
     /** Context-menu "Add child task". @default 'Add child task' */
@@ -2533,6 +2703,20 @@ export declare interface GanttMessages {
     readonly startLabel: string;
     /** Baseline tooltip "End:" label. @default 'End:' */
     readonly endLabel: string;
+    /** Bar tooltip task-name label. @default 'Task:' */
+    readonly tooltipTaskLabel: string;
+    /** Bar tooltip start-date label. @default 'Start:' */
+    readonly tooltipStartLabel: string;
+    /** Bar tooltip end-date label. @default 'End:' */
+    readonly tooltipEndLabel: string;
+    /** Bar tooltip duration label. @default 'Duration:' */
+    readonly tooltipDurationLabel: string;
+    /** Bar tooltip progress label. @default 'Progress:' */
+    readonly tooltipProgressLabel: string;
+    /** Bar tooltip milestone-date label. @default 'Date:' */
+    readonly tooltipDateLabel: string;
+    /** Bar tooltip dependency label. @default 'Depends on:' */
+    readonly tooltipDependsOnLabel: string;
     /**
      * Builds a summary-bar aria-label. `task` is the summary task itself, for
      * labels that need more than its name (an owner, a status, a custom field).
@@ -2566,7 +2750,133 @@ export declare interface GanttMessages {
     }) => string;
     /** Builds the progress-handle aria-label. @default `${name} progress` */
     readonly progressAriaLabel: (name: string) => string;
+    /**
+     * Summary-bar aria-label when it can expand. Read only when this key, or
+     * `summaryAriaLabelCollapse`, is set and `summaryAriaLabel` is not a
+     * function. Param: `name`. @default '{name} (summary) \u2014 expand'
+     */
+    readonly summaryAriaLabelExpand: string;
+    /** Summary-bar aria-label when it can collapse. Param: `name`. @default '{name} (summary) \u2014 collapse' */
+    readonly summaryAriaLabelCollapse: string;
+    /**
+     * Bar aria-label of a read-only bar, which reports progress. Params: `name`,
+     * `start`, `end`, `progress`. @default '{name}: {start} to {end}, {progress}% complete'
+     */
+    readonly barAriaLabelWithProgress: string;
+    /** Progress-ring cell aria-label. Param: `value`. @default '{value} percent complete' */
+    readonly progressRingAriaLabel: string;
+    /** Task-list aria-label. `accessibility.taskListAriaLabel` wins. @default 'Gantt task list' */
+    readonly taskListAriaLabel: string;
+    /** Timeline header aria-label. @default 'Timeline header' */
+    readonly timelineHeaderAriaLabel: string;
+    /** Header checkbox aria-label. @default 'Select all tasks' */
+    readonly selectAllAriaLabel: string;
+    /** Row checkbox aria-label. Param: `name`. @default 'Select {name}' */
+    readonly selectTaskAriaLabel: string;
+    /** Expand-chevron aria-label. Param: `name`. @default 'Expand {name}' */
+    readonly expandAriaLabel: string;
+    /** Collapse-chevron aria-label. Param: `name`. @default 'Collapse {name}' */
+    readonly collapseAriaLabel: string;
+    /**
+     * Column-header aria-label. Params: `title`, `sortState` (one of the
+     * `sort*` keys) and `sortPosition` (the `sortPosition` text, or `''`).
+     * @default '{title}, {sortState}{sortPosition}'
+     */
+    readonly columnHeaderAriaLabel: string;
+    /** Sort state of an ascending column. @default 'sorted ascending' */
+    readonly sortAscending: string;
+    /** Sort state of a descending column. @default 'sorted descending' */
+    readonly sortDescending: string;
+    /** Sort state of an unsorted column. @default 'not sorted' */
+    readonly sortNone: string;
+    /** Position of a column in a multi-column sort. Param: `position`. @default ', sort position {position}' */
+    readonly sortPosition: string;
+    /** Column resize-handle aria-label. Param: `title`. @default 'Resize {title} column' */
+    readonly resizeColumnAriaLabel: string;
+    /** Splitter aria-label. @default 'Resize panels' */
+    readonly resizePanelsAriaLabel: string;
+    /** Scroll button toward earlier dates. @default 'Scroll to task (earlier)' */
+    readonly scrollToTaskEarlier: string;
+    /** Scroll button toward later dates. @default 'Scroll to task (later)' */
+    readonly scrollToTaskLater: string;
+    /**
+     * Dependency arrow aria-label. Params: `from` and `to` (task ids),
+     * `fromName` and `toName`. @default 'Dependency from {from} to {to}'
+     */
+    readonly dependencyAriaLabel: string;
+    /**
+     * Remove-dependency button aria-label. Params: `from`, `to`, `fromName` and
+     * `toName`. @default 'Remove dependency from {from} to {to}'
+     */
+    readonly removeDependencyAriaLabel: string;
+    /** Dialog close-button aria-label. @default 'Close dialog' */
+    readonly closeDialog: string;
+    /** Title of the `name` column. `columnConfig[].title` wins. @default 'Task Name' */
+    readonly columnName: string;
+    /** Title of the `startTime` column. @default 'Start' */
+    readonly columnStartTime: string;
+    /** Title of the `endTime` column. @default 'End' */
+    readonly columnEndTime: string;
+    /** Title of the `duration` column. @default 'Duration' */
+    readonly columnDuration: string;
+    /** Title of the `progress` column. @default 'Progress' */
+    readonly columnProgress: string;
+    /** Title of the `progressRing` column. @default 'Progress' */
+    readonly columnProgressRing: string;
+    /** Title of the `assignees` column. @default 'Assignees' */
+    readonly columnAssignees: string;
+    /** Title of the `predecessors` column. @default 'Predecessors' */
+    readonly columnPredecessors: string;
+    /** Title of the `successors` column. @default 'Successors' */
+    readonly columnSuccessors: string;
+    /** Title of the `baselineStart` column. @default 'Baseline Start' */
+    readonly columnBaselineStart: string;
+    /** Title of the `baselineEnd` column. @default 'Baseline End' */
+    readonly columnBaselineEnd: string;
+    /** Title of the `baselineVariance` column. @default 'Variance' */
+    readonly columnBaselineVariance: string;
+    /** Title of the `wbs` column. @default 'WBS' */
+    readonly columnWbs: string;
+    /** A duration in calendar days. Param: `count`. @default '{count} d' */
+    readonly durationDays: string;
+    /** A duration in working days. Param: `count`. @default '{count} wd' */
+    readonly durationWorkingDays: string;
+    /** A duration in hours. Param: `count`. @default '{count} h' */
+    readonly durationHours: string;
+    /** A duration in minutes. Param: `count`. @default '{count} m' */
+    readonly durationMinutes: string;
+    /** A progress value (cells, bar labels, the tooltip). Param: `value`. @default '{value}%' */
+    readonly progressValue: string;
+    /** Separator between assignee names. @default ', ' */
+    readonly listSeparator: string;
+    /**
+     * Value of the tooltip's dependency row. Params: `taskId`, `type` (a
+     * `dependencyType*` key) and `lag` (the `dependencyLag` text, or `''`).
+     * @default '{taskId} · {type}{lag}'
+     */
+    readonly tooltipDependencyValue: string;
+    /** Lag of a dependency, signed (`+2`). Not used for zero lag. Param: `lag`. @default ' ({lag}d)' */
+    readonly dependencyLag: string;
+    /** Finish-to-start dependency. @default 'FS' */
+    readonly dependencyTypeFS: string;
+    /** Start-to-start dependency. @default 'SS' */
+    readonly dependencyTypeSS: string;
+    /** Finish-to-finish dependency. @default 'FF' */
+    readonly dependencyTypeFF: string;
+    /** Start-to-finish dependency. @default 'SF' */
+    readonly dependencyTypeSF: string;
 }
+
+/**
+ * {@link GanttMessages} as input: every key optional, and every function key
+ * also takes a template string. In a template, `{name}` inserts a param,
+ * `{n, number}` formats a number in the chart's `tag`, and
+ * `{n, plural, one {...} other {...}}` picks a plural branch. Strings keep
+ * JSON and Blazor users away from functions.
+ */
+export declare type GanttMessagesInput = {
+    readonly [K in keyof GanttMessages]?: GanttMessages[K] extends (...args: never[]) => string ? GanttMessages[K] | string : GanttMessages[K];
+};
 
 declare type GanttOptions = GanttOptionsInternal;
 
@@ -2896,9 +3206,10 @@ export declare interface GanttUserOptions {
     /**
      * Working calendar config. When set, weekends + holidays drive duration
      * math, summary aggregation, and timeline stripes. Any object turns it on,
-     * even `{}` (a Monday to Friday week). Absent = every day is a working day.
-     * `update({calendar})` rebuilds it; `update({calendar: undefined})` turns it
-     * off. See {@link CalendarOptions}.
+     * even `{}` (a Monday to Friday week), except one holding only the header
+     * settings `weekStart` and `fiscalYearStartMonth`. Absent = every day is a
+     * working day. `update({calendar})` rebuilds it; `update({calendar: undefined})`
+     * turns it off. See {@link CalendarOptions}.
      * @default undefined
      */
     readonly calendar?: CalendarOptions;
@@ -2931,7 +3242,9 @@ export declare interface GanttUserOptions {
      * Custom formatter for the crosshair label text. Receives the date under the
      * cursor and the current sub-tier of the timeline header. When omitted, the
      * label auto-adapts to the active tier: `'ddd MM/DD/YYYY'` for day/week/
-     * month/quarter/year tiers and `'MM/DD HH:mm'` for hour/minute tiers.
+     * month/quarter/year tiers and `'MM/DD HH:mm'` for halfday/hour/minute
+     * tiers, with weekday names from `locale.dateLocale` when one is set.
+     * @default undefined (the tier-adaptive label)
      */
     readonly crosshairLabelFormat?: CrosshairLabelFormatter;
     /** Border color for all cells in the task table and timeline grid. @default '#EDEFF2' (light) / '#3A3A3A' (dark) */
@@ -3182,7 +3495,10 @@ export declare interface GanttUserOptions {
     /**
      * dayjs-compatible format string used to parse `startTime` / `endTime` values.
      * Changing it with `update()` does not rewrite the stored dates, so pass
-     * `series` in the new format alongside it.
+     * `series` in the new format alongside it. It is also how dates are shown,
+     * and since 3.22 `Q`, `Do`, `k`, `w`, `W`, `X`, `x` and `L` print values
+     * there; wrap text that should print as written in `[ ]` (the chart warns
+     * once about such a letter outside brackets).
      * @default 'MM-DD-YYYY'
      */
     readonly inputDateFormat?: string;
@@ -3283,7 +3599,11 @@ export declare interface GanttUserOptions {
     readonly enableQuickFilter?: boolean;
     /** Fine-tunes the built-in quick-filter search box (placeholder, fields, case-sensitivity). */
     readonly quickFilter?: QuickFilterOptions;
-    /** `aria-label` for the task-list table, used by screen readers. @default 'Task list' */
+    /**
+     * `aria-label` for the task-list table, used by screen readers. Wins over
+     * the `taskListAriaLabel` message.
+     * @default 'Gantt task list'
+     */
     readonly taskListAriaLabel?: string;
     /**
      * Veto hook called immediately before a task is inserted via
@@ -3492,21 +3812,72 @@ export declare const LightTheme: GanttTheme;
  */
 export declare interface LocaleOptions {
     /**
+     * A locale pack ({@link GanttLocalePack}): the base layer under every other
+     * `locale` field. Each explicit `locale.*` field wins over the pack's value,
+     * and `calendar.weekStart` and `calendar.fiscalYearStartMonth` win over the
+     * pack's. Object only: a string logs one warning per chart and is ignored.
+     * @default undefined
+     */
+    readonly pack?: GanttLocalePack;
+    /**
+     * BCP 47 language tag such as `'ja'` or `'ja-JP'`. When it resolves (here or
+     * from `pack.tag`), it is set as the chart root's `lang`, and it drives the
+     * plural rules and number formatting of message templates. A malformed tag
+     * (such as `'ja_JP'`) is ignored, as if unset, so sorting and grouping never
+     * throw.
+     * @default undefined (falls back to `pack.tag`)
+     */
+    readonly tag?: string;
+    /**
+     * dayjs pattern for read-only dates: the task list Start, End, Baseline
+     * Start and Baseline End columns and the bar and baseline tooltips, formatted
+     * with the active date locale. Editors keep `inputDateFormat`. Unset: the
+     * pack's `displayDateTimeFormat` when `inputDateFormat` has time tokens, else
+     * the pack's `displayDateFormat`, else `inputDateFormat` as before.
+     * @default undefined
+     */
+    readonly displayDateFormat?: string;
+    /**
+     * Patterns for the default crosshair label. The top-level
+     * `crosshairLabelFormat` function wins. See {@link GanttCrosshairFormat}.
+     * @default undefined (the built-in patterns)
+     */
+    readonly crosshairFormat?: GanttCrosshairFormat;
+    /**
      * Text and layout direction. `'rtl'` mirrors the timeline horizontally
      * (time flows right-to-left, the task list moves to the right) and sets
      * `dir="rtl"` on the container; `'auto'` defers to the document/element.
+     * When it is not set, the pack's `dir` applies.
      * @default 'ltr'
      */
     readonly direction?: TextDirection;
     /**
-     * dayjs-compatible locale object used to format every date, month, and
-     * weekday in the timeline. Import one from `dayjs/locale/*` (e.g.
-     * `import localeFr from 'dayjs/locale/fr'`) and pass it here. See
-     * {@link GanttDateLocale}.
+     * dayjs-compatible locale object for the timeline header labels, the dates
+     * in bar aria-labels and the default crosshair label. Its name is also set
+     * as the `lang` of the timeline header rows (not the chart root, whose other
+     * text keeps the page's language). Dates shown with `inputDateFormat`
+     * (task list, tooltips, task form) are not affected; the header's word
+     * order can be changed with {@link timelineHeaderFormat}. Import one from
+     * `dayjs/locale/*` (e.g. `import localeFr from 'dayjs/locale/fr'`) and pass
+     * it here. See {@link GanttDateLocale}. Wins over the pack's `dateLocale`.
+     * @default undefined (English)
      */
     readonly dateLocale?: GanttDateLocale;
-    /** Overrides for the Gantt's generated strings. See {@link GanttMessages}. */
-    readonly messages?: Partial<GanttMessages>;
+    /**
+     * Overrides for the Gantt's generated strings. See {@link GanttMessages}.
+     * Each function key also takes a template string (see
+     * {@link GanttMessagesInput}). Wins over the pack's messages key by key.
+     * @default {} (the English defaults, {@link DEFAULT_GANTT_MESSAGES})
+     */
+    readonly messages?: GanttMessagesInput;
+    /**
+     * Labels for the timeline header, per tier and row, in place of the built-in
+     * English-ordered ones. Only the rows you set change. See
+     * {@link TimelineHeaderFormat}. Merged over the pack's
+     * `timelineHeaderFormat` per tier and row.
+     * @default undefined (the built-in labels)
+     */
+    readonly timelineHeaderFormat?: TimelineHeaderFormat;
 }
 
 /**
@@ -4192,6 +4563,127 @@ export declare type ThemeMode = 'dark' | 'light';
 /** Identifier for a timeline tier. Ordered finest to coarsest. */
 export declare type TierId = 'minute' | 'hour' | 'halfday' | 'day' | 'week' | 'month' | 'quarter' | 'year';
 
+/** Whether a tier is rendered as the top (coarse) row or the sub (fine) row. */
+export declare type TierPosition = 'top' | 'sub';
+
+/**
+ * Timeline header labels per tier (`minute`, `hour`, `halfday`, `day`, `week`,
+ * `month`, `quarter`, `year`) and row (`top`, `sub`). Only the rows you set
+ * change, so an absent or empty object renders the built-in labels.
+ *
+ * Which rows show depends on the zoom (`pixelsPerDay`, or the zoom that fits
+ * the project when it is unset): at week density (about 26 px per day) the
+ * top row is `month` and the sub row is `week`; `week` becomes the top row
+ * only once zoomed in to day cells (42 px per day or more). Set both rows of
+ * a tier when the zoom can vary. `minute.top`, `halfday.top` and
+ * `quarter.top` never render, because no finer tier sits under them.
+ */
+export declare type TimelineHeaderFormat = Partial<Record<TierId, TimelineHeaderTierFormat>>;
+
+/** One width-gated label in a candidate array (see {@link TimelineHeaderLabelFormat}). */
+export declare interface TimelineHeaderLabelCandidate {
+    /**
+     * Narrowest cell width (px) this candidate is used at.
+     * @default 0
+     */
+    readonly minWidth?: number;
+    /** A pattern string or a function, as in {@link TimelineHeaderLabelFormat}. */
+    readonly format: string | TimelineHeaderLabelFormatter;
+}
+
+/**
+ * What a {@link TimelineHeaderLabelFormatter} is told about the cell it labels.
+ * Dates are plain `Date`s, so the types never depend on the dayjs bundled with
+ * ApexGantt.
+ */
+export declare interface TimelineHeaderLabelContext {
+    /** Tier the cell belongs to. */
+    readonly tier: TierId;
+    /** Row the cell renders in: `'top'` (the coarse row) or `'sub'` (the fine row). */
+    readonly position: TierPosition;
+    /**
+     * Rendered width of the cell in px. The cells at either end of the timeline
+     * can be clipped, so they are narrower than their siblings.
+     */
+    readonly cellWidth: number;
+    /**
+     * The cell's last instant (its exclusive end minus 1 ms): for a week cell,
+     * the last day of the week. This is the cell's natural end, even when the
+     * cell is clipped at the end of the timeline.
+     */
+    readonly end: Date;
+    /** Week of the year by the date locale's rules and the effective week start (the `w` token). */
+    readonly week: number;
+    /** Calendar quarter of the cell start, 1 to 4 (the `Q` token). */
+    readonly quarter: number;
+    /**
+     * Fiscal year of the cell start, named by the calendar year it starts in
+     * (`{fy}`). With `calendar.fiscalYearStartMonth: 4`, April 2026 to March
+     * 2027 is fiscal year 2026. With no fiscal start set it is the calendar year.
+     */
+    readonly fiscalYear: number;
+    /** Fiscal quarter of the cell start, 1 to 4 (`{fq}`). With no fiscal start set it is the calendar quarter. */
+    readonly fiscalQuarter: number;
+    /** Name of `locale.dateLocale` (such as `'ja'`), or `'en'` when none is set. */
+    readonly locale: string;
+    /**
+     * Format `date` (default: the cell start) with a pattern, exactly as a string
+     * {@link TimelineHeaderLabelFormat} is applied: the date locale and week
+     * start are in force, and `{end:PATTERN}` (the cell's last instant),
+     * `{fy}` and `{fq}` (the fiscal year and quarter of `date`) work too.
+     */
+    readonly format: (pattern: string, date?: Date) => string;
+}
+
+/**
+ * How one tier and row is labelled.
+ *
+ * - **string**: a dayjs pattern applied to the cell start at every width. A
+ *   label wider than its cell is cut with an ellipsis. Besides the core dayjs
+ *   tokens it takes `Q`, `Do`, `k`/`kk`, `X`/`x` (advancedFormat), `w`/`ww`/`wo`
+ *   (week of year, following the week start), `W`/`WW` (ISO week), `gggg`/`GGGG`
+ *   (week year) and `L`/`LL`/`LLL`/`LLLL` with their lowercase forms (the date
+ *   locale's own date formats). Wrap Latin text in `[...]` (`'[Wk] w'`); CJK text
+ *   such as 年, 月, 週 needs no escaping. Three placeholders are filled in by
+ *   ApexGantt: `{end:PATTERN}` is the cell's last instant formatted with
+ *   PATTERN (`'M/D-{end:M/D}'` gives `12/28-1/3` for a Sunday week), `{fy}` is the fiscal year
+ *   and `{fq}` the fiscal quarter (see `calendar.fiscalYearStartMonth`). `YYYY`
+ *   and `Q` stay calendar-based. Inside `{end:...}`, `{fy}`/`{fq}` are those of
+ *   the cell's last instant. Any other `{...}`, or a `{` never closed, prints
+ *   as written.
+ * - **candidate array**: replaces the built-in list of labels for that row.
+ *   It is sorted widest-first (the order you write it in does not matter); the
+ *   first candidate whose `minWidth` is at most the cell width is used, and the
+ *   narrowest one below that. An empty array keeps the built-in labels.
+ * - **function**: called at every width; read `context.cellWidth` to shorten
+ *   the label yourself.
+ */
+export declare type TimelineHeaderLabelFormat = string | TimelineHeaderLabelFormatter | ReadonlyArray<TimelineHeaderLabelCandidate>;
+
+/**
+ * Function form of a header label: return the text for the cell starting at
+ * `date`. The text is HTML-escaped before it renders, so return plain text.
+ * It runs for every cell on every render and zoom step, so keep it pure and
+ * cheap. If it throws (or returns anything but a string or a number) the
+ * cell shows the built-in label for its width, and the chart logs one warning
+ * for that row.
+ */
+export declare type TimelineHeaderLabelFormatter = (date: Date, context: TimelineHeaderLabelContext) => string;
+
+/** Label overrides for one tier. A row left unset keeps its built-in labels. */
+export declare interface TimelineHeaderTierFormat {
+    /**
+     * Label when this tier is the top (coarse) row.
+     * @default undefined (the built-in labels)
+     */
+    readonly top?: TimelineHeaderLabelFormat;
+    /**
+     * Label when this tier is the sub (fine) row.
+     * @default undefined (the built-in labels)
+     */
+    readonly sub?: TimelineHeaderLabelFormat;
+}
+
 /**
  * A plain button in the custom toolbar area.
  *
@@ -4332,7 +4824,9 @@ declare interface TooltipOptions {
 /**
  * Builds the bar tooltip's HTML. `context` carries values worked out with the
  * chart's settings (see {@link TooltipTemplateContext}); a two-argument
- * function still works.
+ * function still works. The result is written as HTML, so pass task text
+ * through the exported `escapeHtml` before interpolating it, as the default
+ * template does.
  */
 export declare type TooltipTemplate = (task: Task, dateFormat: string, context?: TooltipTemplateContext) => string;
 
@@ -4347,6 +4841,33 @@ export declare interface TooltipTemplateContext {
      * days (`'5 wd'`) when a `calendar` is set with day snapping.
      */
     readonly durationText: string;
+    /**
+     * The chart's resolved strings (the English defaults merged with
+     * `locale.messages`), so a custom template can reuse the translated tooltip
+     * labels. The chart always passes it; it is optional only so code that
+     * builds a context by hand keeps compiling.
+     * @default undefined (the default template then uses the English labels)
+     */
+    readonly messages?: GanttMessages;
+    /**
+     * The task's start date as the task list shows it: in
+     * `locale.displayDateFormat` (or the pack's display format) when one is set,
+     * else in `inputDateFormat`.
+     * @default undefined (the default template then formats with `dateFormat`)
+     */
+    readonly startText?: string;
+    /**
+     * The task's end date as the task list shows it. See {@link startText}.
+     * @default undefined (the default template then formats with `dateFormat`)
+     */
+    readonly endText?: string;
+    /**
+     * The chart's BCP 47 tag (`locale.tag`, else the pack's), so `{n, number}`
+     * and `{n, plural, ...}` in the tooltip messages format as they do in the
+     * task list.
+     * @default undefined (the runtime's locale)
+     */
+    readonly tag?: string;
 }
 
 /**

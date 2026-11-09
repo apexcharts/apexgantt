@@ -61,6 +61,15 @@ jobs:
       - run: npm install -g npm@latest
       - run: npm install
 
+      # The locale packs are reachable only through the "./locales/*" entries
+      # in package.json. Load one through the package's own exports (a self
+      # reference), so a release cannot ship packs that no import can reach.
+      - name: Smoke-test the locale packs
+        run: |
+          node --input-type=module -e "const {ja} = await import('apexgantt/locales/ja'); if (ja.tag !== 'ja') process.exit(1)"
+          node -e "if (require('apexgantt/locales/ja').ja.tag !== 'ja') process.exit(1)"
+          echo "✅ apexgantt/locales/ja loads as ESM and CommonJS"
+
       - name: Publish to npm
         run: npm publish --provenance --tag ${{ steps.check.outputs.tag }}
 

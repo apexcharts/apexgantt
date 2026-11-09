@@ -7,12 +7,16 @@
     <!-- Load dayjs + locales from CDN purely to obtain dayjs locale OBJECTS.
          ApexGantt registers the object you pass onto its own bundled dayjs, so the
          host page needs no further dayjs setup. (English is built into dayjs.) -->
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/fr.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/de.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/ar.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/he.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/locale/fr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/locale/de.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/locale/ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/locale/he.js"></script>
     <script src="../apexgantt.min.js"></script>
+    <!-- The first-party Japanese pack: plain data that sets ApexGanttLocales.ja.
+         It can load before or after apexgantt.min.js. From npm it is
+         `import {ja} from 'apexgantt/locales/ja'`. -->
+    <script src="../locales/ja.min.js"></script>
     <style>
       :root {
         --ink: #1a1a2e;
@@ -103,9 +107,11 @@
       <h2>Localization &amp; RTL</h2>
       <p class="subtitle">
         Pick a language to re-render the Gantt. <code>locale.dateLocale</code> localizes the timeline month / weekday
-        names, <code>locale.messages</code> translates the toolbar, context menu, task form, and validation, and
-        <code>locale.direction: 'rtl'</code> flows the whole chart right-to-left, including a mirrored time axis (the
-        earliest date sits on the right). Try the toolbar's add / edit and right-click a row.
+        names, <code>locale.messages</code> translates the toolbar, context menu, task form, tooltip, and validation,
+        and <code>locale.direction: 'rtl'</code> flows the whole chart right-to-left, including a mirrored time axis
+        (the earliest date sits on the right). 日本語 uses the first-party locale pack instead:
+        <code>locale: { pack: ApexGanttLocales.ja }</code>. Try the toolbar's add / edit, hover a bar, and right-click a
+        row.
       </p>
     </header>
 
@@ -115,15 +121,21 @@
 
     <p class="legend">
       Localized here: <b>timeline month / weekday labels</b> (via the dayjs locale object),
-      <b>toolbar + context-menu + task-form strings</b>, <b>validation messages</b>, and <b>bar aria-labels</b>. For
-      Arabic / Hebrew the time axis, task-list panel, and chrome <b>mirror right-to-left</b>. Defaults (no
-      <code>locale</code>) stay English, left-to-right.
+      <b>toolbar + context-menu + task-form strings</b>, <b>bar tooltip labels</b>, <b>validation messages</b>, and
+      <b>bar aria-labels</b>. For Arabic / Hebrew the time axis, task-list panel, and chrome
+      <b>mirror right-to-left</b>. The 日本語 pack (status: draft) also translates the column titles, durations
+      (<code>36日</code>), filter operators and every aria-label, shows dates as <code>2025/12/29</code>, starts weeks
+      on Monday (<code>12/29～</code>, <code>1/5～</code>), and zooming out shows fiscal quarters and years from April
+      (<code>2025年度 第4四半期</code>, <code>2026年度</code>). <code>calendar.weekStart</code> and
+      <code>calendar.fiscalYearStartMonth</code> override the pack's. Defaults (no <code>locale</code>) stay English,
+      left-to-right.
     </p>
 
     <script>
       // names: task labels, translated so the re-render is visually obvious.
       // dayjsName: the locale loaded above; dateLocale reads it from dayjs.Ls.
       // messages: the user-facing strings ApexGantt exposes via locale.messages.
+      // pack: a first-party locale pack, used in place of the three above.
       const LOCALES = {
         en: {
           label: 'English',
@@ -308,17 +320,28 @@
               canToggle ? `${name} (סיכום), ${collapsed ? 'הרחבה' : 'כיווץ'}` : `${name} (סיכום)`,
           },
         },
+        ja: {
+          label: '日本語',
+          dir: 'ltr',
+          names: {phase: '設計フェーズ', research: '調査', mockups: 'モックアップ', dev: '開発', launch: 'リリース'},
+          // The first-party pack loaded above (locales/ja.min.js) carries
+          // everything: the translated messages, the date names, Monday weeks,
+          // an April fiscal year (年度), Japanese header word order and
+          // YYYY/MM/DD dates in the task list and tooltips. Any explicit
+          // locale.* or calendar.* option would win over its value.
+          pack: ApexGanttLocales.ja,
+        },
       };
 
-      const ORDER = ['en', 'fr', 'de', 'ar', 'he'];
+      const ORDER = ['en', 'fr', 'de', 'ar', 'he', 'ja'];
 
       function buildSeries(n) {
         return [
           {id: 'p1', name: n.phase, progress: 60},
-          {id: 't1', name: n.research, startTime: '2025-01-06', endTime: '2025-01-20', parentId: 'p1', progress: 100},
-          {id: 't2', name: n.mockups, startTime: '2025-01-21', endTime: '2025-02-10', parentId: 'p1', progress: 70},
-          {id: 't3', name: n.dev, startTime: '2025-02-11', endTime: '2025-04-15', progress: 25},
-          {id: 'm1', name: n.launch, startTime: '2025-04-16', type: 'milestone'},
+          {id: 't1', name: n.research, startTime: '2025-12-29', endTime: '2026-01-12', parentId: 'p1', progress: 100},
+          {id: 't2', name: n.mockups, startTime: '2026-01-13', endTime: '2026-02-02', parentId: 'p1', progress: 70},
+          {id: 't3', name: n.dev, startTime: '2026-02-03', endTime: '2026-04-07', progress: 25},
+          {id: 'm1', name: n.launch, startTime: '2026-04-08', type: 'milestone'},
         ];
       }
 
@@ -345,16 +368,21 @@
           width: '100%',
           height: 440,
           inputDateFormat: 'YYYY-MM-DD',
+          // Week density: localized month names over week cells. Zoom out for
+          // quarters and years (the fiscal 年度 labels in 日本語).
+          pixelsPerDay: 14,
           enableTaskCRUDToolbar: true,
           enableContextMenu: true,
           enableTaskEdit: true,
           canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;',
-          locale: {
-            direction: cfg.dir,
-            // dayjs.Ls holds the locale objects loaded from the CDN above.
-            dateLocale: dayjs.Ls[cfg.dayjsName],
-            messages: cfg.messages,
-          },
+          locale: cfg.pack
+            ? {pack: cfg.pack}
+            : {
+                direction: cfg.dir,
+                // dayjs.Ls holds the locale objects loaded from the CDN above.
+                dateLocale: window.dayjs ? dayjs.Ls[cfg.dayjsName] : undefined,
+                messages: cfg.messages,
+              },
         });
         current.render();
       }

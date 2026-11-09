@@ -1,6 +1,6 @@
 {
   "name": "apexgantt",
-  "version": "3.21.0",
+  "version": "3.22.0",
   "license": "SEE LICENSE IN LICENSE.md",
   "repository": {
     "type": "git",
@@ -33,6 +33,18 @@
         "types": "./ignite-ui.d.ts",
         "default": "./apexgantt.ignite-ui.min.js"
       }
-    }
+    },
+    "./locales/*.json": "./locales/*.json",
+    "./locales/*": {
+      "import": {
+        "types": "./locales/*.d.ts",
+        "default": "./locales/*.es.min.js"
+      },
+      "require": {
+        "types": "./locales/*.d.cts",
+        "default": "./locales/*.cjs"
+      }
+    },
+    "./package.json": "./package.json"
   }
 }

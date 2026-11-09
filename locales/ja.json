@@ -1,0 +1,292 @@
+{
+  "tag": "ja",
+  "status": "draft",
+  "weekStart": 1,
+  "fiscalYearStartMonth": 4,
+  "displayDateFormat": "YYYY/MM/DD",
+  "displayDateTimeFormat": "YYYY/MM/DD HH:mm",
+  "crosshairFormat": {
+    "date": "YYYY/M/D(ddd)",
+    "time": "M/D H:mm"
+  },
+  "dateLocale": {
+    "name": "ja",
+    "weekdays": [
+      "日曜日",
+      "月曜日",
+      "火曜日",
+      "水曜日",
+      "木曜日",
+      "金曜日",
+      "土曜日"
+    ],
+    "weekdaysShort": [
+      "日",
+      "月",
+      "火",
+      "水",
+      "木",
+      "金",
+      "土"
+    ],
+    "weekdaysMin": [
+      "日",
+      "月",
+      "火",
+      "水",
+      "木",
+      "金",
+      "土"
+    ],
+    "months": [
+      "1月",
+      "2月",
+      "3月",
+      "4月",
+      "5月",
+      "6月",
+      "7月",
+      "8月",
+      "9月",
+      "10月",
+      "11月",
+      "12月"
+    ],
+    "monthsShort": [
+      "1月",
+      "2月",
+      "3月",
+      "4月",
+      "5月",
+      "6月",
+      "7月",
+      "8月",
+      "9月",
+      "10月",
+      "11月",
+      "12月"
+    ],
+    "ordinal": "{n}日",
+    "meridiem": [
+      "午前",
+      "午後"
+    ],
+    "formats": {
+      "LT": "HH:mm",
+      "LTS": "HH:mm:ss",
+      "L": "YYYY/MM/DD",
+      "LL": "YYYY年M月D日",
+      "LLL": "YYYY年M月D日 HH:mm",
+      "LLLL": "YYYY年M月D日 dddd HH:mm",
+      "l": "YYYY/MM/DD",
+      "ll": "YYYY年M月D日",
+      "lll": "YYYY年M月D日 HH:mm",
+      "llll": "YYYY年M月D日(ddd) HH:mm"
+    },
+    "relativeTime": {
+      "future": "%s後",
+      "past": "%s前",
+      "s": "数秒",
+      "m": "1分",
+      "mm": "%d分",
+      "h": "1時間",
+      "hh": "%d時間",
+      "d": "1日",
+      "dd": "%d日",
+      "M": "1ヶ月",
+      "MM": "%dヶ月",
+      "y": "1年",
+      "yy": "%d年"
+    }
+  },
+  "timelineHeaderFormat": {
+    "year": {
+      "top": "{fy}年度",
+      "sub": "{fy}年度"
+    },
+    "quarter": {
+      "sub": [
+        {
+          "minWidth": 160,
+          "format": "{fy}年度 第{fq}四半期"
+        },
+        {
+          "format": "第{fq}四半期"
+        }
+      ]
+    },
+    "month": {
+      "top": "YYYY年M月",
+      "sub": "M月"
+    },
+    "week": {
+      "top": "YYYY年M/D～",
+      "sub": "M/D～"
+    },
+    "day": {
+      "top": [
+        {
+          "minWidth": 130,
+          "format": "YYYY年M月D日(ddd)"
+        },
+        {
+          "minWidth": 90,
+          "format": "M月D日(ddd)"
+        },
+        {
+          "format": "M/D(ddd)"
+        }
+      ],
+      "sub": "D"
+    },
+    "hour": {
+      "top": [
+        {
+          "minWidth": 150,
+          "format": "M月D日(ddd) H時"
+        },
+        {
+          "minWidth": 80,
+          "format": "M/D H時"
+        },
+        {
+          "format": "H時"
+        }
+      ],
+      "sub": [
+        {
+          "minWidth": 36,
+          "format": "H時"
+        },
+        {
+          "format": "H"
+        }
+      ]
+    }
+  },
+  "messages": {
+    "zoomIn": "拡大",
+    "zoomOut": "縮小",
+    "addTask": "タスクを追加",
+    "deleteSelected": "選択したタスクを削除",
+    "undo": "元に戻す (Ctrl+Z)",
+    "redo": "やり直し (Ctrl+Y)",
+    "exportAsSvg": "SVG形式でエクスポート",
+    "exportAsPng": "PNG形式でエクスポート",
+    "exportAsPdf": "PDF形式でエクスポート",
+    "quickFilterPlaceholder": "タスクを検索…",
+    "filterButton": "フィルター",
+    "filterHeading": "タスクの絞り込み",
+    "filterMatchLabel": "一致条件",
+    "filterMatchAll": "すべて",
+    "filterMatchAny": "いずれか",
+    "filterAddCondition": "+ 条件を追加",
+    "filterApply": "適用",
+    "filterClear": "クリア",
+    "filterRemoveCondition": "条件を削除",
+    "filterNoConditions": "条件がありません。",
+    "filterOperatorContains": "含む",
+    "filterOperatorNotContains": "含まない",
+    "filterOperatorEquals": "等しい",
+    "filterOperatorNotEquals": "等しくない",
+    "filterOperatorStartsWith": "で始まる",
+    "filterOperatorEndsWith": "で終わる",
+    "filterOperatorGt": "より大きい",
+    "filterOperatorGte": "以上",
+    "filterOperatorLt": "より小さい",
+    "filterOperatorLte": "以下",
+    "filterOperatorBefore": "より前",
+    "filterOperatorAfter": "より後",
+    "filterOperatorOn": "同じ日付",
+    "filterOperatorIsEmpty": "空白",
+    "filterOperatorNotEmpty": "空白以外",
+    "groupNone": "（なし）",
+    "groupCountLabel": "（{count}件）",
+    "exportFailedNoChart": "エクスポートに失敗しました。チャートが見つかりません。ページを再読み込みして、もう一度お試しください。",
+    "exportFailedGeneric": "エクスポートに失敗しました。詳しくはコンソールを確認してください。",
+    "exportFileName": "gantt-chart-{timestamp}",
+    "selectedCount": "{count}件を選択中",
+    "newTaskName": "新しいタスク",
+    "editTask": "タスクを編集",
+    "addChildTask": "子タスクを追加",
+    "addSiblingTask": "同じ階層にタスクを追加",
+    "indent": "インデント",
+    "outdent": "インデント解除",
+    "deleteTask": "タスクを削除",
+    "deleteTaskWithChildren": "削除（子タスクを含む）",
+    "formTaskName": "タスク名",
+    "formStartDate": "開始日",
+    "formEndDate": "終了日",
+    "formProgress": "進捗率 (%)",
+    "formSubmit": "更新",
+    "editTaskTitle": "タスクの編集: {name}",
+    "closeDialog": "ダイアログを閉じる",
+    "validationStartRequired": "開始日を入力してください",
+    "validationEndRequired": "終了日を入力してください",
+    "validationEndAfterStart": "終了日は開始日より後の日付にしてください",
+    "validationNameRequired": "タスク名を入力してください",
+    "validationProgressRequired": "進捗率を入力してください",
+    "validationProgressRange": "進捗率は0から100の範囲で入力してください",
+    "addTaskRowLabel": "+ タスクを追加",
+    "columnName": "タスク名",
+    "columnStartTime": "開始",
+    "columnEndTime": "終了",
+    "columnDuration": "期間",
+    "columnProgress": "進捗",
+    "columnProgressRing": "進捗",
+    "columnAssignees": "担当者",
+    "columnPredecessors": "先行タスク",
+    "columnSuccessors": "後続タスク",
+    "columnBaselineStart": "ベースライン開始",
+    "columnBaselineEnd": "ベースライン終了",
+    "columnBaselineVariance": "差異",
+    "columnWbs": "WBS",
+    "durationDays": "{count}日",
+    "durationWorkingDays": "{count}稼働日",
+    "durationHours": "{count}時間",
+    "durationMinutes": "{count}分",
+    "progressValue": "{value}%",
+    "listSeparator": "、",
+    "baselineLabel": "ベースライン:",
+    "startLabel": "開始:",
+    "endLabel": "終了:",
+    "tooltipTaskLabel": "タスク:",
+    "tooltipStartLabel": "開始:",
+    "tooltipEndLabel": "終了:",
+    "tooltipDurationLabel": "期間:",
+    "tooltipProgressLabel": "進捗:",
+    "tooltipDateLabel": "日付:",
+    "tooltipDependsOnLabel": "先行タスク:",
+    "tooltipDependencyValue": "{taskId} · {type}{lag}",
+    "dependencyLag": "（{lag}日）",
+    "dependencyTypeFS": "FS",
+    "dependencyTypeSS": "SS",
+    "dependencyTypeFF": "FF",
+    "dependencyTypeSF": "SF",
+    "summaryAriaLabel": "{name}（サマリー）",
+    "summaryAriaLabelExpand": "{name}（サマリー）、展開",
+    "summaryAriaLabelCollapse": "{name}（サマリー）、折りたたみ",
+    "barAriaLabel": "{name}: {start}から{end}まで",
+    "barAriaLabelWithProgress": "{name}: {start}から{end}まで、進捗 {progress}%",
+    "barAriaValueText": "{start}から{end}まで、{durationDays}日間",
+    "progressAriaLabel": "{name}の進捗",
+    "progressRingAriaLabel": "進捗 {value}%",
+    "taskListAriaLabel": "タスク一覧",
+    "timelineHeaderAriaLabel": "タイムラインの見出し",
+    "selectAllAriaLabel": "すべてのタスクを選択",
+    "selectTaskAriaLabel": "{name}を選択",
+    "expandAriaLabel": "{name}を展開",
+    "collapseAriaLabel": "{name}を折りたたむ",
+    "columnHeaderAriaLabel": "{title}、{sortState}{sortPosition}",
+    "sortAscending": "昇順で並べ替え済み",
+    "sortDescending": "降順で並べ替え済み",
+    "sortNone": "並べ替えなし",
+    "sortPosition": "、並べ替えの優先順位 {position}",
+    "resizeColumnAriaLabel": "{title}列の幅を変更",
+    "resizePanelsAriaLabel": "パネルのサイズを変更",
+    "scrollToTaskEarlier": "タスクまでスクロール（前）",
+    "scrollToTaskLater": "タスクまでスクロール（後）",
+    "dependencyAriaLabel": "{from}から{to}への依存関係",
+    "removeDependencyAriaLabel": "{from}から{to}への依存関係を削除"
+  }
+}
