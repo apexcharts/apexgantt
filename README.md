@@ -108,7 +108,7 @@ The layout can be configured by passing a second argument to `ApexGantt` with th
 | `milestoneColor` | `string` | `'#7C3AED'` (light) / `'#A78BFA'` (dark) | Fill color for milestone diamonds. |
 | `arrowColor` | `string` | `'#94A3B8'` (light) / `'#94A3B8'` (dark) | Color of dependency arrows between tasks. Subtle slate-gray by default so links don't compete with bars. When you do not pass it, `--apex-gantt-dependency-line` on the container sets it, then `--apx-grid`. |
 | `dependencies` | `DependencyOptions` | `{}` | Polish + editing for dependency arrows: `cornerRadius` (rounded joints), `hitWidth` (invisible thicker stroke for hover/click targeting), `tooltipTemplate: (ctx) => string` (HTML on hover; requires non-zero `hitWidth`), `classBuilder: (ctx) => string \| string[]` (per-arrow CSS class for cross-team / blocked / etc), `editable: boolean` (hover darkens the arrow, click selects it and reveals a "✕" affordance: click the ✕ or press <kbd>Delete</kbd> to remove via the undoable command path; on bar hover two anchor circles appear at the bar's start/finish edges, and dragging from one to another bar draws a dashed preview that commits the new dependency on release; the (source-anchor, target-anchor) pair determines the type: right→left FS, left→left SS, right→right FF, left→right SF), `allowSummaryDescendantLinks: boolean` (allow edges between a summary task and its descendants, drawn or added with `gantt.addDependency()`; off by default since such edges confuse downstream date math). When `editable: true`, `hitWidth` is auto-bumped to at least `12` if unset. The `ctx` carries `fromTask`, `toTask`, `type`, and `lag`. |
-| `calendar` | `CalendarOptions` | `undefined` | Working-calendar config. When set, weekends and holidays drive duration math, summary aggregation, and timeline stripes: durations stop counting calendar days and start counting working days. Any `calendar` object turns it on, even `{}`, which gives a Monday to Friday week, except one that holds only `weekStart` and `fiscalYearStartMonth` (those two shape the timeline header alone). Leave the option out and every day is a working day (no stripes, no snap). Fields: `workingWeekdays: number[]` (0 = Sunday to 6 = Saturday; default `[1, 2, 3, 4, 5]`; numeric strings are read as numbers, and a list naming no weekday from 0 to 6 logs a warning and uses Monday to Friday), `holidays: Array<string \| Date \| { date, label? }>` (non-working dates regardless of weekday; mixed forms allowed; strings are read with `inputDateFormat` like task dates, and ISO `YYYY-MM-DD` always works), `showNonWorkingStripes: boolean` (tint weekend and holiday columns, over the row backgrounds and under the bars, arrows and annotations; default `true`), `holidayTooltip: (ctx) => string` (optional HTML shown while the pointer is over a holiday column of the timeline, bars excepted; `ctx.date` is the Date, `ctx.label` is whichever string was supplied in the matching entry), `dragSnapMode: 'next' \| 'previous' \| 'allow'` (what happens when a drag/resize commits onto a non-working day: `'next'` (default) snaps forward, `'previous'` snaps backward, `'allow'` permits non-working start/end. Drag preserves the source task's working-day duration across the snap; resize snaps the moving endpoint only. No effect when `snapUnit !== 'day'` or the input format carries time tokens), `weekStart: number` (first day of the week, 0 = Sunday to 6 = Saturday: week cells in the timeline header start on it and week numbers follow it; default: the `locale.dateLocale`'s own week start, so Monday for `de` and Saturday for `ar`, else Sunday; any other value logs a warning and is ignored), `fiscalYearStartMonth: number` (first month of the fiscal year, 1 = January to 12; default `1`: quarter and year cells start on fiscal boundaries and their built-in labels read as fiscal periods, a fiscal year named by the calendar year it starts in, so with `4` the cell from April 2026 to March 2027 reads `FY2026` and its first quarter `#1 Apr-Jun`; month, week and day cells are unaffected; any other value logs a warning and January is used). `update({calendar})` rebuilds the calendar and `update({calendar: undefined})` turns it off; a theme change keeps it. |
+| `calendar` | `CalendarOptions` | `undefined` | Working-calendar config. When set, weekends and holidays drive duration math, summary aggregation, and timeline stripes: durations stop counting calendar days and start counting working days. Any `calendar` object turns it on, even `{}`, which gives a Monday to Friday week, except one that holds only `weekStart` and `fiscalYearStartMonth` (those two shape the timeline header alone). Leave the option out and every day is a working day (no stripes, no snap). Fields: `workingWeekdays: number[]` (0 = Sunday to 6 = Saturday; default `[1, 2, 3, 4, 5]`; numeric strings are read as numbers, and a list naming no weekday from 0 to 6 logs a warning and uses Monday to Friday), `holidays: Array<string \| Date \| { date, label? }>` (non-working dates regardless of weekday; mixed forms allowed; strings are read with `inputDateFormat` like task dates, and ISO `YYYY-MM-DD` always works), `showNonWorkingStripes: boolean` (tint weekend and holiday columns, over the row backgrounds and under the bars, arrows and annotations; default `true`), `holidayTooltip: (ctx) => string` (optional HTML shown while the pointer is over a holiday column of the timeline, bars excepted; `ctx.date` is the Date, `ctx.label` is whichever string was supplied in the matching entry), `dragSnapMode: 'next' \| 'previous' \| 'allow'` (what happens when a drag/resize commits onto a non-working day: `'next'` (default) snaps forward, `'previous'` snaps backward, `'allow'` permits non-working start/end. Drag preserves the source task's working-day duration across the snap; resize snaps the moving endpoint only. No effect when `snapUnit !== 'day'` or the input format carries time tokens), `weekStart: number` (first day of the week, 0 = Sunday to 6 = Saturday: week cells in the timeline header start on it and week numbers follow it; default: the `locale.dateLocale`'s own week start, so Monday for `de` and Saturday for `ar`, else Sunday; any other value logs a warning and is ignored), `fiscalYearStartMonth: number` (first month of the fiscal year, 1 = January to 12; default `undefined`, calendar years. Setting any valid month, `1` included, turns fiscal-year mode on: quarter and year cells start on fiscal boundaries and their built-in labels read as fiscal periods, a fiscal year named by the calendar year it starts in, so with `4` the cell from April 2026 to March 2027 reads `FY2026` and its first quarter `#1 Apr-Jun`, and with `1` the cells stay on calendar boundaries but read `FY2026` and `#1 Jan-Mar`. It also switches on the `fiscal` rows of `locale.timelineHeaderFormat` and sets `ctx.fiscal` for label functions; see [Calendar and fiscal years](#calendar-and-fiscal-years). Month, week and day cells are unaffected; any other value logs a warning and is ignored, as if unset). `update({calendar})` rebuilds the calendar and `update({calendar: undefined})` turns it off; a theme change keeps it. |
 | `borderColor` | `string` | `'#E5E7EB'` (light) / `'#3A3A3A'` (dark) | Color of cell and row divider lines. |
 | `cellBorderColor` | `string` | `'#EDEFF2'` (light) / `'#3A3A3A'` (dark) | Border color for all cells in the task table and timeline grid. |
 | `cellBorderWidth` | `string` | `'1px'` | CSS border-width for all cell lines. |
@@ -191,14 +191,14 @@ const gantt = new ApexGantt('#chart', {
 
 | `locale` key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `pack` | `GanttLocalePack` | `undefined` | A locale pack: plain JSON-safe data (`tag`, `status`, `dir`, `messages`, `dateLocale`, `timelineHeaderFormat`, `displayDateFormat`, `displayDateTimeFormat`, `crosshairFormat`, `weekStart`, `fiscalYearStartMonth`) applied as the base layer under every other `locale` field. Each explicit `locale.*` field wins over the pack's value (`messages` and `timelineHeaderFormat` key by key and row by row), and `calendar.weekStart` and `calendar.fiscalYearStartMonth` win over the pack's. A pack never turns working days on. Object only: a string logs one warning per chart and is ignored. `update({ locale: { pack: undefined } })` returns to English. |
+| `pack` | `GanttLocalePack` | `undefined` | A locale pack: plain JSON-safe data (`tag`, `status`, `dir`, `messages`, `dateLocale`, `timelineHeaderFormat`, `displayDateFormat`, `displayDateTimeFormat`, `crosshairFormat`, `weekStart`, `fiscalYearStartMonth`) applied as the base layer under every other `locale` field. Each explicit `locale.*` field wins over the pack's value (`messages` and `timelineHeaderFormat` key by key and row by row), and `calendar.weekStart` and `calendar.fiscalYearStartMonth` win over the pack's. A pack that sets `fiscalYearStartMonth` puts the chart in fiscal-year mode exactly as `calendar.fiscalYearStartMonth` does, so a language pack should leave it unset (the first-party `ja` pack does). A pack never turns working days on. Object only: a string logs one warning per chart and is ignored. `update({ locale: { pack: undefined } })` returns to English. |
 | `tag` | `string` | `undefined` (the pack's `tag`) | BCP 47 language tag such as `'ja'` or `'ja-JP'`. When one resolves it is set as the `lang` of the chart root (a `lang` the host set comes back when the tag goes, and on `destroy()`), and it sets the plural rules and number formatting of message templates, the collation of text sorting and grouping, and turns the progress fields (task form and inline editor) into text fields with a decimal keyboard, so a full-width IME value such as `５０` is read as 50. Without a tag or pack the root's `lang` is never touched and the fields are unchanged. A malformed tag (such as `'ja_JP'`, which should be `'ja-JP'`) is ignored as if unset. |
 | `displayDateFormat` | `string` | `undefined` | dayjs pattern for read-only dates: the task list Start, End, Baseline Start and Baseline End columns and the bar, milestone and baseline tooltips, formatted in the date locale. Editors keep `inputDateFormat`, and stored dates are unchanged. Unset: the pack's `displayDateTimeFormat` when `inputDateFormat` has time tokens, else the pack's `displayDateFormat`, else `inputDateFormat` as before. |
 | `crosshairFormat` | `GanttCrosshairFormat` | `undefined` | Patterns of the default crosshair label: `date` for day-and-coarser tiers (default `'ddd MM/DD/YYYY'`) and `time` for halfday, hour and minute tiers (default `'MM/DD HH:mm'`). Each wins over the pack's; the top-level `crosshairLabelFormat` function wins over both. |
 | `direction` | `'ltr' \| 'rtl' \| 'auto'` | `'ltr'` | Text/layout direction. `'rtl'` sets `dir="rtl"` on the container (flowing the toolbar, task list, task form, context menu, and tooltips right-to-left and moving the task-list panel to the right) **and mirrors the timeline time axis** so time flows right-to-left: the earliest date sits on the right, bars/header cells/grid lines/non-working stripes/dependency arrows/annotations are all mirrored, progress fills from the start (right) edge, and drag/resize/progress interactions are direction-aware. `'auto'` defers to the document/element. When it is not set, the pack's `dir` applies. |
 | `dateLocale` | `GanttDateLocale` (a `dayjs/locale/*` object, or the same data with `meridiem` as an `[am, pm]` pair and `ordinal` as a `'{n}日'` template) | `undefined` (the pack's `dateLocale`) | Month, weekday and AM/PM names in the timeline header, the dates in bar aria-labels (in the locale's own long date format, `LL`) and the weekday in the default crosshair label. Its week start also sets where week cells start, unless `calendar.weekStart` is set. Its name is set as the `lang` of the timeline header rows, which hold only text in that locale, so the browser draws it with that language's fonts and screen readers read it in that language; the rest of the chart keeps the page's `lang`. The header keeps the built-in English word order (`12月 2025`); change it with `timelineHeaderFormat`. Dates shown with `inputDateFormat` (task list, tooltips, task form) are not affected unless `displayDateFormat` is set. Import the dayjs locale object and pass it; ApexGantt registers it on its own bundled dayjs, so you do not need to configure dayjs yourself. |
 | `messages` | `GanttMessagesInput` | `{}` | Overrides any subset of the generated strings (toolbar, including the Zoom In / Zoom Out buttons and the selection count, context menu, task form + validation, bar and baseline tooltip labels and values, column titles, durations, the add-task row, the export file name, filter operators, and every aria-label). Unset keys keep the pack's text, else their English defaults, exported as `DEFAULT_GANTT_MESSAGES`. Each function key (`editTaskTitle`, `groupCountLabel` and the rest) also takes a template string such as `'Edit: {name}'`, with `{n, number}` and `{n, plural, one {...} other {...}}` formatted in `tag`, so the whole object can be JSON. A function you pass is used as is. |
-| `timelineHeaderFormat` | `TimelineHeaderFormat` | `undefined` | Timeline header labels per tier (`minute`, `hour`, `halfday`, `day`, `week`, `month`, `quarter`, `year`) and row (`top`, `sub`), in place of the built-in labels. Each row takes a dayjs pattern string (used at every width; a label wider than its cell is cut with an ellipsis), an array of `{ minWidth?, format }` candidates (sorted widest-first by the chart; the first that fits the cell is used, the narrowest below that), or a function `(date, ctx) => string` (`ctx` carries `tier`, `position`, `cellWidth`, `end`, `week`, `quarter`, `fiscalYear`, `fiscalQuarter`, `locale` and a `format(pattern, date?)` helper). Patterns also take `{end:PATTERN}` (the cell's last instant), `{fy}` and `{fq}` (the fiscal year and quarter, see `calendar.fiscalYearStartMonth`); `YYYY` and `Q` stay calendar-based. Output is HTML-escaped. A formatter that throws falls back to the built-in label and logs one warning per row per chart. Rows left unset keep the built-in labels; `minute.top`, `halfday.top` and `quarter.top` never render. |
+| `timelineHeaderFormat` | `TimelineHeaderFormat` | `undefined` | Timeline header labels per tier (`minute`, `hour`, `halfday`, `day`, `week`, `month`, `quarter`, `year`) and row (`top`, `sub`), in place of the built-in labels. Each row takes a dayjs pattern string (used at every width; a label wider than its cell is cut with an ellipsis), an array of `{ minWidth?, format }` candidates (sorted widest-first by the chart; the first that fits the cell is used, the narrowest below that), or a function `(date, ctx) => string` (`ctx` carries `tier`, `position`, `cellWidth`, `end`, `week`, `quarter`, `fiscalYear`, `fiscalQuarter`, `fiscal`, `locale` and a `format(pattern, date?)` helper). Patterns also take `{end:PATTERN}` (the cell's last instant), `{fy}` and `{fq}` (the fiscal year and quarter, see `calendar.fiscalYearStartMonth`); `YYYY` and `Q` stay calendar-based. An optional `fiscal` block holds rows used only while a fiscal year is in use (`calendar.fiscalYearStartMonth` or the pack's set to a valid month), so one format reads `2026年` with calendar years and `2026年度` with fiscal ones; see [Calendar and fiscal years](#calendar-and-fiscal-years). Code that walks a format's values meets that block beside the tier rows, so it skips the `fiscal` key; `TimelineHeaderTierRows` types the tier rows alone (the format without `fiscal`, and the `fiscal` block itself). Output is HTML-escaped. A formatter that throws falls back to the built-in label and logs one warning per row per chart. Rows left unset keep the built-in labels; `minute.top`, `halfday.top` and `quarter.top` never render. |
 
 With `direction: 'rtl'` the timeline opens scrolled to its start, which sits at the right edge, and keeps the view across re-renders, zooms, `scrollToTask()` and `setState({scroll})`. Horizontal scroll offsets in `GanttUiState` (`getState().scroll.horizontal`) are measured from where the time axis starts: the left edge in LTR and the **right** edge in RTL, so `0` is the start of the timeline in both and a saved state restores the same dates even when the timeline has grown. Arrow keys on a focused bar follow the screen, so under RTL `ArrowRight` moves a bar earlier (see [Keyboard and screen readers](#keyboard-and-screen-readers)).
 
@@ -349,7 +349,7 @@ tooltipTemplate(task, dateFormat, context) {
 
 ### Locale packs
 
-A locale pack is one plain-data object, safe to keep as JSON, that sets a whole language at once: the messages, the date names, the header word order, how read-only dates are shown, and the week and fiscal-year start that language's users expect. Pass it as `locale.pack`. It is the base layer: every explicit `locale.*` and `calendar.*` option still wins over it.
+A locale pack is one plain-data object, safe to keep as JSON, that sets a whole language at once: the messages, the date names, the header word order, how read-only dates are shown, and the week start that language's users expect. Where the year starts is a planning choice rather than a language one, so a pack is best left without a fiscal year; its header rows can still carry `fiscal` variants that switch on when a user sets one. Pass it as `locale.pack`. It is the base layer: every explicit `locale.*` and `calendar.*` option still wins over it.
 
 ApexGantt ships one first-party pack, Japanese (`ja`). Each pack is a separate file of about 2.8 KB gzip next to the library, so the core bundle does not grow, and you load only the languages you use.
 
@@ -372,8 +372,8 @@ const {ja} = require('apexgantt/locales/ja');
 
 ```html
 <!-- CDN: the pack script sets window.ApexGanttLocales.ja, and can load before or after the library -->
-<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.22.0/apexgantt.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.22.0/locales/ja.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.23.0/apexgantt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.23.0/locales/ja.min.js"></script>
 <script>
   const gantt = new ApexGantt(document.getElementById('gantt-container'), {
     series: tasks,
@@ -402,18 +402,20 @@ const {ja} = require('apexgantt/locales/ja');
 | `status` | `'draft'` (see below). |
 | `messages` | All 123 string keys: every `GanttMessages` key except `filterOperatorLabel`, which reads the 15 `filterOperator*` keys the pack translates. |
 | `dateLocale` | The dayjs `ja` data (month and weekday names, `L`/`LL` formats, 午前/午後, `{n}日` ordinals) as plain data. |
-| `timelineHeaderFormat` | Japanese word order at every zoom: `2026年度` over `2026年度 第1四半期` zoomed out (`第1四半期` where a quarter cell is narrower than 160 px); `2025年12月` over `12/29～`, `1/5～` at week zoom; `2025年12/29～` over the day numbers at day zoom; `2026年1月5日(月)` (shorter in narrow cells) over 午前/午後 or `15時` further in; `1月5日(月) 15時` over the minutes at the deepest zoom. |
+| `timelineHeaderFormat` | Japanese word order at every zoom: `2026年` over `第1四半期` zoomed out (`1Q` where a quarter cell is narrower than 96 px; the label is picked per cell, so near 96 px a row can mix the two, as quarters run 90 to 92 days); `2025年12月` over `12/29～`, `1/5～` at week zoom; `2025年12/29～` over the day numbers at day zoom; `2026年1月5日(月)` (shorter in narrow cells) over 午前/午後 or `15時` further in; `1月5日(月) 15時` over the minutes at the deepest zoom. |
 | `displayDateFormat` | `'YYYY/MM/DD'` for the task list and tooltips (`2026/01/05`), or `displayDateTimeFormat` `'YYYY/MM/DD HH:mm'` when `inputDateFormat` has time tokens. Editors keep `inputDateFormat`. |
 | `crosshairFormat` | `{date: 'YYYY/M/D(ddd)', time: 'M/D H:mm'}`. |
+| `timelineHeaderFormat.fiscal` | `{year: {top: '{fy}年度', sub: '{fy}年度'}}`: the year row reads `2026年度` once a fiscal year is set. |
 | `weekStart` | `1`: weeks start on Monday. |
-| `fiscalYearStartMonth` | `4`: quarters and years follow the April fiscal year (年度), named by the year it starts in. |
 
-The pack's `weekStart` and `fiscalYearStartMonth` shape the header only and never turn the working calendar on. Override them like any other field:
+The pack sets no `fiscalYearStartMonth`, so on its own it shows calendar years (`2026年`, January to December) over calendar quarters (`第1四半期` for January to March). For 年度 planning add the fiscal year yourself. April is the right start for most Japanese organizations:
 
 ```js
 locale: {pack: ja},
-calendar: {weekStart: 0, fiscalYearStartMonth: 1}, // Sunday weeks, calendar-year quarters
+calendar: {fiscalYearStartMonth: 4}, // 2026年度 = April 2026 to March 2027, 第1四半期 = April to June
 ```
+
+The year row then reads `2026年度` and the quarters count from April; nothing else in the pack changes. A `calendar` that holds only `weekStart` and `fiscalYearStartMonth` shapes the header and never turns the working calendar on. The pack's Monday week is overridden the same way: `calendar: {weekStart: 0}` gives Sunday weeks.
 
 Override single messages or header rows the same way: `locale: {pack: ja, messages: {addTask: '追加'}, timelineHeaderFormat: {week: {sub: 'M/D～{end:M/D}'}}}` keeps every other key and row of the pack.
 
@@ -423,9 +425,10 @@ Override single messages or header rows the same way: `locale: {pack: ja, messag
 | --- | --- |
 | Messages, per key | `locale.messages`, then `pack.messages`, then English |
 | Date locale | `locale.dateLocale`, then `pack.dateLocale`, then none |
-| Header format, per tier and row | `locale.timelineHeaderFormat`, then `pack.timelineHeaderFormat`, then built-in |
+| Header format, per tier and row, calendar years | `locale.timelineHeaderFormat`, then `pack.timelineHeaderFormat`, then built-in (`fiscal` blocks ignored) |
+| Header format, per tier and row, while a fiscal year is in use | `locale.timelineHeaderFormat.fiscal`, then `locale.timelineHeaderFormat`, then `pack.timelineHeaderFormat.fiscal`, then `pack.timelineHeaderFormat`, then the built-in fiscal labels (`FY2026`, `#1 Apr-Jun`) |
 | Week start | `calendar.weekStart`, then `pack.weekStart`, then the date locale's `weekStart`, then 0 |
-| Fiscal year start | `calendar.fiscalYearStartMonth`, then `pack.fiscalYearStartMonth`, then 1 |
+| Fiscal year start | `calendar.fiscalYearStartMonth`, then `pack.fiscalYearStartMonth`, then none (calendar years). A fiscal year is in use whenever either is a valid month, `1` included, so no `calendar` value turns off a pack's fiscal year: leave the key out of the pack instead |
 | Direction | `locale.direction` (when you set it), then `pack.dir`, then `'ltr'` |
 | Language tag | `locale.tag`, then `pack.tag`, then none |
 | Read-only date pattern | `locale.displayDateFormat`, then the pack's `displayDateTimeFormat` (time-bearing `inputDateFormat`) or `displayDateFormat`, then `inputDateFormat` |
@@ -445,23 +448,29 @@ Any object of the `GanttLocalePack` shape works as a pack, so a translation can 
 
 `locale.timelineHeaderFormat` replaces the labels of the timeline header, one tier and row at a time. The header has two rows: a coarse **top** row and a fine **sub** row, each drawn from one of eight tiers (`minute`, `hour`, `halfday`, `day`, `week`, `month`, `quarter`, `year`). Rows you leave unset keep the built-in labels, and the cells themselves (where they start, how wide they are) never change; only the text does.
 
-This recipe gives Japanese labels with Monday weeks and an April fiscal year (年度). The first-party [`ja` pack](#locale-packs) ships these rows and more, so `locale: {pack: ja}` is the shorter route; the recipe shows how the rows are built:
+This recipe gives Japanese labels with Monday weeks, calendar years by default and 年度 labels once a fiscal year is set. The first-party [`ja` pack](#locale-packs) ships these rows and more, so `locale: {pack: ja}` is the shorter route; the recipe shows how the rows are built:
 
 ```ts
 import ja from 'dayjs/locale/ja';
 
 const gantt = new ApexGantt('#chart', {
   series: tasks,
-  calendar: {weekStart: 1, fiscalYearStartMonth: 4},
+  // Add fiscalYearStartMonth: 4 for 年度 planning (April to March).
+  calendar: {weekStart: 1},
   locale: {
     dateLocale: ja,
     timelineHeaderFormat: {
-      year: {top: '{fy}年度', sub: '{fy}年度'},
-      // The 年度 already shows in the top row, so narrow cells drop it.
-      quarter: {sub: [{minWidth: 160, format: '{fy}年度 第{fq}四半期'}, {format: '第{fq}四半期'}]},
+      year: {top: 'YYYY年', sub: 'YYYY年'},
+      // The year row is always above the quarters, so they never repeat it.
+      // Q is a token (the calendar quarter), so a literal Q is escaped.
+      quarter: {sub: [{minWidth: 96, format: '第{fq}四半期'}, {format: '{fq}[Q]'}]},
       month: {top: 'YYYY年M月', sub: 'M月'},
-      week: {top: 'YYYY年M/D～', sub: 'M/D～'},
+      week: {top: 'YYYY年M月D日～', sub: 'M/D～'},
       day: {sub: 'D'},
+      // Used instead of the rows above only while a fiscal year is in use.
+      fiscal: {
+        year: {top: '{fy}年度', sub: '{fy}年度'},
+      },
     },
     messages: {
       tooltipTaskLabel: 'タスク:',
@@ -476,7 +485,38 @@ const gantt = new ApexGantt('#chart', {
 });
 ```
 
-At week zoom this reads `2025年12月` over `12/29～`, `1/5～`; zoomed out, `2026年度` over `2026年度 第1四半期` (April to June 2026), or `第1四半期` where the quarter cell is narrower than 160 px. A `calendar` that holds only `weekStart` and `fiscalYearStartMonth` shapes the header and leaves every day a working day.
+At week zoom this reads `2025年12月` over `12/29～`, `1/5～`; zoomed out, `2026年` over `第1四半期` (January to March 2026), or `1Q` where the quarter cell is narrower than 96 px. With `fiscalYearStartMonth: 4` added it reads `2026年度` over `第1四半期` (April to June 2026). A `calendar` that holds only `weekStart` and `fiscalYearStartMonth` shapes the header and leaves every day a working day.
+
+#### Calendar and fiscal years
+
+A fiscal year is in use when `calendar.fiscalYearStartMonth` (or a locale pack's `fiscalYearStartMonth`) is set to a valid month, `1` included. Left unset, the header shows calendar years and quarters. While a fiscal year is in use:
+
+- quarter and year cells start on fiscal boundaries (with `1`, these are the calendar boundaries);
+- the built-in quarter and year labels read as fiscal periods: `FY2026`, `#1 Apr-Jun`, or `#1 Jan-Mar` with a January start;
+- the rows of the `fiscal` block in `timelineHeaderFormat` replace the rows of the same tier and position;
+- a label function sees `ctx.fiscal === true`.
+
+`{fy}` and `{fq}` follow the fiscal year when one is in use and are the calendar year and quarter otherwise, so `'第{fq}四半期'` serves both modes and only the year row needs a fiscal variant. With the recipe above (or the `ja` pack):
+
+| `calendar.fiscalYearStartMonth` | Year row | Quarter row | Narrow quarter (under 96 px) |
+| --- | --- | --- | --- |
+| not set | `2026年` (January to December) | `第1四半期` (January to March) | `1Q` |
+| `4` | `2026年度` (April 2026 to March 2027) | `第1四半期` (April to June) | `1Q` |
+| `1` | `2026年度` (January to December) | `第1四半期` (January to March) | `1Q` |
+
+The narrow label is written `'{fq}[Q]'`: a bare `Q` is the calendar quarter token, so `'{fq}Q'` prints `11`, `22`. Candidates are picked per cell, and quarters run 90 to 92 days, so at a zoom that puts the cells either side of 96 px one row shows both `第1四半期` and `1Q`.
+
+While a fiscal year is in use, each tier and row takes the first layer that sets it:
+
+1. `locale.timelineHeaderFormat.fiscal`
+2. `locale.timelineHeaderFormat`
+3. `pack.timelineHeaderFormat.fiscal`
+4. `pack.timelineHeaderFormat`
+5. the built-in fiscal labels
+
+So a row you set yourself always wins over the pack, whether or not you also give it a fiscal variant: `locale: {pack: ja, timelineHeaderFormat: {year: {top: 'YYYY'}}}` reads `2026` in both modes. With no fiscal year in use the `fiscal` blocks are ignored and the order is `locale.timelineHeaderFormat`, then the pack's, then built-in. The `fiscal` block is plain data like the rest of the format, so a JSON locale pack can carry it, and switching `calendar.fiscalYearStartMonth` through `update()` switches the rows with it.
+
+Before 3.23.0 the built-in labels read as fiscal periods only when the start month was not January, so `fiscalYearStartMonth: 1` gave calendar labels. It now gives `FY2026` and `#1 Jan-Mar`; leave the option unset for calendar labels. The same holds over a locale pack that sets `fiscalYearStartMonth` (the 3.22.0 `ja` pack did): `calendar.fiscalYearStartMonth: 1` keeps fiscal-year mode on, and an invalid value is ignored, so the pack's month applies. For calendar years with such a pack, use one without the key (the 3.23.0 `ja` pack) or spread it without it: `const {fiscalYearStartMonth, ...calendarPack} = pack`.
 
 #### What a row can be set to
 
@@ -486,7 +526,7 @@ At week zoom this reads `2025年12月` over `12/29～`, `1/5～`; zoomed out, `2
 | candidate array | `[{ minWidth: 90, format: 'YYYY年M月' }, { format: 'M月' }]` | Replaces the built-in list of labels for that row. The chart sorts it widest-first, so the order you write it in does not matter: the first candidate whose `minWidth` (default `0`) is at most the cell width is used, and the narrowest one below that. Each `format` is a pattern string or a function. An empty array keeps the built-in labels. |
 | function | ``(date, ctx) => `第${ctx.week}週` `` | Called for every cell with the cell start as a `Date` and a context; read `ctx.cellWidth` to shorten the label yourself. |
 
-The function's `ctx` carries `tier`, `position` (`'top'` or `'sub'`), `cellWidth`, `end`, `week`, `quarter`, `fiscalYear`, `fiscalQuarter`, `locale` (the date locale's name, `'en'` when none is set) and `format(pattern, date?)`, which formats `date` (default: the cell start) exactly as a pattern string is applied.
+The function's `ctx` carries `tier`, `position` (`'top'` or `'sub'`), `cellWidth`, `end`, `week`, `quarter`, `fiscalYear`, `fiscalQuarter`, `fiscal` (`true` while a fiscal year is in use, see [Calendar and fiscal years](#calendar-and-fiscal-years)), `locale` (the date locale's name, `'en'` when none is set) and `format(pattern, date?)`, which formats `date` (default: the cell start) exactly as a pattern string is applied. A function can therefore switch labels itself: ``(date, ctx) => ctx.fiscal ? `${ctx.fiscalYear}年度` : `${date.getFullYear()}年` ``.
 
 - Output is plain text: it is HTML-escaped before it renders, so `<b>` shows as `<b>`.
 - A function that throws, or returns anything but a string or a number, leaves that cell with the built-in label for its width, and the chart logs one warning per row.

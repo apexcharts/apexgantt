@@ -77,6 +77,23 @@
         color: var(--accent);
         font-weight: 600;
       }
+      .fiscal-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px dashed var(--line);
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .fiscal-toggle[hidden] {
+        display: none;
+      }
+      .fiscal-toggle input {
+        margin: 0;
+        accent-color: var(--accent);
+      }
       .lang-btn .dir {
         font-size: 10px;
         letter-spacing: 0.5px;
@@ -125,9 +142,11 @@
       <b>bar aria-labels</b>. For Arabic / Hebrew the time axis, task-list panel, and chrome
       <b>mirror right-to-left</b>. The 日本語 pack (status: draft) also translates the column titles, durations
       (<code>36日</code>), filter operators and every aria-label, shows dates as <code>2025/12/29</code>, starts weeks
-      on Monday (<code>12/29～</code>, <code>1/5～</code>), and zooming out shows fiscal quarters and years from April
-      (<code>2025年度 第4四半期</code>, <code>2026年度</code>). <code>calendar.weekStart</code> and
-      <code>calendar.fiscalYearStartMonth</code> override the pack's. Defaults (no <code>locale</code>) stay English,
+      on Monday (<code>12/29～</code>, <code>1/5～</code>), and zooming out shows calendar years over quarters:
+      <code>2026年</code> over <code>第1四半期</code>, or <code>1Q</code> in narrow cells. The pack sets no fiscal year:
+      tick <b>年度 (4月始まり)</b> to add <code>calendar: { fiscalYearStartMonth: 4 }</code>, and the same pack switches
+      to fiscal years from April (<code>2025年度</code> over <code>第4四半期</code> for January to March 2026).
+      <code>calendar.weekStart</code> overrides the pack's Monday weeks. Defaults (no <code>locale</code>) stay English,
       left-to-right.
     </p>
 
@@ -326,10 +345,13 @@
           names: {phase: '設計フェーズ', research: '調査', mockups: 'モックアップ', dev: '開発', launch: 'リリース'},
           // The first-party pack loaded above (locales/ja.min.js) carries
           // everything: the translated messages, the date names, Monday weeks,
-          // an April fiscal year (年度), Japanese header word order and
-          // YYYY/MM/DD dates in the task list and tooltips. Any explicit
-          // locale.* or calendar.* option would win over its value.
+          // Japanese header word order and YYYY/MM/DD dates in the task list
+          // and tooltips. Any explicit locale.* or calendar.* option would win
+          // over its value. It sets no fiscal year, so years read 2026年; the
+          // 年度 toggle adds calendar.fiscalYearStartMonth: 4 and the pack's
+          // fiscal rows take over (2026年度).
           pack: ApexGanttLocales.ja,
+          fiscalToggle: true,
         },
       };
 
@@ -348,9 +370,33 @@
       const host = document.getElementById('host');
       const switcher = document.getElementById('switcher');
       let current = null;
+      let currentKey = null;
+
+      // 年度 (4月始まり): only for 日本語. Off by default, so the pack alone
+      // shows calendar years.
+      const fiscalToggle = document.createElement('label');
+      fiscalToggle.className = 'fiscal-toggle';
+      fiscalToggle.hidden = true;
+      const fiscalInput = document.createElement('input');
+      fiscalInput.type = 'checkbox';
+      fiscalToggle.append(fiscalInput, '年度 (4月始まり)');
+
+      /** The calendar option for the toggle: header settings only, so no working days turn on. */
+      function fiscalCalendar() {
+        return fiscalInput.checked ? {fiscalYearStartMonth: 4} : undefined;
+      }
+
+      // update() re-renders in place and keeps the zoom, so zoom out first to
+      // watch the year row switch between 2026年 and 2026年度.
+      fiscalInput.addEventListener('change', () => {
+        if (current && LOCALES[currentKey].fiscalToggle) current.update({calendar: fiscalCalendar()});
+      });
 
       function mount(key) {
         const cfg = LOCALES[key];
+        currentKey = key;
+        fiscalToggle.hidden = !cfg.fiscalToggle;
+        if (!cfg.fiscalToggle) fiscalInput.checked = false;
 
         document.documentElement.setAttribute('lang', key);
         document.documentElement.setAttribute('dir', cfg.dir);
@@ -369,12 +415,13 @@
           height: 440,
           inputDateFormat: 'YYYY-MM-DD',
           // Week density: localized month names over week cells. Zoom out for
-          // quarters and years (the fiscal 年度 labels in 日本語).
+          // quarters and years (2026年, or 2026年度 with the 年度 toggle, in 日本語).
           pixelsPerDay: 14,
           enableTaskCRUDToolbar: true,
           enableContextMenu: true,
           enableTaskEdit: true,
           canvasStyle: 'border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;',
+          calendar: cfg.fiscalToggle ? fiscalCalendar() : undefined,
           locale: cfg.pack
             ? {pack: cfg.pack}
             : {
@@ -396,6 +443,7 @@
         btn.addEventListener('click', () => mount(key));
         switcher.appendChild(btn);
       });
+      switcher.appendChild(fiscalToggle);
 
       mount('en');
     </script>

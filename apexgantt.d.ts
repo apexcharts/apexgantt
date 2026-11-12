@@ -1745,14 +1745,23 @@ export declare interface CalendarOptions {
      */
     readonly weekStart?: number;
     /**
-     * First month of the fiscal year, 1 (January) to 12 (December). Quarter and
-     * year cells in the timeline header start on fiscal boundaries, and their
-     * built-in labels read as fiscal periods: with `4` (April), the year cell
-     * from April 2026 to March 2027 reads `FY2026` (a fiscal year is named by
-     * the calendar year it starts in) and its first quarter reads `#1 Apr-Jun`.
+     * First month of the fiscal year, 1 (January) to 12 (December). Setting it
+     * puts the timeline header in fiscal-year mode: quarter and year cells start
+     * on fiscal boundaries, and their built-in labels read as fiscal periods.
+     * With `4` (April), the year cell from April 2026 to March 2027 reads
+     * `FY2026` (a fiscal year is named by the calendar year it starts in) and
+     * its first quarter reads `#1 Apr-Jun`.
+     *
+     * Fiscal-year mode turns on whenever a valid month is set explicitly, `1`
+     * included: `1` keeps calendar-aligned cells but labels them `FY2026` and
+     * `#1 Jan-Mar`. Left unset (and with no locale pack that sets one), the
+     * header shows calendar years and quarters. The same rule decides when the
+     * `fiscal` block of `locale.timelineHeaderFormat` applies, and sets
+     * `fiscal` in a label formatter's context.
+     *
      * Month, week and day cells are unaffected. Anything other than a whole
-     * number from 1 to 12 logs a warning and January is used.
-     * @default 1
+     * number from 1 to 12 logs a warning and is ignored, as if unset.
+     * @default undefined (calendar years, no fiscal-year labels)
      */
     readonly fiscalYearStartMonth?: number;
 }
@@ -2552,7 +2561,14 @@ export declare interface GanttLocalePack {
     readonly crosshairFormat?: GanttCrosshairFormat;
     /** First day of the week, 0 to 6. `calendar.weekStart` wins. Never turns on working days. @default undefined */
     readonly weekStart?: number;
-    /** First month of the fiscal year, 1 to 12. `calendar.fiscalYearStartMonth` wins. Never turns on working days. @default undefined */
+    /**
+     * First month of the fiscal year, 1 to 12. `calendar.fiscalYearStartMonth`
+     * wins. Setting it puts the chart in fiscal-year mode, as an explicit
+     * `calendar.fiscalYearStartMonth` does (see
+     * {@link CalendarOptions.fiscalYearStartMonth}), so a language pack should
+     * leave it unset and let users opt in. Never turns on working days.
+     * @default undefined
+     */
     readonly fiscalYearStartMonth?: number;
 }
 
@@ -3874,7 +3890,8 @@ export declare interface LocaleOptions {
      * Labels for the timeline header, per tier and row, in place of the built-in
      * English-ordered ones. Only the rows you set change. See
      * {@link TimelineHeaderFormat}. Merged over the pack's
-     * `timelineHeaderFormat` per tier and row.
+     * `timelineHeaderFormat` per tier and row; its `fiscal` block applies only
+     * while a fiscal year is in use.
      * @default undefined (the built-in labels)
      */
     readonly timelineHeaderFormat?: TimelineHeaderFormat;
@@ -4577,8 +4594,38 @@ export declare type TierPosition = 'top' | 'sub';
  * only once zoomed in to day cells (42 px per day or more). Set both rows of
  * a tier when the zoom can vary. `minute.top`, `halfday.top` and
  * `quarter.top` never render, because no finer tier sits under them.
+ *
+ * The optional `fiscal` block holds rows used only while a fiscal year is in
+ * use, so one format (or one locale pack) can read `2026年` with calendar
+ * years and `2026年度` once `calendar.fiscalYearStartMonth` is set.
+ *
+ * Code that walks the values of a format (`Object.values`, `Object.entries`)
+ * meets the `fiscal` block beside the tier rows, so it narrows on the key
+ * (`if (key === 'fiscal') continue`) and can annotate the rows it keeps as
+ * {@link TimelineHeaderTierRows}.
  */
-export declare type TimelineHeaderFormat = Partial<Record<TierId, TimelineHeaderTierFormat>>;
+export declare type TimelineHeaderFormat = TimelineHeaderTierRows & {
+    /**
+     * Rows used instead of the ones above while a fiscal year is in use, that
+     * is while `calendar.fiscalYearStartMonth` (or a locale pack's
+     * `fiscalYearStartMonth`) is set to a valid month, `1` included. With no
+     * fiscal year set the block is ignored. JSON-safe like the rest of the
+     * format, so a locale pack can carry it.
+     *
+     * While a fiscal year is in use, each tier and row takes the first of these
+     * that sets it: the user's `locale.timelineHeaderFormat.fiscal`, the user's
+     * `locale.timelineHeaderFormat`, the pack's `timelineHeaderFormat.fiscal`,
+     * the pack's `timelineHeaderFormat`, then the built-in fiscal labels
+     * (`FY2026`, `#1 Apr-Jun`). A row the user sets therefore wins over every
+     * row of the pack, fiscal or not.
+     *
+     * @example
+     * // 2026年 with calendar years, 2026年度 once calendar.fiscalYearStartMonth is set.
+     * {year: {top: 'YYYY年', sub: 'YYYY年'}, fiscal: {year: {top: '{fy}年度', sub: '{fy}年度'}}}
+     * @default undefined (the rows above apply in fiscal-year mode too)
+     */
+    readonly fiscal?: TimelineHeaderTierRows;
+};
 
 /** One width-gated label in a candidate array (see {@link TimelineHeaderLabelFormat}). */
 export declare interface TimelineHeaderLabelCandidate {
@@ -4624,6 +4671,15 @@ export declare interface TimelineHeaderLabelContext {
     readonly fiscalYear: number;
     /** Fiscal quarter of the cell start, 1 to 4 (`{fq}`). With no fiscal start set it is the calendar quarter. */
     readonly fiscalQuarter: number;
+    /**
+     * Whether a fiscal year is in use: `true` when `calendar.fiscalYearStartMonth`
+     * (or the locale pack's `fiscalYearStartMonth`) is set to a valid month, `1`
+     * included, and `false` when neither is. Lets one formatter write fiscal
+     * labels (`2026年度`) in fiscal-year mode and calendar labels (`2026年`)
+     * otherwise. The same rule decides when the `fiscal` block of
+     * {@link TimelineHeaderFormat} applies.
+     */
+    readonly fiscal: boolean;
     /** Name of `locale.dateLocale` (such as `'ja'`), or `'en'` when none is set. */
     readonly locale: string;
     /**
@@ -4683,6 +4739,15 @@ export declare interface TimelineHeaderTierFormat {
      */
     readonly sub?: TimelineHeaderLabelFormat;
 }
+
+/**
+ * The tier rows of a {@link TimelineHeaderFormat}: one optional
+ * {@link TimelineHeaderTierFormat} per tier (`minute`, `hour`, `halfday`,
+ * `day`, `week`, `month`, `quarter`, `year`). It is the shape of the format
+ * without its `fiscal` key, and the shape of the `fiscal` block itself, which
+ * is the type `TimelineHeaderFormat` had before 3.23.0.
+ */
+export declare type TimelineHeaderTierRows = Partial<Record<TierId, TimelineHeaderTierFormat>>;
 
 /**
  * A plain button in the custom toolbar area.

@@ -2,7 +2,6 @@
   "tag": "ja",
   "status": "draft",
   "weekStart": 1,
-  "fiscalYearStartMonth": 4,
   "displayDateFormat": "YYYY/MM/DD",
   "displayDateTimeFormat": "YYYY/MM/DD HH:mm",
   "crosshairFormat": {
@@ -101,17 +100,17 @@
   },
   "timelineHeaderFormat": {
     "year": {
-      "top": "{fy}年度",
-      "sub": "{fy}年度"
+      "top": "YYYY年",
+      "sub": "YYYY年"
     },
     "quarter": {
       "sub": [
         {
-          "minWidth": 160,
-          "format": "{fy}年度 第{fq}四半期"
+          "minWidth": 96,
+          "format": "第{fq}四半期"
         },
         {
-          "format": "第{fq}四半期"
+          "format": "{fq}[Q]"
         }
       ]
     },
@@ -120,7 +119,7 @@
       "sub": "M月"
     },
     "week": {
-      "top": "YYYY年M/D～",
+      "top": "YYYY年M月D日～",
       "sub": "M/D～"
     },
     "day": {
@@ -137,7 +136,15 @@
           "format": "M/D(ddd)"
         }
       ],
-      "sub": "D"
+      "sub": [
+        {
+          "minWidth": 64,
+          "format": "D(ddd)"
+        },
+        {
+          "format": "D"
+        }
+      ]
     },
     "hour": {
       "top": [
@@ -162,6 +169,12 @@
           "format": "H"
         }
       ]
+    },
+    "fiscal": {
+      "year": {
+        "top": "{fy}年度",
+        "sub": "{fy}年度"
+      }
     }
   },
   "messages": {
@@ -185,10 +198,10 @@
     "filterClear": "クリア",
     "filterRemoveCondition": "条件を削除",
     "filterNoConditions": "条件がありません。",
-    "filterOperatorContains": "含む",
-    "filterOperatorNotContains": "含まない",
-    "filterOperatorEquals": "等しい",
-    "filterOperatorNotEquals": "等しくない",
+    "filterOperatorContains": "を含む",
+    "filterOperatorNotContains": "を含まない",
+    "filterOperatorEquals": "と等しい",
+    "filterOperatorNotEquals": "と等しくない",
     "filterOperatorStartsWith": "で始まる",
     "filterOperatorEndsWith": "で終わる",
     "filterOperatorGt": "より大きい",
@@ -197,7 +210,7 @@
     "filterOperatorLte": "以下",
     "filterOperatorBefore": "より前",
     "filterOperatorAfter": "より後",
-    "filterOperatorOn": "同じ日付",
+    "filterOperatorOn": "と同じ日付",
     "filterOperatorIsEmpty": "空白",
     "filterOperatorNotEmpty": "空白以外",
     "groupNone": "（なし）",
@@ -264,8 +277,8 @@
     "dependencyTypeFF": "FF",
     "dependencyTypeSF": "SF",
     "summaryAriaLabel": "{name}（サマリー）",
-    "summaryAriaLabelExpand": "{name}（サマリー）、展開",
-    "summaryAriaLabelCollapse": "{name}（サマリー）、折りたたみ",
+    "summaryAriaLabelExpand": "{name}（サマリー）、展開する",
+    "summaryAriaLabelCollapse": "{name}（サマリー）、折りたたむ",
     "barAriaLabel": "{name}: {start}から{end}まで",
     "barAriaLabelWithProgress": "{name}: {start}から{end}まで、進捗 {progress}%",
     "barAriaValueText": "{start}から{end}まで、{durationDays}日間",
