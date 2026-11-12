@@ -372,8 +372,8 @@ const {ja} = require('apexgantt/locales/ja');
 
 ```html
 <!-- CDN: the pack script sets window.ApexGanttLocales.ja, and can load before or after the library -->
-<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.23.0/apexgantt.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.23.0/locales/ja.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.23.1/apexgantt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.23.1/locales/ja.min.js"></script>
 <script>
   const gantt = new ApexGantt(document.getElementById('gantt-container'), {
     series: tasks,
@@ -399,10 +399,10 @@ const {ja} = require('apexgantt/locales/ja');
 | Field | Value |
 | --- | --- |
 | `tag` | `'ja'`: the chart root gets `lang="ja"` (so Japanese glyph shapes are used and screen readers switch voice), message templates use Japanese plural and number rules, and text sorts and groups with Japanese collation. |
-| `status` | `'draft'` (see below). |
+| `status` | `'reviewed'` (see below). |
 | `messages` | All 123 string keys: every `GanttMessages` key except `filterOperatorLabel`, which reads the 15 `filterOperator*` keys the pack translates. |
 | `dateLocale` | The dayjs `ja` data (month and weekday names, `L`/`LL` formats, 午前/午後, `{n}日` ordinals) as plain data. |
-| `timelineHeaderFormat` | Japanese word order at every zoom: `2026年` over `第1四半期` zoomed out (`1Q` where a quarter cell is narrower than 96 px; the label is picked per cell, so near 96 px a row can mix the two, as quarters run 90 to 92 days); `2025年12月` over `12/29～`, `1/5～` at week zoom; `2025年12/29～` over the day numbers at day zoom; `2026年1月5日(月)` (shorter in narrow cells) over 午前/午後 or `15時` further in; `1月5日(月) 15時` over the minutes at the deepest zoom. |
+| `timelineHeaderFormat` | Japanese word order at every zoom: `2026年` over `第1四半期` zoomed out (`1Q` where a quarter cell is narrower than 96 px; the label is picked per cell, so near 96 px a row can mix the two, as quarters run 90 to 92 days), and further out a single `2026年` row; `2026年` over `1月` at month zoom; `2025年12月` over `12/29～`, `1/5～` at week zoom; `2025年12月29日～` over `29(月)` at day zoom (the date alone in cells narrower than 64 px); `2026年1月5日(月)` (shorter in narrow cells) over 午前/午後 or `15時` further in; `1月5日(月) 15時` (`1/5 15時` in a narrow cell at the edge) over the minutes at the deepest zoom. |
 | `displayDateFormat` | `'YYYY/MM/DD'` for the task list and tooltips (`2026/01/05`), or `displayDateTimeFormat` `'YYYY/MM/DD HH:mm'` when `inputDateFormat` has time tokens. Editors keep `inputDateFormat`. |
 | `crosshairFormat` | `{date: 'YYYY/M/D(ddd)', time: 'M/D H:mm'}`. |
 | `timelineHeaderFormat.fiscal` | `{year: {top: '{fy}年度', sub: '{fy}年度'}}`: the year row reads `2026年度` once a fiscal year is set. |
@@ -436,9 +436,9 @@ Override single messages or header rows the same way: `locale: {pack: ja, messag
 
 A function you pass in `locale.messages` beats the pack's template for that key. `update({locale: {pack: undefined}})` returns the chart to English.
 
-#### Draft status
+#### Review status
 
-`ja.status` is `'draft'`: the wording has not yet been signed off by a native-speaker reviewer, and it may change in a minor release when it is. The header rows for years, quarters, months, weeks and the day numbers follow a recipe Japanese users confirmed; the day top row, the hour rows, the filter operator wording, 同じ日付 for "on", インデント解除, the から/まで phrasing of screen-reader text, and the FS/SS/FF/SF codes are the parts most likely to change. Review comments are welcome as issues.
+`ja.status` is `'reviewed'` since 3.23.1: Japanese users of ApexGantt reviewed the wording, from the timeline header rows and the fiscal year labels to the filter operators and the screen-reader text. `status` is metadata only; the chart does not read it. The wording can still change in any release; when it does, that release's notes call it out under "Changed". Pin an exact version if your tests or screenshots depend on the labels. Wording comments are still welcome as issues. Packs for other languages start as `'draft'` until a native speaker signs them off.
 
 #### Custom packs
 
